@@ -1,0 +1,25 @@
+/* src/css/custom.css */
+.header-coffee-link:hover {
+	opacity: 0.6;
+}
+
+.header-coffee-link::before {
+	content: '';
+	width: 24px;
+	height: 24px;
+	display: flex;
+
+	/* Use the SVG as a mask so it inherits theme color */
+	-webkit-mask: url('/img/buy-me-a-coffee.svg') no-repeat center;
+	mask: url('/img/buy-me-a-coffee.svg') no-repeat center;
+	-webkit-mask-size: contain;
+	mask-size: contain;
+
+	/* This is the “ink” color of the icon */
+	background-color: var(--ifm-navbar-link-color);
+}
+
+/* Optional: keep hover color aligned with link hover color */
+.header-coffee-link:hover::before {
+	background-color: var(--ifm-navbar-link-hover-color);
+}
