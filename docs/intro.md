@@ -32,7 +32,9 @@ William Zinsser said the same in the introduction to his book *On Writing Well* 
 
 Everything I've encountered since, including pursuing software engineering as a career in more general terms (i.e., not limited to only web development), makes me think others might stand to benefit from hearing about my experience (past, present, and future). Why? Because we neither live nor learn in a vacuum. Maybe you already know much of what I have to share. That's okay. But maybe you don't. For example, do you know the [query execution order](/docs/software-engineering/sql/query-execution-order) for SQL queries? I sure as hell didn't when I first started out. But once I did, it felt like I unlocked a superpower. Maybe, just maybe, you can unlock some of your own superpowers by reading more about my varied experiences in software engineering and beyond.
 
-Notable posts on this site appear below (this list is dynamic and will be updated over time). Reading one or more of these highlighted posts should help convey whether or not this site will help unlock one of your superpowers. But, of course, the best way to determine whether or not this site may be of use to you is for you to poke around and prod for yourself. Happy exploring!
+The "noteworthy" sections on this site (i.e., articles, books, courses) feature works I thought worthy of taking notes on for one reason or another. These notes are my own. They are neither polished nor complete, but I will be happy if you nonetheless find them to be of some use.
+
+Highlighted posts on this site appear below (this list is dynamic and will be updated over time). Reading one or more of these posts should help convey whether or not this site is for you. Of course, the best way to find out is for you to poke around and prod for yourself. Happy exploring!
 
 <div className='gallery'>
   <div className='sub-heading'>
@@ -43,12 +45,12 @@ Notable posts on this site appear below (this list is dynamic and will be update
     <div className='introCardDetails' >
       Short and sweet. This will give you some insight into how I approach my own learning as well as how I approaching crafting content for others.
     </div>
-    <DocsLink to='/docs/teaching-portfolio/educational-philosophy'>See Educational Philosophy <ArrowRight className='arrow' /></DocsLink>
+    <DocsLink to='/docs/teaching-portfolio/educational-philosophy'>See Educational Philosophy <ArrowRight className='card-arrow' /></DocsLink>
   </div>
   <div className='card'>
     <h4>Window Functions (SQL)</h4>
     <div className='introCardDetails' >An in-depth guide to SQL window/analytic functions. This is not only a guide but also a useful reference (e.g., syntax guidance, basic examples, etc.).</div>
-    <DocsLink to='/docs/software-engineering/sql/window-functions'>See Window Functions <ArrowRight className='arrow' /></DocsLink>
+    <DocsLink to='/docs/software-engineering/sql/window-functions'>See Window Functions <ArrowRight className='card-arrow' /></DocsLink>
   </div>
 </div>
 <br />
@@ -63,7 +65,7 @@ Notable posts on this site appear below (this list is dynamic and will be update
   <div className='card'>
     <h4>Feynman Technique</h4>
     <div className='introCardDetails' >Tired of not being able to learn things quickly? Give the Feynman Technique a try next time.</div>
-    <DocsLink to='/blog/2026/01/15/2026/feynman-technique'>See Feynman Technique <ArrowRight className='arrow' /></DocsLink>
+    <DocsLink to='/blog/2026/01/15/2026/feynman-technique'>See Feynman Technique <ArrowRight className='card-arrow' /></DocsLink>
   </div>
 </div>
 <br />

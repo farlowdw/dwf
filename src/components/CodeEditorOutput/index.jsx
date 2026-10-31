@@ -45,7 +45,7 @@ const CodeEditorOutput = ({
 			};
 
 			const response = await axios.post(
-				'https://emkc.org/api/v2/piston/execute',
+				'/.netlify/functions/execute',
 				payload
 			);
 			const result = response.data.run;

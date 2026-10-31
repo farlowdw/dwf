@@ -61,12 +61,28 @@ const sidebars = {
           collapsed: true,
           items: [
             'noteworthy-books/bctci/overview',
+            'noteworthy-books/bctci/highlights',
             'noteworthy-books/bctci/checklist',
             'noteworthy-books/bctci/postmortem',
             'noteworthy-books/bctci/cheatsheet',
             'noteworthy-books/bctci/bugs',
             'noteworthy-books/bctci/triggers',
             'noteworthy-books/bctci/catalog',
+          ]
+        },
+      ]
+    },
+    {
+      type: 'category',
+      label: 'Noteworthy courses',
+      collapsed: true,
+      items: [
+        {
+          type: 'category',
+          label: 'Total TypeScript - Matt Pocock',
+          collapsed: true,
+          items: [
+            'noteworthy-courses/total-typescript/beginners-typescript',
           ]
         },
       ]
