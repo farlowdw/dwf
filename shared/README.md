@@ -76,6 +76,7 @@ npm run test:shared
 way. A pull lands as two commits, a squash and its merge: build the site, look at it, then `git push`
 it.
 The site you pushed from holds the change and the rejoin's two commits, a squash and its merge: `git push` it too.
+Where a site has its own page about `shared/`, the pull's `Next:` adds `npm run shared:verify`, which checks that page.
 
 ## Every site at once
 
