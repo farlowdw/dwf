@@ -1,0 +1,8 @@
+// src/css/site.scss: this site's own styles, the second entry of customCss in docusaurus.config.js, so
+// a rule here loads after shared/css/custom.scss and wins over a rule there with the same selector. No rules
+// yet: the site draws everything from the shared stylesheets.
+//
+// HOW TO CHANGE IT  A colour, font or size of this site only: the same variable under the same selector as in
+// shared/css/custom.scss, set here: :root for most, :root:where(:not([data-theme='dark'])) for the alerts'
+// light tints, where a :root value loses. Anything every site should have goes in shared/css and is rolled out
+// (shared/README.md).

@@ -1,0 +1,258 @@
+/* styles.module.css — the look and the motion of <DropDownIC> (index.jsx): the underlined
+   trigger with its raised blue arrow, the paragraph that holds a dropdown (.ddic-paragraph,
+   set by mdx.cjs), and the box that slides open inside it.
+
+   THE MOTION  The box lives in .panel, a grid with one row that goes from 0fr (closed) to 1fr
+   (open) by a CSS transition; its only item, .clip, clips the box to that row. Nothing is
+   measured: the row's height is whatever the box needs, so a box whose contents change (a
+   nested dropdown, an image) keeps up. A closed .panel is display:none — a closed dropdown
+   must not break its line, and its contents must be out of the tab order. index.jsx adds
+   .shown (display: grid) one step before .open (1fr), so the browser sees the 0fr state first
+   and slides the row instead of jumping, and takes .shown away again once the closing
+   transition has ended. The box's own margins sit INSIDE .clip, so the text below moves with
+   the box and nothing jumps. With "reduce motion" on, there is no motion. On paper every
+   dropdown is open (the print rule at the end).
+   THE CLOSE EASES IN (slow start, fast finish), on purpose: a box in a paragraph pushes the
+   words after it onto a line of their own, and they can only come back up beside the title
+   the instant the box is gone — a jump no CSS can animate (Interview Cake has the same one).
+   Finishing fast puts that jump inside the fastest part of the motion, where it reads as the
+   end of one movement; an ease-out close lingered a few pixels high for ~100 ms and the jump
+   then showed as a second, separate move.
+
+   ANOTHER SITE  Every colour is a custom property with two values: the shared token first
+   (--color-gray-*, shared/css/custom.scss), Infima's as the fallback, which any Docusaurus
+   site has — so the file works unchanged without the shared stylesheet. The spacing, the
+   underline and the arrow use Infima's variables only.
+
+   THE UNDERLINE  is a dashed border-bottom on .words (the title's text, in two spans: the
+   words before the last one, and the last one with the arrow in .tail, which never wraps), not
+   a text-decoration, so it runs under a KaTeX inline-block too; the arrow sits after it,
+   unlined. It sits at the text's own bottom edge: a tall formula in a title (a \frac) reaches
+   below it — write \tfrac or a/b in titles.
+
+   HOW TO CHANGE IT  The knobs are the custom properties on .trigger and .panel: the colours
+   (--ddic-*: the underline, the arrow, the box's background and border, the code background
+   inside it; the dark values under html[data-theme='dark']), the timing (--ddic-open,
+   --ddic-close, --ddic-ease-open, --ddic-ease-close), the box's spacing (--ddic-margin, --ddic-padding) and the
+   arrow's size, pull and nudge (--ddic-arrow-scale, --ddic-arrow-pull, --ddic-arrow-shift). The
+   paragraph margins copy Infima's for <p> (node_modules/infima/dist/css/default/default.css:
+   `p`, `.markdown > p`, `.markdown li > p`) and the theme's Details rule for a last <p>: keep
+   them equal. A nested dropdown's shades: `.box .panel`. */
+
+/* ---- the paragraph that holds a dropdown: a <div> with a <p>'s margins ---- */
+
+:global(.ddic-paragraph) {
+  margin: 0 0 var(--ifm-paragraph-margin-bottom);
+}
+
+:global(.markdown > .ddic-paragraph) {
+  margin-bottom: var(--ifm-leading);
+}
+
+:global(.markdown li > .ddic-paragraph) {
+  margin-top: var(--ifm-list-paragraph-margin);
+}
+
+/* a dropdown written as a block of its own (`block`): a paragraph of its own */
+.block {
+  margin: 0 0 var(--ifm-paragraph-margin-bottom);
+}
+
+:global(.markdown) > .block {
+  margin-bottom: var(--ifm-leading);
+}
+
+/* the last paragraph of a <details> loses its bottom margin (the theme's Details does that
+   for a <p>) */
+:global(details .ddic-paragraph:last-child),
+:global(details) > .block:last-child {
+  margin-bottom: 0;
+}
+
+/* ---- the trigger ---- */
+
+.trigger {
+  --ddic-underline: var(--ifm-color-emphasis-500);
+  --ddic-underline-hover: var(--ifm-link-color);
+  --ddic-arrow: var(--ifm-link-color);
+  --ddic-arrow-scale: 0.8;     /* the arrow's size, as a share of the text's (Interview Cake: 0.8) */
+  --ddic-arrow-pull: 0em;      /* a pull over the last letter (negative) or a gap before the arrow (positive). Interview Cake pulls theirs, but their titles end in a period, with nothing up at cap height where the arrow's top stroke runs; after a tall last letter (an l) a pull lands on it. At 0 the glyph's own left bearing (0.03 em, measured) plus the letter's right bearing (0.03 em for an l, 0.08 em for a period) is the gap: about one pixel after the tallest letter */
+  --ddic-arrow-shift: 0em;     /* a vertical nudge, if a font wants one (down is positive) */
+
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--ifm-link-color);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* the underlined words, arrow included (a hook for the author's own styling) */
+.title {
+}
+
+/* the title's text: the dashed underline */
+.words {
+  border-bottom: 1px dashed var(--ddic-underline);
+  padding-bottom: 0.02em;
+  transition: border-color var(--ifm-transition-fast) ease;
+}
+
+/* the last word and the arrow: one piece, never broken over two lines (index.jsx > withArrow) */
+.tail {
+  white-space: nowrap;
+}
+
+/* a pointer resting on it, the keyboard on it, or the box open: the underline in the link blue
+   (hover only where there is a pointer — on a touch screen it would stick after a tap) */
+@media (hover: hover) {
+  .trigger:hover .words {
+    border-bottom-color: var(--ddic-underline-hover);
+  }
+}
+
+.trigger:focus-visible .words,
+.triggerOpen .words {
+  border-bottom-color: var(--ddic-underline-hover);
+}
+
+/* the arrow: Interview Cake's geometry for the ↴ glyph — 0.8 of the text's size, its line
+   box as tall as the text's line (so `vertical-align: top` centres the glyph on the line, as
+   their inherited pixel line-height does), right after the last letter (--ddic-arrow-pull).
+   Inline text, not an icon: it wraps with the word (the tail) and takes the device's font for
+   the glyph. */
+.arrow {
+  display: inline;
+  font-size: calc(var(--ddic-arrow-scale) * 1em);
+  line-height: calc(var(--ifm-line-height-base, 1.5) / var(--ddic-arrow-scale));
+  vertical-align: top;
+  position: relative;
+  top: var(--ddic-arrow-shift);
+  margin-left: var(--ddic-arrow-pull);
+  color: var(--ddic-arrow);
+  font-weight: normal;
+  font-style: normal;
+  text-decoration: none;
+}
+
+/* ---- the panel: the row that opens ---- */
+
+.panel {
+  --ddic-open: 320ms;
+  --ddic-close: 260ms;
+  --ddic-ease-open: cubic-bezier(0.2, 0, 0, 1);    /* fast start, soft landing */
+  --ddic-ease-close: cubic-bezier(0.5, 0, 0.9, 0.4); /* slow start, fast finish (see THE CLOSE EASES IN) */
+  --ddic-bg: var(--color-gray-4, var(--ifm-color-emphasis-100));
+  --ddic-border: var(--ifm-color-primary-lighter);
+  --ddic-code-bg: var(--color-gray-8, var(--ifm-color-emphasis-200));
+  --ddic-margin: 0.5rem 0.5rem 0.75rem;
+  --ddic-padding: 0.75rem 1rem;
+
+  display: none;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--ddic-close) var(--ddic-ease-close);
+}
+
+/* displayed: opening (still 0fr), open, or closing (0fr again) */
+.shown {
+  display: grid;
+}
+
+.open {
+  grid-template-rows: 1fr;
+  transition-duration: var(--ddic-open);
+  transition-timing-function: var(--ddic-ease-open);
+}
+
+/* clip, not hidden: a hidden overflow is a scroll container, and focusing something inside a
+   half-open box could scroll it and leave it stuck. min-width 0: a grid item is otherwise as
+   wide as its widest content (a code block's longest line), which would push the box past the
+   paragraph and the page sideways on a phone; at 0 the box keeps the paragraph's width and
+   the code block scrolls inside it */
+.clip {
+  min-height: 0;
+  min-width: 0;
+  overflow: clip;
+}
+
+/* ---- the box ---- */
+
+.box {
+  margin: var(--ddic-margin);
+  padding: var(--ddic-padding);
+  background: var(--ddic-bg);
+  border: 1px solid var(--ddic-border);
+  border-radius: var(--ifm-global-radius);
+  /* a dropdown inside *emphasis* or **strong** does not inherit the slant or the weight */
+  font-style: normal;
+  font-weight: var(--ifm-font-weight-normal);
+  opacity: 0;
+  transition: opacity var(--ddic-close) var(--ddic-ease-close);
+  /* code inside the box stands off its background one more step: inline code reads
+     --ifm-code-background (Infima's variable), a code block --ifm-pre-background — on a site
+     that points its blocks at it (shared/css/_code-blocks.scss does; a stock theme keeps the
+     Prism theme's own background for its blocks) */
+  --ifm-code-background: var(--ddic-code-bg);
+  --ifm-pre-background: var(--ddic-code-bg);
+}
+
+.open .box {
+  opacity: 1;
+  transition-duration: var(--ddic-open);
+  transition-timing-function: var(--ddic-ease-open);
+}
+
+/* inline code: a site may paint it with fixed greys (shared/css/custom.scss and
+   _custom-dark.scss do); inside the box it follows the box's step instead, in both themes. The
+   selector names the panel too, so it outranks a site's dark-mode rule
+   (html[data-theme='dark'] code). A code block is not touched here: it takes the box's
+   --ifm-pre-background (above), which shared/css/_code-blocks.scss points the whole block
+   at; on a stock theme Prism paints the block. */
+.panel .box :not(pre) > :global(code) {
+  background-color: var(--ifm-code-background);
+}
+
+/* the last thing in the box ends flush with its padding */
+.box > :last-child {
+  margin-bottom: 0;
+}
+
+/* a dropdown inside a dropdown's box: one shade further in, its code one more */
+.box .panel {
+  --ddic-bg: var(--color-gray-8, var(--ifm-color-emphasis-200));
+  --ddic-code-bg: var(--color-gray-12, var(--ifm-color-emphasis-300));
+}
+
+:global(html[data-theme='dark']) .panel {
+  --ddic-bg: var(--color-gray-86, var(--ifm-background-surface-color));
+  --ddic-border: var(--ifm-color-primary-dark);
+  --ddic-code-bg: var(--color-gray-82, var(--ifm-color-emphasis-200));
+}
+
+:global(html[data-theme='dark']) .box .panel {
+  --ddic-bg: var(--color-gray-82, var(--ifm-color-emphasis-200));
+  --ddic-code-bg: var(--color-gray-78, var(--ifm-color-emphasis-300));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  .box,
+  .words {
+    transition: none;
+  }
+}
+
+/* on paper every dropdown is open: nothing a note says is left off the page */
+@media print {
+  .panel {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: none;
+  }
+
+  .box {
+    opacity: 1;
+  }
+}

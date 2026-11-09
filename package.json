@@ -1,0 +1,6 @@
+{
+  "name": "docusaurus-shared",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The styles, components and scripts Docusaurus sites share, vendored into each site at shared/ with git subtree. It installs nothing: requirements.cjs says what a site must have."
+}

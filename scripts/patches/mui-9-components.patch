@@ -1,0 +1,99 @@
+# mui-9-components.patch: the MUI 9 changes to the components that older sites hold as copies: Asterisk,
+# BibRef, LC and the two grid illustrations. git apply skips these comment lines. One patch fits every copy
+# that is as the older sites held it. A file a site lacks, or has changed, does not fit: shared:join prints
+# the line with an --exclude for each, and its list names each changed file, to move to MUI 9 by hand.
+#
+# To change it: make the change in a copy of a site, then replace the diff below with its `git diff` of
+# these files. Keep MUI X code out of it: shared/ holds none, so a component that imports MUI X, such as
+# CustomToolbar, takes its change by hand. Paths are from a site's root.
+
+diff --git a/src/components/Asterisk/index.jsx b/src/components/Asterisk/index.jsx
+index 1e0970f..9331a70 100644
+--- a/src/components/Asterisk/index.jsx
++++ b/src/components/Asterisk/index.jsx
+@@ -20,7 +20,7 @@ export default function Asterisk({
+ 			title={children}
+ 			placement="top"
+ 			arrow
+-			componentsProps={{
++			slotProps={{
+ 				tooltip: {
+ 					sx: {
+ 						color: '#E3E3E3',
+@@ -28,7 +28,7 @@ export default function Asterisk({
+ 					},
+ 				},
+ 			}}>
+-			<span style={{cursor, verticalAlign: 'super', marginLeft: '1px', fontSize: '0.75em'}}><Link color={colorMode == 'dark' ? '#48adf6' : '#0676c8'}>{symbol}</Link></span>
++			<span style={{cursor, verticalAlign: 'super', marginLeft: '1px', fontSize: '0.75em'}}><Link sx={{color: colorMode == 'dark' ? '#48adf6' : '#0676c8'}}>{symbol}</Link></span>
+ 		</Tooltip>
+ 	);
+ }
+diff --git a/src/components/BibRef/index.jsx b/src/components/BibRef/index.jsx
+index 7a9a16c..0ed1c62 100644
+--- a/src/components/BibRef/index.jsx
++++ b/src/components/BibRef/index.jsx
+@@ -135,7 +135,7 @@ export default function BibRef({
+ 					}
+ 					placement="top"
+ 					arrow
+-					componentsProps={{
++					slotProps={{
+ 						tooltip: {
+ 							sx: {
+ 								color: '#E3E3E3',
+diff --git a/src/components/LC/index.jsx b/src/components/LC/index.jsx
+index 8789e95..48cac49 100644
+--- a/src/components/LC/index.jsx
++++ b/src/components/LC/index.jsx
+@@ -81,7 +81,7 @@ export default function LC({
+ 					title={children}
+ 					placement="top"
+ 					arrow
+-          componentsProps={{
++          slotProps={{
+ 						tooltip: {
+ 							sx: {
+ 								color: '#E3E3E3',
+diff --git a/src/components/_IllustrationsOnly/DataGridBad/index.jsx b/src/components/_IllustrationsOnly/DataGridBad/index.jsx
+index e12461a..4b2af23 100644
+--- a/src/components/_IllustrationsOnly/DataGridBad/index.jsx
++++ b/src/components/_IllustrationsOnly/DataGridBad/index.jsx
+@@ -52,11 +52,12 @@ export default function SampleDataGrid() {
+ 			<DataGrid
+ 				rows={rows}
+ 				columns={columns}
+-				pageSize={5}
+-				rowsPerPageOptions={[5]}
++				initialState={{
++					pagination: {paginationModel: {pageSize: 5}},
++				}}
++				pageSizeOptions={[5]}
+ 				checkboxSelection
+-				disableSelectionOnClick
+-				experimentalFeatures={{ newEditingApi: true }}
++				disableRowSelectionOnClick
+ 			/>
+ 		</Box>
+ 	);
+diff --git a/src/components/_IllustrationsOnly/DataGridGood/index.jsx b/src/components/_IllustrationsOnly/DataGridGood/index.jsx
+index cc5402a..06c71f0 100644
+--- a/src/components/_IllustrationsOnly/DataGridGood/index.jsx
++++ b/src/components/_IllustrationsOnly/DataGridGood/index.jsx
+@@ -61,11 +61,12 @@ export default function SampleDataGrid() {
+ 				<DataGrid
+ 					rows={rows}
+ 					columns={columns}
+-					pageSize={5}
+-					rowsPerPageOptions={[5]}
++					initialState={{
++						pagination: {paginationModel: {pageSize: 5}},
++					}}
++					pageSizeOptions={[5]}
+ 					checkboxSelection
+-					disableSelectionOnClick
+-					experimentalFeatures={{ newEditingApi: true }}
++					disableRowSelectionOnClick
+ 				/>
+ 			</Box>
+ 		</ThemeProvider>

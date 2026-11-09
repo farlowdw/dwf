@@ -1,0 +1,259 @@
+/* _code-blocks.scss — how every code block of the site looks: its background, and its
+   highlighted lines (the default highlight, error, success, warning, added, removed), with or
+   without line numbers, on a page, in an admonition, in a <details> and in a <DropDownIC>.
+   @use'd by custom.scss; the classes come from shared/wiring/index.cjs > MAGIC_COMMENTS, which
+   a site's config passes to themeConfig.prism.magicComments (a comment like `# highlight-error-start` gives the lines
+   up to `# highlight-error-end` the class code-block-error-line).
+
+   ONE BACKGROUND PER BLOCK  The Prism theme writes its own background inline (on the block's
+   container as --prism-background-color, on the <pre> as background-color), and the
+   line-number gutter of Docusaurus paints itself with --ifm-pre-background. Here all of them
+   are pointed at --ifm-pre-background, the site's code-block grey (custom.scss > :root, dark
+   in _custom-dark.scss). A place that wants its blocks another shade sets --ifm-pre-background
+   on itself — an admonition in dark mode does below, <DropDownIC>'s box does in its own
+   stylesheet — and the container, the title bar, the lines, the gutter and the copy button
+   all follow. (Docusaurus's own `.codeBlock { --ifm-pre-background: var(--prism-background-
+   color) }` then reads that value back, so there is no loop.)
+
+   HIGHLIGHTED LINES  Every kind is one entry of $code-line-kinds below: the class its magic
+   comment gives a line, whether it has the coloured bar on its left edge, and the sign that
+   replaces it (+ / −). Its colours are three custom properties (in :root and, for dark mode,
+   under html[data-theme='dark']): --code-line-<kind>-bg (the band, translucent, so it shows on
+   any background), -bar (the left edge), -ink (the line number, or the sign). A line of a kind
+   sets --line-bg / --line-bar / --line-ink, and two rules draw them:
+     - WITHOUT line numbers the line is a block that reaches the block's edges: the band, the
+       bar as an inset shadow, the sign (added / removed) hung in the left padding;
+     - WITH line numbers Docusaurus lays the block out as a table (a line is a row, its number
+       a cell, `display: table-row`): the row keeps that display (a block would break the
+       table, which is what hid the code of added and removed lines), the band runs under the
+       number too, the bar sits on the number cell's left edge, and the number takes the
+       kind's colour — or turns into the + / − of an added / removed line.
+   The default highlight is a translucent overlay rather than one grey, so it shows on every
+   background a block can have (the dark dropdown box's code grey used to equal it).
+   A line is a whole number of pixels tall (LINES OF WHOLE PIXELS, at the <pre> below), so
+   the number cells meet exactly and the bar runs unbroken from line to line. On paper the band
+   prints in light, and in dark the browser darkens the text and drops the band (DARK ON PAPER).
+
+   THE CODE EDITOR  <CodeEditor> reads these tokens with built-in fallbacks equal to these
+   values (<CodeEditor>'s styles.module.css > THE CODE-LINE TOKENS, in its theme's mode, which
+   can differ from the site's); the editor's wiring test keeps the fallbacks equal to the
+   values here.
+
+   HOW TO CHANGE IT  A colour: the --code-line-* properties (light in :root, dark under
+   html[data-theme='dark']; then the editor's fallback, which the wiring test demands). A new kind: an entry in $code-line-kinds, its properties (-bg and
+   -ink, and -bar when the entry says bar: true), and
+   a magic comment with its class in shared/wiring/index.cjs > MAGIC_COMMENTS. The bar's width: $code-line-bar-width.
+   A place whose blocks need another shade: set --ifm-pre-background there. */
+
+@use 'sass:map';
+
+// ---- the kinds of highlighted line (class from the magic comment; bar; sign) ----
+
+$code-line-bar-width: 3px;
+
+$code-line-kinds: (
+	'highlighted': (class: 'theme-code-block-highlighted-line', bar: false, sign: null),
+	'error': (class: 'code-block-error-line', bar: true, sign: null),
+	'success': (class: 'code-block-success-line', bar: true, sign: null),
+	'warning': (class: 'code-block-warning-line', bar: true, sign: null),
+	'removed': (class: 'code-block-removed-line', bar: false, sign: '\2212'),
+	'added': (class: 'code-block-added-line', bar: false, sign: '+'),
+);
+
+// ---- colours (light, then dark; the code editor carries the same values as fallbacks: see the header) ----
+
+:root {
+	// the default highlight: an overlay of the site's darkest grey (gray-12 on gray-4)
+	--code-line-highlighted-bg: rgba(28, 38, 47, 0.09);
+	--code-line-highlighted-ink: inherit;
+
+	--code-line-error-bg: rgba(255, 0, 0, 0.125);
+	--code-line-error-bar: rgba(255, 0, 0, 0.5);
+	--code-line-error-ink: #d1242f;
+
+	--code-line-success-bg: rgba(0, 255, 0, 0.125);
+	--code-line-success-bar: rgba(0, 200, 0, 0.6);
+	--code-line-success-ink: #1a7f37;
+
+	--code-line-warning-bg: rgba(255, 255, 0, 0.21);
+	--code-line-warning-bar: rgba(230, 180, 0, 0.75);
+	--code-line-warning-ink: #9a6700;
+
+	--code-line-removed-bg: rgba(255, 0, 0, 0.125);
+	--code-line-removed-ink: #d1242f;
+
+	--code-line-added-bg: rgba(0, 255, 149, 0.125);
+	--code-line-added-ink: #047857; /* a darker green than the old rgb(2, 164, 113), which was 2.8:1 on its band */
+
+	// Docusaurus's own highlighted line reads this one
+	--docusaurus-highlighted-code-line-bg: var(--code-line-highlighted-bg);
+}
+
+html[data-theme='dark'] {
+	// a bluish light overlay (gray-82 on gray-86)
+	--code-line-highlighted-bg: rgba(90, 120, 150, 0.125);
+
+	--code-line-error-bg: rgba(255, 0, 0, 0.14);
+	--code-line-error-bar: rgba(255, 90, 90, 0.75);
+	--code-line-error-ink: #ff7b72;
+
+	--code-line-success-bg: rgba(0, 255, 0, 0.11);
+	--code-line-success-bar: rgba(80, 220, 120, 0.75);
+	--code-line-success-ink: #56d364;
+
+	--code-line-warning-bg: rgba(255, 255, 0, 0.12);
+	--code-line-warning-bar: rgba(255, 220, 60, 0.75);
+	--code-line-warning-ink: #e3b341;
+
+	--code-line-removed-bg: rgba(255, 0, 0, 0.14);
+	--code-line-removed-ink: #ff7b72;
+
+	--code-line-added-bg: rgba(0, 255, 149, 0.11);
+	--code-line-added-ink: #3fd69e;
+
+	--docusaurus-highlighted-code-line-bg: var(--code-line-highlighted-bg);
+}
+
+// ---- one background per block ----
+
+.theme-code-block {
+	// beats the theme's inline variable (an author !important outranks an inline declaration)
+	--prism-background-color: var(--ifm-pre-background) !important;
+	box-shadow: none !important;
+
+	pre {
+		// the theme's inline background-color on <pre>
+		background-color: var(--prism-background-color) !important;
+		// LINES OF WHOLE PIXELS: Infima's 1.45 rounded to whole pixels (14 px type: 20.3 → 20 px).
+		// At 20.3 px the lines land on fractions of a pixel, a browser can draw each
+		// line's number cell 20 px tall on a whole pixel, and where its rounding made a line
+		// 21 px the cell — and the bar on it — stopped a pixel short: a notch in the bar
+		// (2026-10-21, a dropdown's block on a Retina Mac). With whole-pixel lines every line
+		// rounds the same way and the cells meet. A browser without round() keeps 1.45.
+		line-height: round(nearest, calc(var(--ifm-pre-line-height) * 1em), 1px);
+	}
+
+	pre code {
+		background-color: transparent;
+	}
+}
+
+// a dark admonition sets its blocks one step lighter than the page's
+html[data-theme='dark'] .theme-admonition {
+	--ifm-pre-background: var(--color-gray-78);
+}
+
+// Dracula's keywords are italic; the site's are upright (the theme writes the style inline, so
+// only an !important declaration reaches it)
+html[data-theme='dark'] .theme-code-block .token.keyword {
+	font-style: normal !important;
+}
+
+// ---- highlighted lines ----
+
+// each kind sets the three properties its line is drawn with
+.theme-code-block .token-line {
+	@each $kind, $spec in $code-line-kinds {
+		&.#{map.get($spec, class)} {
+			--line-bg: var(--code-line-#{$kind}-bg);
+			--line-ink: var(--code-line-#{$kind}-ink);
+			@if map.get($spec, bar) {
+				--line-bar: var(--code-line-#{$kind}-bar);
+			} @else {
+				--line-bar: transparent;
+			}
+		}
+	}
+}
+
+// every highlighted line, whatever its kind
+$any-kind: '';
+@each $kind, $spec in $code-line-kinds {
+	@if $any-kind == '' {
+		$any-kind: '.#{map.get($spec, class)}';
+	} @else {
+		$any-kind: '#{$any-kind}, .#{map.get($spec, class)}';
+	}
+}
+
+// WITHOUT line numbers: a block reaching the edges, its bar an inset shadow
+.theme-code-block .token-line:not([class*='codeLine_']):is(#{$any-kind}) {
+	// print the band too (a browser leaves backgrounds out of a print by default)
+	print-color-adjust: exact;
+	-webkit-print-color-adjust: exact;
+	display: block;
+	margin: 0 calc(-1 * var(--ifm-pre-padding));
+	padding: 0 var(--ifm-pre-padding);
+	background-color: var(--line-bg);
+	box-shadow: inset $code-line-bar-width 0 0 0 var(--line-bar);
+}
+
+// WITH line numbers: the row stays a row; the band runs under the number; the bar and the
+// colour go on the number cell
+.theme-code-block .token-line[class*='codeLine_']:is(#{$any-kind}) {
+	print-color-adjust: exact;
+	-webkit-print-color-adjust: exact;
+	display: table-row;
+	margin: 0;
+	padding: 0;
+	background-color: var(--line-bg);
+
+	> [class*='codeLineNumber_'] {
+		// the gutter is opaque (it stays put when the code scrolls sideways): the band is laid over it
+		background: linear-gradient(var(--line-bg), var(--line-bg)), var(--ifm-pre-background);
+		print-color-adjust: exact;
+		-webkit-print-color-adjust: exact;
+		box-shadow: inset $code-line-bar-width 0 0 0 var(--line-bar);
+	}
+
+	> [class*='codeLineNumber_']::before {
+		opacity: 1;
+		color: var(--line-ink);
+	}
+}
+
+// the default highlight keeps the number's own colour, a little brighter (Docusaurus's way)
+.theme-code-block .token-line[class*='codeLine_'].theme-code-block-highlighted-line > [class*='codeLineNumber_']::before {
+	opacity: 0.85;
+}
+
+// added / removed: the sign
+@each $kind, $spec in $code-line-kinds {
+	$sign: map.get($spec, sign);
+	@if $sign {
+		// without numbers: hung in the left padding, before the code
+		.theme-code-block .token-line.#{map.get($spec, class)}:not([class*='codeLine_'])::before {
+			content: '#{$sign}';
+			display: inline-block;
+			width: 0;
+			position: relative;
+			left: -0.75em;
+			color: var(--line-ink);
+			font-weight: 700;
+		}
+
+		// with numbers: in place of the number (the count goes on, so the next numbers stay right)
+		.theme-code-block .token-line.#{map.get($spec, class)}[class*='codeLine_'] > [class*='codeLineNumber_']::before {
+			content: '#{$sign}';
+			font-weight: 700;
+		}
+	}
+}
+
+// a removed line is left out of a copied selection (the copy button copies the source as it is)
+.theme-code-block .token-line.code-block-removed-line {
+	user-select: none;
+}
+
+// DARK ON PAPER  The exact pairs above print a marked line's band, and with it the line's own text, which a
+// print in dark keeps near white: Dracula's ink on a pale band on white paper, and a dark gutter cell on a
+// numbered row. So in dark a print takes the browser's own way with colours again: it darkens the text and
+// leaves the band out, as for every other line. Light prints as above. With JavaScript off no theme is set,
+// the server's code colours are Dracula's, and this rule applies too.
+@media print {
+	html:not([data-theme='light']) .theme-code-block .token-line,
+	html:not([data-theme='light']) .theme-code-block .token-line > [class*='codeLineNumber_'] {
+		print-color-adjust: economy !important;
+		-webkit-print-color-adjust: economy !important;
+	}
+}

@@ -1,0 +1,17 @@
+# .gitignore: the files git leaves out of this repository. It ships as gitignore.template in
+# shared/template, so it never acts inside shared/. shared:new and shared:join write it as .gitignore.
+# To change it: add a line under the heading it belongs to.
+
+# Dependencies
+node_modules
+
+# Generated files
+/build
+.docusaurus
+.cache-loader
+
+# Secrets and local state
+.env
+.env.*
+.netlify
+.DS_Store
