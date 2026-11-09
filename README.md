@@ -91,6 +91,7 @@ npm run shared:all -- run test:shared   # one npm script in each site
 
 `pull` and `bump` ask every site before they touch any. One site that cannot run means nothing runs, and the
 refusal prints the ready `--skip` line. A pull that changes only `shared/template/` builds nothing.
+`pull` compares too: for a site whose posts share a date, set `UV_THREADPOOL_SIZE=1` in the shell first, as for `bump`.
 
 `bump` pulls first, so one proof covers both, and moves each site to the pin the hub holds. Give it a version
 and it first moves the pin in `template/package.json` and publishes that one commit, behind one question,
