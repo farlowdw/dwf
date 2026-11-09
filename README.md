@@ -23,7 +23,7 @@ Install with `npm ci`, never `npm update`: `package-lock.json` holds the exact v
 | `env SKIP_HTML_MINIFICATION=true npm run build` | Production build into `build/`. Netlify builds with that variable set, so set it here too or the HTML differs. |
 | `npm run serve` | Serves `build/` on http://localhost:3000. |
 | `npm run clear` | Removes Docusaurus's caches and `build/`. |
-| `node --test scripts/site-files.test.mjs` | Checks on this site's own files that need no build: no file in `static/` hides one in `shared/static/`, the sentence below on `shared/README.md` sends readers to `--help`, and every blog address the site has published still belongs to a post (a post whose date changes keeps its address with `slug:` in its front matter). The file's header lists them. |
+| `node --test scripts/site-files.test.mjs` | Checks on this site's own files that need no build: no file in `static/` hides one in `shared/static/`, the sentence below on `shared/README.md` sends readers to `--help`, every blog address the site has published still belongs to a post (a post whose date changes keeps its address with `slug:` in its front matter), and the five rules below say what `shared/README.md`'s say. The file's header lists them. |
 | `node shared/scripts/check-mui-api.mjs` | Fails on an old MUI API name, such as `componentsProps` or `GridToolbar`. The Netlify build command runs it first, so a hit stops the build in under a second. Exit 0 is clean, 1 found a name, 2 could not run. The list is `shared/scripts/lib/oldMuiApis.json`, and the script's header says how to change it. |
 
 ## The shared folder
@@ -57,8 +57,43 @@ how to change it, and the main options of the commands below; `-- --help` lists 
 The `@docusaurus/*` packages are pinned to one exact version, the one in
 `shared/template/package.json`, and `shared:status` holds this site to it.
 
-The five rules in `shared/README.md` bind every commit here. Its chapters say how to update Docusaurus,
-how to hold this site back, and what fails without a word.
+`shared/README.md`'s chapters say how to update Docusaurus, how to hold this site back, and what fails
+without a word.
+
+## Rules
+
+Every commit here keeps these.
+
+### The five rules
+
+The shared folder's, word for word as `shared/README.md` gives them. `scripts/site-files.test.mjs` fails
+when the two lists differ.
+
+1. Commit `shared/` alone, with a subject that reads well in the hub, because a public site's history
+   carries it.
+2. A clean tracked tree before a pull or a push.
+3. `--squash` in every site, forever.
+4. A branch that holds a subtree pull is merged back, never rebased.
+5. Never amend or squash a subtree bookkeeping commit.
+
+### This site's own
+
+- Nothing private goes in: no `.env` value, licence key, password, machine path or word of the word
+  list, in a file, a path or a commit subject. The public check reads files and paths, never a
+  subject, so read each subject before a push: this history is public.
+- A tool's own folder or notes file stays out of git through `.git/info/exclude`, which is never
+  pushed, not through `.gitignore`, which is.
+- Every file opens with a comment that says what it is for and how to change it. Named constants,
+  short functions, one documented file per list, and this README changes in the same commit as what
+  it describes.
+
+### Checks before a push
+
+1. `npm run shared:verify`: the old-MUI check, the public check's tests, `scripts/site-files.test.mjs`
+   and `test:shared`.
+2. `env SKIP_HTML_MINIFICATION=true npm run build`, then `node shared/scripts/check-public.mjs` on that
+   build, as the command in `netlify.toml` does.
+3. `npm run shared:status`: 0 failed.
 
 ## Deploying
 

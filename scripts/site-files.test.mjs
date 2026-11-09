@@ -20,11 +20,15 @@
  *                           the date and name of its file or folder. So a post whose date changes keeps its
  *                           old address with `slug:` in its front matter. The name rule is Docusaurus's
  *                           own parseBlogFileName, read from node_modules, so run npm ci first.
+ *   the five rules          the README's list under "The five rules" says word for word what the list
+ *                           under that heading in shared/README.md says, so the copy here never drifts
+ *                           from the rules every site keeps
  *
  * How to change it: a new check is a test below with a line in the list above. A name Finder or an
  * editor leaves in a folder goes in IGNORED_NAMES. A new wording of the README's sentence must still
  * match POINTER_SENTENCE. A post published for the first time adds its address to
  * PUBLISHED_POST_ADDRESSES; a post moved on purpose needs a redirect first, and then its line goes.
+ * Red on the five rules after a pull: copy the list from shared/README.md into the README.
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -46,6 +50,15 @@ const POINTER_SENTENCE = /`shared\/README\.md` says [^.]*\./;
 /** `-- --help` after an npm command, or `--help` after a node one. */
 const HELP_POINTER = /--help` lists the rest/;
 const FULL_LIST_CLAIM = /\bevery option\b/;
+
+const SHARED_README = 'shared/README.md';
+/** The heading both READMEs give the rules, at any level from ## to ####. */
+const FIVE_RULES_HEADING = 'The five rules';
+const FIVE_RULES_COUNT = 5;
+const HEADING_LINE = /^(#{1,6}) (.*)$/;
+const NUMBERED_LINE = /^\d+\. /;
+/** A wrapped line of a numbered item: indented under the item's text. */
+const ITEM_CONTINUATION = /^ {2,}\S/;
 
 const BLOG = 'blog';
 /** The blog's route: Docusaurus's default routeBasePath, which docusaurus.config.js keeps. */
@@ -76,6 +89,32 @@ function filesUnder(folder) {
 /** The shared static files that this site also keeps a file of its own for, at the same path. */
 function hiddenSharedFiles() {
   return filesUnder(SHARED_STATIC).filter((file) => fs.existsSync(path.join(ROOT, SITE_STATIC, file)));
+}
+
+/** A heading line's level and text, or null for any other line. */
+function headingOf(line) {
+  const match = line.match(HEADING_LINE);
+  return match ? { level: match[1].length, text: match[2] } : null;
+}
+
+/**
+ * The numbered items under the first heading called `heading` (## or deeper), up to the next heading,
+ * each with its wrapped lines joined by single spaces. Text between the heading and the list is not an item.
+ */
+function numberedItemsUnder(file, heading) {
+  const lines = fs.readFileSync(path.join(ROOT, file), 'utf8').split('\n');
+  const start = lines.findIndex((line) => {
+    const found = headingOf(line);
+    return found !== null && found.level >= 2 && found.text === heading;
+  });
+  if (start === -1) return [];
+  const items = [];
+  for (const line of lines.slice(start + 1)) {
+    if (HEADING_LINE.test(line)) break;
+    if (NUMBERED_LINE.test(line)) items.push(line.trim());
+    else if (items.length > 0 && ITEM_CONTINUATION.test(line)) items[items.length - 1] += ` ${line.trim()}`;
+  }
+  return items.map((item) => item.replace(/\s+/g, ' '));
 }
 
 /** The address Docusaurus gives one post, or null for a draft, which has no page. */
@@ -114,4 +153,11 @@ test('every blog address the site has published still belongs to a post', () => 
   const lost = PUBLISHED_POST_ADDRESSES.filter((address) => !addresses.has(address));
   const advice = 'give the post that moved `slug: <its old address without /blog>` in its front matter';
   assert.deepEqual(lost, [], `no post has ${lost.join(', ')} any more: ${advice}`);
+});
+
+test("the README's five rules say what shared/README.md's say", () => {
+  const shared = numberedItemsUnder(SHARED_README, FIVE_RULES_HEADING);
+  const here = numberedItemsUnder(README, FIVE_RULES_HEADING);
+  assert.equal(shared.length, FIVE_RULES_COUNT, `${SHARED_README} has no list of ${FIVE_RULES_COUNT} under "${FIVE_RULES_HEADING}": is shared/ mounted?`);
+  assert.deepEqual(here, shared, `${README}'s list under "${FIVE_RULES_HEADING}" differs from ${SHARED_README}'s: copy it from there`);
 });
