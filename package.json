@@ -22,7 +22,7 @@
     "shared:bump": "node shared/scripts/bump.mjs",
     "shared:all": "node shared/scripts/all.mjs",
     "shared:compare": "node shared/scripts/compare.mjs",
-    "shared:verify": "node shared/scripts/check-mui-api.mjs && node --test scripts/check-public.test.mjs scripts/site-files.test.mjs && npm run test:shared"
+    "shared:verify": "node shared/scripts/check-mui-api.mjs && node --test shared/scripts/__tests__/check-public.test.mjs scripts/site-files.test.mjs && npm run test:shared"
   },
   "comparePages": [
     "/",

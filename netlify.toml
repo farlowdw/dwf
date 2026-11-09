@@ -3,12 +3,12 @@
 # To change it: edit the block concerned, then run `netlify build` to check it. This file is
 # public, so no secret goes here: anything private is a variable on the Netlify project.
 # The build command starts with shared/scripts/check-mui-api.mjs, which stops on an old MUI name in under a
-# second, and ends with scripts/check-public.mjs, which stops a build that would publish something
-# private. Keep both in this command: `netlify build` and `netlify deploy` both run it, and a
+# second, and ends with shared/scripts/check-public.mjs, which stops a build that would publish
+# something private. Keep both in this command: `netlify build` and `netlify deploy` both run it, and a
 # predeploy npm script would only run under `npm run deploy`. See the README, The public check.
 
 [build]
-  command = "node shared/scripts/check-mui-api.mjs && npm run build && node scripts/check-public.mjs"
+  command = "node shared/scripts/check-mui-api.mjs && npm run build && node shared/scripts/check-public.mjs"
   functions = "netlify/functions"
   publish = "build"
 
