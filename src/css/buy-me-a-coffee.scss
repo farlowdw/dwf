@@ -1,4 +1,8 @@
-/* src/css/custom.css */
+// src/css/buy-me-a-coffee.scss: the coffee icon in the navbar, the last entry of customCss in
+// docusaurus.config.js. Its link is the navbar item with className header-coffee-link.
+//
+// HOW TO CHANGE IT  The icon: static/img/buy-me-a-coffee.svg. Its colour follows the navbar's link
+// colours through the two background-color lines below.
 .header-coffee-link:hover {
 	opacity: 0.6;
 }

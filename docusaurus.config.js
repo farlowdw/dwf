@@ -1,41 +1,33 @@
 // @ts-check
-// `@type` JSDoc annotations allow editor autocompletion and type checking
-// (when paired with `@ts-check`).
-// There are various equivalent ways to declare your Docusaurus config.
-// See: https://docusaurus.io/docs/api/docusaurus-config
+/*
+ * docusaurus.config.js: the whole site's configuration: title and URL, the docs, blog and pages,
+ * the plugins, the navbar and the footer. The lists every site of the family repeats (admonition
+ * keywords, KaTeX options, <DropDownIC>'s MDX plugins, Prism's languages and magic comments) come
+ * from shared/wiring/index.cjs, and shared/ also holds the global stylesheets (customCss) and static
+ * files (staticDirectories).
+ *
+ * HOW TO CHANGE IT
+ *   A list from shared/wiring: edit it there and roll it out (shared/README.md). A keyword of this
+ *   site only: add ADMONITION_KEYWORDS to the require below, then, in the docs, blog and pages
+ *   blocks, write `admonitions: { keywords: [...ADMONITION_KEYWORDS, 'mine'] }` in place of
+ *   `...admonitionsConfig`. Its component and colours: shared/README.md > When one site needs
+ *   something different.
+ *   A style of this site only: src/css/site.scss and _site-dark.scss. Keep customCss as relative
+ *   strings: require.resolve would write this machine's path into the public bundle.
+ *   The options of Docusaurus itself: https://docusaurus.io/docs/api/docusaurus-config
+ * (`@type` JSDoc annotations below give editor autocompletion with `@ts-check`.)
+ */
 
 import { themes as prismThemes } from 'prism-react-renderer';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
-const katexMacros = require('./katex-macros');
-
-const admonitionsConfig = {
-  admonitions: {
-    keywords: [
-      'danger',
-      'warning',
-      'caution',
-      'info',
-      'tip',
-      'note',
-      'dwf',
-      'key',
-      'perf',
-      'extension',
-      'study',
-      'tool',
-      'iio',
-    ],
-  },
-}
-
-/** @typedef {import('katex').TrustContext} TrustContext */
-
-/** @param {TrustContext} context */
-const katexTrust = (context) => ['\\htmlId', '\\href'].includes(context.command);
-
-/** @param {Record<string, string>} macros */
-const cloneMacros = (macros) => JSON.parse(JSON.stringify(macros));
+// The lists every site shares, and the inline dropdown's MDX plugins (<DropDownIC>,
+// shared/components/DropDownIC/mdx.cjs: a title read as markdown and maths, and the paragraph that
+// holds it drawn as a <div>).
+const {
+  ADDITIONAL_LANGUAGES, MAGIC_COMMENTS, admonitionsConfig, katexOptions,
+  preprocessDropDownIc, rehypeDropDownIc, remarkDropDownIc,
+} = require('./shared/wiring/index.cjs');
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -45,6 +37,9 @@ const config = {
   url: 'https://danielwfarlow.com',
   baseUrl: '/',
   onBrokenLinks: 'warn',
+
+  // shared/static holds the fonts and icons every site serves; both folders land at the site's root.
+  staticDirectories: ['static', 'shared/static'],
 
   customFields: {
     forbiddenGiscusDocPaths: [
@@ -63,6 +58,10 @@ const config = {
 
   markdown: {
     mermaid: true,
+    // A <DropDownIC> opened mid-sentence around a body of blocks (code, paragraphs) is rewritten
+    // into a form MDX parses and joined back into one paragraph by rehypeDropDownIc: see
+    // shared/components/DropDownIC/mdx.cjs > preprocessDropDownIc. Everything else passes untouched.
+    preprocessor: preprocessDropDownIc,
     hooks: {
       onBrokenMarkdownLinks: 'warn',
       onBrokenMarkdownImages: 'throw'
@@ -76,27 +75,20 @@ const config = {
       ({
 
         docs: {
-          sidebarPath: require.resolve('./sidebars.js'),
+          // Paths in this config are relative strings that Docusaurus resolves itself. The site's
+          // config ships in the public main bundle, so require.resolve would publish this machine's
+          // absolute path there.
+          sidebarPath: './sidebars.js',
           editUrl: 'https://github.com/farlowdw/dwf/tree/master/',
-          remarkPlugins: [remarkMath],
-          rehypePlugins: [[rehypeKatex, {
-            throwOnError: true,
-            globalGroup: true,
-            trust: katexTrust,
-            macros: cloneMacros(katexMacros)
-          }]],
+          remarkPlugins: [remarkMath, remarkDropDownIc],
+          rehypePlugins: [rehypeDropDownIc, [rehypeKatex, katexOptions()]],
           ...admonitionsConfig,
         },
 
         blog: {
           editUrl: 'https://github.com/farlowdw/dwf/tree/master/',
-          remarkPlugins: [remarkMath],
-          rehypePlugins: [[rehypeKatex, {
-            throwOnError: true,
-            globalGroup: true,
-            trust: katexTrust,
-            macros: cloneMacros(katexMacros)
-          }]],
+          remarkPlugins: [remarkMath, remarkDropDownIc],
+          rehypePlugins: [rehypeDropDownIc, [rehypeKatex, katexOptions()]],
           blogTitle: `Blog`,
           blogDescription: `Blog entries from Daniel W. Farlow's personal website.`,
           postsPerPage: 'ALL',
@@ -109,18 +101,16 @@ const config = {
 
         theme: {
           customCss: [
-            require.resolve('./src/css/custom.scss'),
-            require.resolve('./src/css/buy-me-a-coffee.scss'),
+            './shared/css/custom.scss',
+            './src/css/site.scss',
+            './src/css/buy-me-a-coffee.scss',
           ]
         },
 
         pages: {
-          rehypePlugins: [[rehypeKatex, {
-            throwOnError: true,
-            globalGroup: true,
-            trust: katexTrust,
-            macros: cloneMacros(katexMacros)
-          }]],
+          // No remark-math here: a `$` on a page is a dollar sign.
+          remarkPlugins: [remarkDropDownIc],
+          rehypePlugins: [rehypeDropDownIc, [rehypeKatex, katexOptions()]],
           ...admonitionsConfig,
         },
 
@@ -160,7 +150,7 @@ const config = {
 
   plugins: [
     'docusaurus-plugin-sass',
-    require.resolve("docusaurus-plugin-image-zoom"),
+    'docusaurus-plugin-image-zoom',
     'my-loaders',
     '@docusaurus/theme-mermaid'
   ],
@@ -379,131 +369,8 @@ const config = {
       prism: {
         theme: prismThemes.github,
         darkTheme: prismThemes.dracula,
-        magicComments: [
-          {
-            className: 'theme-code-block-highlighted-line',
-            line: 'highlight-next-line',
-            block: { start: 'highlight-start', end: 'highlight-end' },
-          },
-          {
-            className: 'code-block-error-line',
-            line: 'highlight-error-next-line',
-            block: { start: 'highlight-error-start', end: 'highlight-error-end' },
-          },
-          {
-            className: 'code-block-error-line-numbers',
-            line: 'highlight-error-next-line-numbers',
-            block: { start: 'highlight-error-start-numbers', end: 'highlight-error-end-numbers' },
-          },
-          {
-            className: 'code-block-success-line',
-            line: 'highlight-success-next-line',
-            block: { start: 'highlight-success-start', end: 'highlight-success-end' },
-          },
-          {
-            className: 'code-block-success-line-numbers',
-            line: 'highlight-success-next-line-numbers',
-            block: { start: 'highlight-success-start-numbers', end: 'highlight-success-end-numbers' },
-          },
-          {
-            className: 'code-block-warning-line',
-            line: 'highlight-warning-next-line',
-            block: { start: 'highlight-warning-start', end: 'highlight-warning-end' },
-          },
-          {
-            className: 'code-block-warning-line-numbers',
-            line: 'highlight-warning-next-line-numbers',
-            block: { start: 'highlight-warning-start-numbers', end: 'highlight-warning-end-numbers' },
-          },
-          {
-            className: 'code-block-removed-line',
-            line: 'highlight-remove-next-line',
-            block: { start: 'highlight-remove-start', end: 'highlight-remove-end' },
-          },
-          {
-            className: 'code-block-added-line',
-            line: 'highlight-add-next-line',
-            block: { start: 'highlight-add-start', end: 'highlight-add-end' },
-          },
-        ],
-        additionalLanguages: [
-          "apacheconf",
-          "applescript",
-          "asciidoc",
-          "aspnet",
-          "awk",
-          "bash",
-          "basic",
-          "c",
-          "clojure",
-          "cpp",
-          "csharp",
-          "css",
-          "csv",
-          "docker",
-          "editorconfig",
-          "ejs",
-          "elixir",
-          "erlang",
-          "excel-formula",
-          "flow",
-          "fortran",
-          "git",
-          "go",
-          "go-module",
-          "graphql",
-          "handlebars",
-          "http",
-          "java",
-          "javadoclike",
-          "javascript",
-          "js-extras",
-          "jsdoc",
-          "json",
-          "jsonp",
-          "jsx",
-          "latex",
-          "less",
-          "lisp",
-          "log",
-          "lua",
-          "makefile",
-          "markdown",
-          "markup",
-          "markup-templating",
-          "mongodb",
-          "nginx",
-          "perl",
-          "php",
-          "php-extras",
-          "phpdoc",
-          "plsql",
-          "powerquery",
-          "powershell",
-          "pug",
-          "python",
-          "r",
-          "regex",
-          "ruby",
-          "rust",
-          "sas",
-          "sass",
-          "scheme",
-          "scss",
-          "shell-session",
-          "sql",
-          "systemd",
-          "toml",
-          "tsx",
-          "turtle",
-          "typescript",
-          "vim",
-          "visual-basic",
-          "wasm",
-          "wiki",
-          "wolfram",
-          "yaml"
-        ]
+        magicComments: MAGIC_COMMENTS,
+        additionalLanguages: ADDITIONAL_LANGUAGES
       },
     }),
 };

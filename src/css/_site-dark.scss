@@ -1,0 +1,28 @@
+// src/css/_site-dark.scss: the dark twin of site.scss, which @use's it. Every rule sits under
+// html[data-theme='dark'], as in shared/css/_custom-dark.scss. It holds this site's pseudocode boxes
+// in dark mode, and the one custom admonition value where this site differs from shared.
+//
+// HOW TO CHANGE IT  A dark colour of this site only: add it below, and its light twin, if any, in
+// site.scss. A dark colour every site should have goes in shared/css and is rolled out
+// (shared/README.md).
+html[data-theme='dark'] {
+	// Pseudocode: the dark colours of the :root block in site.scss.
+	div.ps-root {
+		background-color: var(--ifm-code-background);
+		color: #e3e3e3;
+	}
+
+	.ps-root .ps-algorithm {
+		border-top: 3px solid var(--ifm-navbar-background-color);
+		border-bottom: 2px solid var(--ifm-navbar-background-color);
+	}
+
+	.ps-root .ps-algorithm.with-caption > p.ps-line:first-child {
+		border-bottom: 2px solid var(--ifm-navbar-background-color);
+	}
+
+	// Custom admonitions: this site keeps its own border here, over shared's lighter maroon.
+	.alert--extension {
+		--ifm-alert-border-color: #791e37;
+	}
+}

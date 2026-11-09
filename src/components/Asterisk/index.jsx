@@ -1,34 +1,8 @@
-import React from 'react';
-import Tooltip from '@mui/material/Tooltip';
-import Link from '@mui/material/Link';
-import { useColorMode } from '@docusaurus/theme-common';
-
 /**
+ * src/components/Asterisk/index.jsx: a stub, so a note keeps importing @site/src/components/Asterisk.
+ * The component is shared/components/Asterisk.
  *
- * @param {string} cursor Symbol to be used when hovering over the asterisk
- * @param {string} symbol Symbol to be used as asterisk
+ * HOW TO CHANGE IT  Edit the component there and roll it out (shared/README.md). Data or a default
+ * of this site only goes here, as a wrapper like src/components/BibRef/index.jsx.
  */
-export default function Asterisk({
-	// symbol to be used as asterisk
-  cursor = 'help',
-	symbol = '[*]',
-	children = '',
-}) {
-  const { colorMode } = useColorMode();
-	return (
-		<Tooltip
-			title={children}
-			placement="top"
-			arrow
-			slotProps={{
-				tooltip: {
-					sx: {
-						color: '#E3E3E3',
-						backgroundColor: 'rgba(109, 109, 109, 1)',
-					},
-				},
-			}}>
-			<span style={{cursor, verticalAlign: 'super', marginLeft: '1px', fontSize: '0.75em'}}><Link sx={{color: colorMode == 'dark' ? '#48adf6' : '#0676c8'}}>{symbol}</Link></span>
-		</Tooltip>
-	);
-}
+export { default } from '@site/shared/components/Asterisk';

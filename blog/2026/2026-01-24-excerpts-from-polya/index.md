@@ -1,5 +1,7 @@
 ---
 title: Excerpts from Polya on Problem Solving
+# The address this post has had since January 2026: it stays when the folder's date changes.
+slug: /2026/01/19/2026/excerpts-from-polya
 draft: false
 description: Reflection-worthy excerpts from Georga Polya on problem solving.
 tags: 

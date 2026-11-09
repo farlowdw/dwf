@@ -19,7 +19,7 @@ import BibRef from '@site/src/components/BibRef';
 import TOCInline from '@theme/TOCInline';
 import Link from '@docusaurus/Link';
 import DocsLink from '@site/src/components/DocsLink';
-import ArrowRight from '@site/static/icons/arrow_right.svg';
+import ArrowRight from '@site/shared/static/icons/arrow_right.svg';
 import Pseudocode from '@site/src/components/Pseudocode';
 import sampleQuicksort from '!!raw-loader!@site/src/components/_PseudocodesSamples/_test-quicksort.tex';
 

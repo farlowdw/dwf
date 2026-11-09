@@ -3,6 +3,8 @@
 
 # Dependencies
 /node_modules
+# Any folder's, so shared/node_modules stays out on a machine without a global ignore.
+node_modules
 
 # Production
 /build

@@ -1,0 +1,135 @@
+// src/css/site.scss: this site's own styles, the second entry of customCss in docusaurus.config.js,
+// so a rule here loads after shared/css/custom.scss and wins over it at equal specificity. It holds
+// what only this site draws: the pseudocode boxes, the card gallery on /docs/intro, the video players
+// and .material-icon. Dark mode: _site-dark.scss, @use'd just below. The navbar's coffee icon has its
+// own file, buy-me-a-coffee.scss. Everything else comes from the shared stylesheets.
+//
+// HOW TO CHANGE IT  A rule of this site only: add it here, and its dark twin, if any, in
+// _site-dark.scss. A colour, font or size of this site only: the same variable as in
+// shared/css/custom.scss, set here. Anything every site should have goes in shared/css and is rolled
+// out (shared/README.md).
+@use 'site-dark';
+
+// Pseudocode: the pseudocode package draws these in the browser, so no built page holds them. Its own
+// stylesheet (docusaurus.config.js > stylesheets) paints these borders black. It loads before this
+// one, so these rules win. The :root nesting comes from the old stylesheet and nothing needs it today.
+:root {
+	div.ps-root {
+		background-color: var(--ifm-code-background);
+		color: #393a34;
+	}
+
+	.ps-root .ps-algorithm {
+		border-top: 3px solid var(--ifm-table-border-color);
+		border-bottom: 2px solid var(--ifm-table-border-color);
+	}
+
+	.ps-root .ps-algorithm.with-caption > p.ps-line:first-child {
+		border-bottom: 2px solid var(--ifm-table-border-color);
+	}
+}
+
+// Material icons: an icon in a sentence, <AcUnitIcon className='material-icon' />, on two docs pages.
+.material-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	vertical-align: middle;
+	padding-bottom: 3px;
+}
+
+// Card gallery on /docs/intro: the grid. .card below is one box of it, .sub-heading a row of its own.
+.gallery {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+	grid-gap: 20px;
+}
+
+// Card: one box of the gallery, with its arrow link at the bottom right.
+.card {
+	display: flex;
+	flex-direction: column;
+	border-radius: 8px;
+	padding: 20px;
+
+	h4 {
+		text-transform: uppercase;
+		font-size: 1.1rem;
+	}
+
+	a {
+		margin-left: auto;
+		margin-top: auto;
+		display: flex;
+		align-items: center;
+	}
+
+	.card-arrow {
+		transition: all 0.3s ease-in-out;
+		display: grid;
+		margin-left: 6px;
+
+		path {
+			stroke: var(--ifm-link-color);
+		}
+	}
+
+	&:hover {
+		.card-arrow {
+			transform: translateX(5px);
+		}
+	}
+}
+
+// Gallery heading: spans every column of the grid.
+.sub-heading {
+	grid-column: 1 / -1;
+	h3 {
+		margin-bottom: 10px;
+	}
+}
+
+// Video player: <ReactPlayer className='react-player' /> inside a div.player-wrapper, which keeps it
+// 16:9 (ref: https://stackoverflow.com/a/65640778/5209533).
+.player-wrapper {
+	position: relative;
+	padding-top: 56.25%; // 720 / 1280 = 0.5625
+}
+
+.react-player {
+	position: absolute;
+	top: 0;
+	left: 0;
+}
+
+// Video content container: src/components/VideoContent, an admonition beside its YouTube videos.
+.unleash-video-container {
+	display: grid;
+	--gap: 0.5em;
+	--border-radius: var(--ifm-alert-border-radius);
+	gap: var(--gap);
+	margin-bottom: 1em;
+}
+
+.unleash-video-container > .videos {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+	gap: var(--gap);
+	margin-bottom: 1em; // fixes issue of videos spilling beyond admonition
+}
+
+.unleash-video-container iframe {
+	aspect-ratio: 16/9;
+}
+
+@media screen and (min-width: 450px) {
+	.unleash-video-container {
+		grid-template-columns: 1fr min(250px, 25%);
+	}
+	.unleash-video-container > .videos {
+		display: flex;
+		flex-direction: column;
+		gap: var(--gap);
+		margin-bottom: 1em; // fixes issue of videos spilling beyond admonition
+	}
+}
