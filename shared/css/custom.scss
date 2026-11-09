@@ -1,0 +1,837 @@
+/**
+ * custom.scss — the shared global stylesheet: the first entry of a site's customCss
+ * (docusaurus.config.js > presets > theme.customCss), before the site's own src/css/site.scss.
+ * Any CSS included here will be global on every site. The classic template bundles Infima by default, a CSS
+ * framework designed to work well for content-centric websites; its variables are overridden in
+ * :root below. In order: the IBM Plex fonts (shared/static/fonts), the colour tokens (--color-gray-*)
+ * and Infima's variables, the custom admonitions (.alert--<keyword>), the docs sidebar, table of
+ * contents, breadcrumbs, "Edit this page" link, footer, navbar, and a few one-off classes used in
+ * notes (.bibHeader for <BibRef>, .centeredImageDiv, the coloured <details> classes, …).
+ * Dark mode: _custom-dark.scss; code blocks: _code-blocks.scss (both @use'd just below).
+ *
+ * HOW TO CHANGE IT
+ *   A colour, font or size of every site: its variable in :root (its dark value, if any, in
+ *   _custom-dark.scss). Of one site only: the same variable in that site's src/css/site.scss.
+ *   A new admonition: an `.alert--<keyword>` block (and its html[data-theme='dark'] one) here,
+ *   and the keyword in shared/wiring/index.cjs > ADMONITION_KEYWORDS. An icon drawn by a rule:
+ *   an SVG in shared/static/icons, referenced as '/icons/<name>.svg' (fonts:
+ *   shared/static/fonts, '/fonts/<file>.woff2').
+ */
+@use 'custom-dark';
+@use 'code-blocks';
+
+@font-face {
+	font-family: 'IBM Plex Sans';
+	src: url('/fonts/IBM-Plex-Sans-300.woff2') format('woff2');
+
+	/* Super Modern Browsers */
+	font-weight: 300;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'IBM Plex Sans';
+	src: url('/fonts/IBM-Plex-Sans-400.woff2') format('woff2');
+
+	/* Super Modern Browsers */
+	font-weight: 400;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'IBM Plex Sans';
+	src: url('/fonts/IBM-Plex-Sans-500.woff2') format('woff2');
+
+	/* Super Modern Browsers */
+	font-weight: 500;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'IBM Plex Sans';
+	src: url('/fonts/IBM-Plex-Sans-600.woff2') format('woff2');
+
+	/* Super Modern Browsers */
+	font-weight: 600;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'IBM Plex Mono';
+	src: url('/fonts/IBM-Plex-Mono-300.woff2') format('woff2');
+
+	/* Super Modern Browsers */
+	font-weight: 300;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'IBM Plex Mono';
+	src: url('/fonts/IBM-Plex-Mono-600.woff2') format('woff2');
+
+	/* Super Modern Browsers */
+	font-weight: 600;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'IBM Plex Mono';
+	src: url('/fonts/IBM-Plex-Mono-normal.woff2') format('woff2');
+
+	/* Super Modern Browsers */
+	font-weight: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'IBM Plex Mono Regular';
+	src: url('/fonts/IBM-Plex-Mono-Regular.woff2') format('woff2');
+
+	/* Super Modern Browsers */
+	font-weight: normal;
+	font-display: swap;
+}
+
+/* You can override the default Infima variables here. */
+
+:root {
+	--ifm-link-hover-decoration: none;
+
+	/* Custom Variables */
+	--color-gray-0: #ffffff;
+	--color-gray-4: #f3f5f7;
+	--color-gray-4-alpha-04: rgba(243, 245, 247, 0.4);
+	--color-gray-8: #e7ebef;
+	--color-gray-12: #dce2e8;
+	--color-gray-16: #cfd8df;
+	--color-gray-74: #344658;
+	--color-gray-78: #2c3b4b;
+	--color-gray-82: #23303d;
+	--color-gray-86: #1c262f;
+	--color-gray-86-alpha-04: rgba(28, 38, 47, 0.4);
+	--color-gray-90: #141c22;
+
+	/* Docusaurus Specific variables */
+	--ifm-color-primary: #0b89d0;
+	--ifm-color-primary-dark: #0079bd;
+	--ifm-color-primary-darker: #005c8f;
+	--ifm-color-primary-darkest: #00324e;
+	--ifm-color-primary-light: #1699e2;
+	--ifm-color-primary-lighter: #35b6ff;
+	--ifm-color-primary-lightest: #77ceff;
+	// --ifm-color-secondary: #986ee2;
+	// --ifm-color-secondary-dark: #8452dc;
+	// --ifm-color-secondary-darker: #7a44da;
+	// --ifm-color-secondary-darkest: #6027c4;
+	// --ifm-color-secondary-light: #ac8ae8;
+	// --ifm-color-secondary-lighter: #b698ea;
+	// --ifm-color-secondary-lightest: #d4c2f3;
+	// --ifm-color-secondary-contrast-background: #e8e1f7;
+	// --ifm-color-secondary-contrast-foreground: #1e0633;
+	--ifm-color-secondary: #e0e7ee;
+	--ifm-color-secondary-dark: #d5dee5;
+	--ifm-color-secondary-darker: #c3cdd6;
+	--ifm-color-secondary-darkest: #b1bcc7;
+	--ifm-color-secondary-light: #ebf1f6;
+	--ifm-color-secondary-lighter: #f2f7fb;
+	--ifm-color-secondary-lightest: #f8fcff;
+	--ifm-color-success: #46b486;
+	--ifm-color-success-dark: #37a476;
+	--ifm-color-success-darker: #02864f;
+	--ifm-color-success-darkest: #026d40;
+	--ifm-color-success-light: #54c596;
+	--ifm-color-success-lighter: #66d0a3;
+	--ifm-color-success-lightest: #77dbb1;
+	--ifm-color-info: #5898d2;
+	--ifm-color-info-dark: #478bca;
+	--ifm-color-info-darker: #2771b6;
+	--ifm-color-info-darkest: #0b5599;
+	--ifm-color-info-light: #6aa4db;
+	--ifm-color-info-lighter: #7bb4e8;
+	--ifm-color-info-lightest: #8cc3f5;
+	--ifm-color-warning: #dd9833;
+	--ifm-color-warning-dark: #c78017;
+	--ifm-color-warning-darker: #a66401;
+	--ifm-color-warning-darkest: #794900;
+	--ifm-color-warning-light: #f2b14f;
+	--ifm-color-warning-lighter: #f6ba61;
+	--ifm-color-warning-lightest: #f9c374;
+	--ifm-color-danger: #e66d6d;
+	--ifm-color-danger-dark: #d95c5c;
+	--ifm-color-danger-darker: #c64242;
+	--ifm-color-danger-darkest: #a02929;
+	--ifm-color-danger-light: #f47e7e;
+	--ifm-color-danger-lighter: #f88e8e;
+	--ifm-color-danger-lightest: #fc9f9f;
+
+	--ifm-color-gray-100: var(--color-gray-12);
+	/*--ifm-color-gray-200: #EBF1F6;
+    --ifm-color-gray-300: #D5DEE5;
+    --ifm-color-gray-400: #B1BCC7;
+    --ifm-color-gray-500: #909DA6;
+    --ifm-color-gray-600: #74818A;
+    --ifm-color-gray-700: #616D75;
+    --ifm-color-gray-800: #404955; */
+	--ifm-color-gray-900: var(--color-gray-90);
+
+	/* --ifm-navbar-background-color; */
+	/* --ifm-background-color */
+	--ifm-heading-color: var(--color-gray-74);
+	--ifm-footer-background-color: var(--color-gray-8);
+	--ifm-color-content-secondary: #616d75;
+	--ifm-link-color: #0676c8;
+	--ifm-menu-color: var(--ifm-color-content);
+	--ifm-menu-color-active: var(--ifm-color-content);
+	--ifm-toc-link-color: var(--ifm-color-content);
+
+	--ifm-table-stripe-background: var(--color-gray-4-alpha-04);
+	--ifm-pre-background: var(--color-gray-4);
+	--ifm-code-background: var(--color-gray-4);
+	--ifm-code-font-size: 0.875rem; /* 14px */
+
+	/* --ifm-pre-color: inherit; */
+	--ifm-global-shadow-lw: 0px 2px 6px rgba(0, 0, 0, 0.2);
+	--ifm-global-shadow-md: 0px 4px 14px rgba(0, 0, 0, 0.16);
+	--ifm-global-shadow-tl: 0px 10px 30px rgba(0, 0, 0, 0.16);
+
+	--ifm-global-radius: 0.25rem;
+
+	--doc-sidebar-width: 320px !important;
+	--ifm-navbar-height: 72px !important;
+
+	--ifm-font-family-base:
+		'IBM Plex Sans', system-ui, -apple-system, Segoe UI, Roboto, Ubuntu,
+		Cantarell, Noto Sans, sans-serif, BlinkMacSystemFont, 'Segoe UI', Helvetica,
+		Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+	--ifm-font-family-monospace:
+		'IBM Plex Mono Regular', 'IBM Plex Mono', SFMono-Regular, Menlo, Monaco,
+		Consolas, 'Liberation Mono', 'Courier New', monospace;
+	/* the code editor's font (<CodeEditor>'s editorFont.js): the site's choice; without
+	   it the editor takes --ifm-font-family-monospace, whose first family here is the single-weight
+	   'IBM Plex Mono Regular' (Monaco would measure that face: keep 'IBM Plex Mono' first) */
+	--ce-font-family: 'IBM Plex Mono', Menlo, Consolas, monospace;
+	--ifm-font-size-base: 16px;
+	--ifm-line-height-base: 1.5; /* 150% */
+	--ifm-font-weight-light: 300;
+	--ifm-font-weight-normal: 400;
+	--ifm-font-weight-semibold: 500;
+	--ifm-font-weight-bold: 600;
+
+	--ifm-heading-line-height: 1.25;
+	--ifm-h1-font-size: 2.5rem; /* 40px */
+	--ifm-h2-font-size: 2rem; /* 32px */
+	--ifm-h3-font-size: 1.5rem; /* 24px */
+	--ifm-h4-font-size: 1.25rem; /* 20px */
+	--ifm-h5-font-size: 1rem; /* 16px */
+	--ifm-h6-font-size: 0.875rem; /* 14px */
+
+	--ifm-heading-font-weight: var(--ifm-font-weight-semibold);
+
+	--ifm-footer-padding-vertical: 3rem;
+
+}
+
+/* The alerts' tints, for light mode and for a page with no theme set (MUI's print window, scripts off). Dark mode
+   keeps Infima's values, set under html[data-theme='dark']. Not plain :root: once Infima sits in a cascade layer,
+   as a later Docusaurus puts it, an unlayered rule wins over it, in dark mode too. :where() keeps :root's weight.
+   One site's value: this same selector in its site.scss. A :root value there loses to this one. */
+:root:where(:not([data-theme='dark'])) {
+	--ifm-color-primary-contrast-background: #e1f4ff;
+	--ifm-color-primary-contrast-foreground: #00324e;
+	--ifm-color-secondary-contrast-background: #ebf1f6;
+	--ifm-color-secondary-contrast-foreground: #1b2738;
+	--ifm-color-success-contrast-background: #ddfaed;
+	--ifm-color-success-contrast-foreground: #003921;
+	--ifm-color-info-contrast-background: #e3f2ff;
+	--ifm-color-info-contrast-foreground: #00315f;
+	--ifm-color-warning-contrast-background: #ffefd8;
+	--ifm-color-warning-contrast-foreground: #3e2500;
+	--ifm-color-danger-contrast-background: #ffe8e8;
+	--ifm-color-danger-contrast-foreground: #6a0808;
+}
+
+/* Custom admonitions. In dark mode every admonition is painted gray-86 (_custom-dark.scss >
+   .theme-admonition), so a dark block below sets only what differs from its light one. */
+// PINK version (looks a little too close to the danger admonition possibly)
+// .alert--dwf {
+//   --ifm-alert-background-color: rgba(252, 166, 182, 0.5); /* Light pink background */
+//   --ifm-alert-background-color-highlight: rgba(254, 210, 218, 0.15); /* Even lighter pink highlight */
+//   --ifm-alert-foreground-color: rgb(66, 69, 73); /* Dark gray text for readability */
+//   --ifm-alert-border-color: #fc6c85; /* New pink border color */
+// }
+
+// html[data-theme='dark'] .alert--dwf {
+//   --ifm-alert-background-color: rgba(252, 166, 182, 0.5); /* Same pink background with transparency */
+//   --ifm-alert-background-color-highlight: rgba(254, 210, 218, 0.15); /* Same highlight */
+//   --ifm-alert-foreground-color: rgb(255, 255, 255); /* White text for contrast on dark background */
+//   --ifm-alert-border-color: #fc6c85; /* New pink border color */
+// }
+
+.alert--dwf {
+	--ifm-alert-background-color: rgba(
+		211,
+		192,
+		242,
+		0.5
+	); /* Light purple background */
+	--ifm-alert-background-color-highlight: rgba(
+		225,
+		213,
+		247,
+		0.15
+	); /* Even lighter purple highlight */
+	--ifm-alert-foreground-color: rgb(
+		66,
+		69,
+		73
+	); /* Dark gray text for readability */
+	--ifm-alert-border-color: #986ee2; /* New purple border color */
+}
+
+html[data-theme='dark'] .alert--dwf {
+	--ifm-alert-foreground-color: rgb(255, 255, 255); /* white text on the dark background */
+}
+
+.alert--tool {
+	--ifm-alert-background-color: rgba(
+		250,
+		88,
+		48,
+		0.5
+	); /* King Crab Orange with transparency */
+	--ifm-alert-background-color-highlight: rgba(
+		255,
+		153,
+		120,
+		0.2
+	); /* Light crab peach highlight */
+	--ifm-alert-foreground-color: rgb(
+		66,
+		69,
+		73
+	); /* Dark gray text for readability */
+	--ifm-alert-border-color: #fa5830; /* King Crab Orange for the border */
+}
+
+html[data-theme='dark'] .alert--tool {
+	--ifm-alert-foreground-color: rgb(255, 255, 255); /* white text on the dark background */
+}
+
+.alert--key {
+	--ifm-alert-background-color: rgba(
+		241,
+		179,
+		24,
+		0.5
+	); /* Yellow/Gold with transparency */
+	--ifm-alert-background-color-highlight: rgba(
+		255,
+		221,
+		120,
+		0.2
+	); /* Lighter gold highlight */
+	--ifm-alert-foreground-color: rgb(
+		66,
+		69,
+		73
+	); /* Dark gray text for readability */
+	--ifm-alert-border-color: #f1b318; /* Yellow/Gold for the border */
+}
+
+html[data-theme='dark'] .alert--key {
+	--ifm-alert-foreground-color: rgb(255, 255, 255); /* white text on the dark background */
+}
+
+.alert--perf {
+	--ifm-alert-background-color: rgba(
+		119,
+		182,
+		234,
+		0.5
+	); /* Argentinian Blue with transparency */
+	--ifm-alert-background-color-highlight: rgba(
+		212,
+		234,
+		251,
+		0.2
+	); /* Lighter blue highlight */
+	--ifm-alert-foreground-color: rgb(
+		66,
+		69,
+		73
+	); /* Dark gray text for readability */
+	--ifm-alert-border-color: #77b6ea; /* Argentinian Blue for the border */
+}
+
+html[data-theme='dark'] .alert--perf {
+	--ifm-alert-foreground-color: rgb(255, 255, 255); /* white text on the dark background */
+}
+
+.alert--extension {
+	--ifm-alert-background-color: rgba(
+		121,
+		30,
+		55,
+		0.5
+	); /* Deep Maroon with transparency */
+	--ifm-alert-background-color-highlight: rgba(
+		186,
+		74,
+		104,
+		0.2
+	); /* Lighter maroon highlight */
+	--ifm-alert-foreground-color: rgb(
+		66,
+		69,
+		73
+	); /* Dark gray text for readability */
+	--ifm-alert-border-color: #791e37; /* Deep Maroon for the border */
+}
+
+html[data-theme='dark'] .alert--extension {
+	--ifm-alert-foreground-color: rgb(255, 255, 255); /* white text on the dark background */
+	--ifm-alert-border-color: #ba4a68; /* the lighter maroon: #791e37 is 1.5:1 on the dark background */
+}
+
+.alert--study {
+	--ifm-alert-background-color: rgba(
+		255,
+		235,
+		205,
+		0.5
+	); /* Blanched Almond with transparency */
+	--ifm-alert-background-color-highlight: rgba(
+		255,
+		245,
+		225,
+		0.2
+	); /* Lighter almond highlight */
+	--ifm-alert-foreground-color: rgb(
+		66,
+		69,
+		73
+	); /* Dark gray text for readability */
+	--ifm-alert-border-color: #ffebcd; /* Blanched Almond for the border */
+}
+
+html[data-theme='dark'] .alert--study {
+	--ifm-alert-background-color-highlight: rgba(
+		139,
+		69,
+		19,
+		0.3
+	); /* SaddleBrown highlight for contrast */
+	--ifm-alert-foreground-color: rgb(
+		255,
+		255,
+		255
+	); /* White text for better contrast in dark mode */
+	--ifm-alert-border-color: #d2b48c; /* Tan border for a subtle, non-intrusive appearance */
+}
+
+.alert--iio {
+	--ifm-alert-background-color: rgba(
+		5,
+		164,
+		172,
+		0.5
+	); /* Teal with transparency */
+	--ifm-alert-background-color-highlight: rgba(
+		153,
+		221,
+		225,
+		0.2
+	); /* Lighter teal highlight */
+	--ifm-alert-foreground-color: rgb(
+		66,
+		69,
+		73
+	); /* Dark gray text for readability */
+	--ifm-alert-border-color: #05a4ac; /* Teal for the border */
+}
+
+html[data-theme='dark'] .alert--iio {
+	--ifm-alert-background-color-highlight: rgba(
+		0,
+		102,
+		102,
+		0.4
+	); /* Darker teal for contrast */
+	--ifm-alert-foreground-color: rgb(
+		255,
+		255,
+		255
+	); /* White text for better contrast in dark mode */
+	--ifm-alert-border-color: #03b3bb; /* Slightly lighter teal for the border in dark mode */
+}
+
+/* Docusaurus Specific Styles */
+.header-github-link {
+	&::before {
+		content: '';
+		width: 24px;
+		height: 24px;
+		display: flex;
+		background: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12'/%3E%3C/svg%3E")
+			no-repeat;
+	}
+	&:hover {
+		opacity: 0.8;
+	}
+}
+
+.theme-doc-sidebar-container {
+	background-color: var(--color-gray-4);
+	button[class*='collapseSidebarButton_'],
+	div[class*='expandButton_'] {
+		svg {
+			display: none;
+		}
+		&::before {
+			content: '';
+			display: inline-block;
+			background: url('/icons/collapse-arrow-left.svg') no-repeat;
+			width: 1.25rem;
+			height: 1.25rem;
+			margin-top: 0.25rem;
+		}
+	}
+	div[class*='expandButton_'] {
+		&::before {
+			transform: rotate(180deg);
+		}
+	}
+}
+.theme-doc-sidebar-menu {
+	font-size: 14px;
+	font-weight: var(--ifm-font-weight-normal);
+	.menu__link {
+		&.menu__link--active {
+			font-weight: var(--ifm-font-weight-bold);
+		}
+	}
+}
+
+.theme-doc-sidebar-menu {
+	.theme-doc-sidebar-item-category {
+		.theme-doc-sidebar-item-link {
+			margin-top: 0;
+			.menu__link {
+				border-left: 0.1rem solid var(--color-gray-16);
+				border-radius: 0 0.25rem 0.25rem 0;
+			}
+			.menu__link--active {
+				border-left: 0.1rem solid var(--color-gray-82);
+			}
+		}
+	}
+	.theme-doc-sidebar-item-link-level-1.menu__list-item,
+	.theme-doc-sidebar-item-link-level-2.menu__list-item {
+		display: flex;
+		align-items: center;
+		&::before {
+			content: '';
+			display: inline-block;
+			background: url('/icons/dot-light.svg') no-repeat;
+			width: 1rem;
+			height: 1rem;
+			transform: scale(0.7);
+		}
+		.menu__link {
+			border-left: none;
+			justify-content: flex-start;
+		}
+	}
+
+	.menu__list-item {
+		// margin-top: 0;
+		.menu__caret {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			padding: 0 0;
+		}
+		.menu__caret::before,
+		.menu__link--sublist::after {
+			min-width: 1.5rem;
+			width: 1.5rem;
+			height: 1.5rem;
+			background: url('/icons/chevron-top.svg') no-repeat;
+			background-position: center center;
+			min-height: 29.5px;
+		}
+		.menu__link--sublist::after {
+			position: absolute;
+			left: 0;
+			top: 0;
+		}
+		// .menu__link--active {
+		//   background: var(--ifm-menu-color-background-active) !important;
+		// }
+		.menu__list-item-collapsible {
+			// a 1.5rem spacer before a category's label (it has no image)
+			&::before {
+				content: '';
+				width: 1.5rem;
+			}
+			.menu__link--active {
+				background: var(--ifm-menu-color-background-active) !important;
+			}
+		}
+
+		// &:not(.theme-doc-sidebar-item-category) {
+		//   .menu__link {
+		//     border-left: 1px solid var(--color-gray-74);
+		//     border-radius: 0;
+		//     &--active {
+		//       border-left-color: var(--color-gray-86);
+		//     }
+		//   }
+		// }
+	}
+}
+
+.table-of-contents {
+	margin-left: 0;
+	padding-left: var(--ifm-toc-padding-horizontal);
+	&.table-of-contents__left-border {
+		border-left: 1px solid var(--color-gray-16);
+	}
+	.table-of-contents__link {
+		display: block;
+		font-size: 0.75rem;
+	}
+	.table-of-contents__link--active {
+		font-weight: var(--ifm-font-weight-bold);
+		border-left: 0.125rem solid var(--color-gray-82);
+		color: var(--ifm-font-color-base);
+		margin-left: -1rem;
+		padding-left: 0.75rem;
+	}
+}
+
+.theme-doc-breadcrumbs {
+	.breadcrumbs {
+		.breadcrumbs__item {
+			--ifm-breadcrumb-padding-horizontal: 0;
+			&:first-child {
+				display: none;
+			}
+			.breadcrumbs__link {
+				background-color: transparent;
+			}
+		}
+	}
+}
+
+.markdown {
+	--ifm-h1-vertical-rhythm-top: 2.5;
+	h1:first-child {
+		--ifm-h1-font-size: 2.5rem; /* 40px */
+	}
+}
+
+// Inline code (code blocks: _code-blocks.scss). :where() keeps the selector as weak as a plain
+// `code`, so a component's own inline-code rule still wins over it.
+:where(:not(pre)) > code {
+	background-color: var(--color-gray-4);
+}
+
+.theme-edit-this-page {
+	display: flex;
+	align-items: center;
+	height: 30px;
+	color: var(--ifm-color-gray-900);
+	svg {
+		display: none;
+	}
+	&::before,
+	&::after {
+		content: '';
+		display: inline-block;
+		transform: translateX(0);
+		transition: transform var(--ifm-transition-fast) linear;
+	}
+	&::before {
+		margin-right: 0.5rem;
+		background: url('/icons/github-dark.svg') no-repeat;
+		width: 24px;
+		height: 24px;
+	}
+	&::after {
+		margin-left: 0.25rem;
+		background: url('/icons/arrow_right.svg') no-repeat;
+		width: 1rem;
+		height: 1rem;
+		margin-bottom: -0.25rem;
+	}
+	&:hover {
+		text-decoration: none;
+		color: var(--ifm-color-gray-1000);
+		&::after {
+			transform: translateX(0.25rem);
+		}
+	}
+}
+
+.footer__links {
+	font-size: 0.75rem;
+	text-transform: uppercase;
+	font-weight: 600;
+
+	.footer__title {
+		font-size: 0.75rem;
+	}
+
+	.footer__item {
+		padding: 0.625rem 0;
+	}
+}
+
+/* .footer__links .footer__link-item svg {
+    display: none;
+  } */
+
+/* Custom Styles */
+
+/* navbar */
+
+.navbar__item.navbar__link {
+	font-size: 14px;
+	line-height: 20px;
+}
+
+
+
+
+
+/* begin admonition styling */
+// .theme-admonition {
+//   background-color: var(--color-gray-86);
+// }
+
+div[class^='admonitionHeading_'] {
+	text-transform: capitalize;
+}
+/* end admonition styling */
+
+/* begin KaTeX styling */
+.mord.boxpad {
+	color: black;
+}
+/* end KaTeX styling */
+
+figcaption {
+	margin-bottom: 1rem;
+}
+
+.bibHeader::before {
+	display: block;
+	content: ' ';
+	padding-top: 35px;
+	// margin-top: -75px;
+	// height: 75px;
+	visibility: hidden;
+	pointer-events: none;
+}
+
+/* begin one-off custom use case styles */
+////////////////////////////////////////
+
+.centeredImageDiv {
+	margin-bottom: 1em;
+}
+
+.introCardDetails {
+	margin-bottom: 1em;
+}
+
+[class^='details_'].dwfDetails {
+	--docusaurus-details-decoration-color: #fc6c85 !important;
+	border: 1px solid #fc6c85 !important;
+}
+
+[class^='details_'].gptDetails {
+	--docusaurus-details-decoration-color: #a170f7 !important;
+	border: 1px solid #a170f7 !important;
+}
+
+[class^='details_'].admDetails {
+	--docusaurus-details-decoration-color: #ff0000 !important;
+	border: 1px solid #ff0000 !important;
+}
+
+[class^='details_'].iioDetails {
+	--docusaurus-details-decoration-color: #fad753 !important;
+	border: 1px solid #fad753 !important;
+}
+
+[class^='details_'].bctciDetails {
+	--docusaurus-details-decoration-color: #03b3bb !important;
+	border: 1px solid #03b3bb !important;
+}
+
+[class^='details_'].pragProgDetails {
+	--docusaurus-details-decoration-color: #4dacab !important;
+	border: 1px solid #4dacab !important;
+}
+
+[class^='details_'] {
+	background-color: var(--color-gray-0) !important;
+}
+
+// How much room a KaTeX display formula gets above and below its line, inside the box that cuts it off.
+// With too little, the tops of tall glyphs are cut and the formula can be nudged up and down.
+$katex-ink-room: 0.4em;
+
+// A formula wider than the page scrolls sideways in its own box, and a scrolling box cuts whatever stands past
+// its padding. KaTeX's glyphs stand up to about 0.08em past the formula's line (\smash and its kind aside), and
+// on these sites' pages its boxes up to about 0.37em (7 px) below it, so the padding holds them. A much larger
+// formula, as with \Huge, can stand past even that: a script could then scroll it a few px, though its glyphs
+// stay whole.
+// The negative margin takes the room back. display: flow-root keeps that margin inside .katex-display, so it never
+// meets another margin: otherwise two formulas in a row, a neighbour's negative margin or the border of a
+// blockquote around a formula would move by the room. The room still stands past .katex-display, so a box that
+// scrolls or hides its overflow needs that much padding where a formula meets its edge.
+// min-width: 0 lets a formula placed straight in a flex or grid box shrink to its column and scroll there, as it
+// did when .katex-display was the scroller. Without it a wide formula keeps its full width and pushes the page
+// sideways.
+// span outranks KaTeX's own .katex-display rule whichever stylesheet loads last. Never give .katex-display an
+// overflow: it would scroll again and cut the glyphs.
+span.katex-display {
+	display: flow-root;
+	min-width: 0;
+}
+
+// overflow-y hidden: with overflow-x auto alone it computes to auto, so a taller formula would get a small
+// vertical scrollbar instead of a cut.
+.katex-display > .katex {
+	margin-block: -$katex-ink-room;
+	overflow-x: auto;
+	overflow-y: hidden;
+	padding-block: $katex-ink-room;
+}
+
+// On paper Chrome keeps a box's bottom padding on the sheet of its last line, scrolling box or not. With the room,
+// a formula that ends within the room of a sheet's foot would send that line to the next sheet, leaving a gap, and
+// later sheets could move. So on paper .katex takes no room, and clips sideways only, as the scrolling box shows a
+// wide formula at rest. A sheet then breaks where it did before the room, and no box cuts the glyphs' tops.
+@media print {
+	.katex-display > .katex {
+		margin-block: 0;
+		overflow-x: clip;
+		overflow-y: visible;
+		padding-block: 0;
+	}
+}
+
+/* The <hr> between a navbar dropdown's groups: Infima draws it (an hr's background); this sets its margins */
+.navbar__dropdown-separator {
+	margin: 0.3rem 0.5rem;
+}
+
+////////////////////////////////////////
+/* end one-off custom use case styles */

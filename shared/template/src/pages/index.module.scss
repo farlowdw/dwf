@@ -1,0 +1,13 @@
+/* src/pages/index.module.scss: the home page's look (src/pages/index.js).
+   HOW TO CHANGE IT  The space around the words: .hero padding. The logo's size: .logo. */
+
+.hero {
+  padding: 4rem 0;
+  text-align: center;
+}
+
+.logo {
+  width: 96px;
+  height: 96px;
+  margin-bottom: 1rem;
+}

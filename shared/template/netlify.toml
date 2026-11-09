@@ -1,0 +1,14 @@
+# netlify.toml: how Netlify builds this site. [build] holds the build command and the folder it
+# publishes, [build.environment] the Node version and the shape of the build. shared:new writes this
+# file into a new site, and shared:join into a site that has none.
+# To change it: edit the block concerned, then run `netlify build` to check it. NODE_VERSION follows
+# .nvmrc. A site's repository may be public, so no secret goes here: anything private is a variable
+# on the Netlify project.
+
+[build]
+  command = "npm run build"
+  publish = "build"
+
+[build.environment]
+  NODE_VERSION = "22"
+  SKIP_HTML_MINIFICATION = "true"

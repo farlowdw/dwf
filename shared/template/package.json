@@ -1,0 +1,78 @@
+{
+  "name": "docusaurus-site",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A new site's package.json, and the version pin every site reads. Each @docusaurus/* entry is one exact version, and shared:status holds a site to it. React and MUI stay ranges, read against each site's lock. To move the pin, change every @docusaurus/* entry here, then run shared:bump on each site. shared:new gives a new site its own name and description.",
+  "scripts": {
+    "docusaurus": "docusaurus",
+    "start": "docusaurus start",
+    "build": "SKIP_HTML_MINIFICATION=true docusaurus build",
+    "swizzle": "docusaurus swizzle",
+    "deploy": "netlify deploy --prod --context production",
+    "clear": "docusaurus clear",
+    "serve": "docusaurus serve",
+    "write-translations": "docusaurus write-translations",
+    "write-heading-ids": "docusaurus write-heading-ids",
+    "test:site": "node shared/scripts/check-mui-api.mjs && node --test --test-reporter=spec \"__tests__/*.test.mjs\"",
+    "shared:status": "node shared/scripts/status.mjs",
+    "shared:pull": "node shared/scripts/pull.mjs",
+    "shared:push": "node shared/scripts/push.mjs",
+    "test:shared": "node shared/scripts/test.mjs",
+    "shared:new": "node shared/scripts/new-site.mjs",
+    "shared:join": "node shared/scripts/join.mjs",
+    "shared:leave": "node shared/scripts/leave.mjs",
+    "shared:bump": "node shared/scripts/bump.mjs",
+    "shared:all": "node shared/scripts/all.mjs",
+    "shared:compare": "node shared/scripts/compare.mjs",
+    "shared:verify": "npm run test:site && npm run test:shared"
+  },
+  "comparePages": [
+    "/",
+    "/docs/intro",
+    "/docs/examples",
+    "/docs/reference-list",
+    "/blog"
+  ],
+  "dependencies": {
+    "@docusaurus/plugin-content-blog": "3.10.2",
+    "@docusaurus/plugin-content-docs": "3.10.2",
+    "@docusaurus/plugin-content-pages": "3.10.2",
+    "@docusaurus/theme-classic": "3.10.2",
+    "@docusaurus/theme-mermaid": "3.10.2",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mdx-js/react": "^3.0.0",
+    "@mui/icons-material": "^9.4.0",
+    "@mui/material": "^9.4.0",
+    "clsx": "^2.0.0",
+    "docusaurus-plugin-sass": "^0.2.5",
+    "katex": "^0.16.27",
+    "prism-react-renderer": "^2.4.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0",
+    "sass": "^1.80.5"
+  },
+  "devDependencies": {
+    "@docusaurus/core": "3.10.2",
+    "@docusaurus/module-type-aliases": "3.10.2",
+    "@docusaurus/preset-classic": "3.10.2",
+    "@docusaurus/types": "3.10.2"
+  },
+  "browserslist": {
+    "production": [
+      ">0.5%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 3 chrome version",
+      "last 3 firefox version",
+      "last 5 safari version"
+    ]
+  },
+  "engines": {
+    "node": ">=20.0"
+  }
+}
