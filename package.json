@@ -7,7 +7,7 @@
     "start": "NODE_OPTIONS=--max-old-space-size=8192 docusaurus start",
     "build": "NODE_OPTIONS=--max-old-space-size=8192 docusaurus build",
     "swizzle": "docusaurus swizzle",
-    "deploy": "docusaurus deploy",
+    "deploy": "netlify deploy --prod --context production",
     "clear": "docusaurus clear",
     "serve": "docusaurus serve",
     "write-translations": "docusaurus write-translations",
@@ -79,6 +79,6 @@
     ]
   },
   "engines": {
-    "node": ">=18.0"
+    "node": ">=20.0"
   }
 }

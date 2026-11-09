@@ -1,41 +1,62 @@
-# Website
+# danielwfarlow.com
 
-This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
+The source of [danielwfarlow.com](https://danielwfarlow.com), a personal site with notes and a blog,
+built with [Docusaurus](https://docusaurus.io/) and hosted on Netlify.
 
-## Installation
+This file is the quick start. Keep its commands in step with `package.json`.
 
-```bash
-yarn
+## Setup
+
+Node 22 (`.nvmrc`) and npm.
+
+```sh
+npm ci
 ```
 
-## Local Development
+Install with `npm ci`, never `npm update`: `package-lock.json` holds the exact versions.
 
-```bash
-yarn start
+## Commands
+
+| Command | What |
+|---|---|
+| `npm start` | Dev server on http://localhost:3000. Most changes show without a restart. |
+| `env SKIP_HTML_MINIFICATION=true npm run build` | Production build into `build/`. Netlify builds with that variable set, so set it here too or the HTML differs. |
+| `npm run serve` | Serves `build/` on http://localhost:3000. |
+| `npm run clear` | Removes Docusaurus's caches and `build/`. |
+
+## Deploying
+
+Through Netlify, built on this machine. Link the folder to the Netlify project once with
+`netlify link`, then:
+
+```sh
+netlify build && netlify deploy --prod --no-build
 ```
 
-This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server.
+`npm run deploy` does the same in one step. Both read `netlify.toml`, and `netlify build` takes
+`SKIP_HTML_MINIFICATION` from the Netlify project. Never use `docusaurus deploy`: it publishes to
+GitHub Pages, not to Netlify.
 
-## Build
+## The public check
 
-```bash
-yarn build
-```
+This repository and the site are public, so every Netlify build ends with
+`scripts/check-public.mjs`. The command is in `netlify.toml`, under `[build]`. It stops the build
+when something private is about to go out:
 
-This command generates static content into the `build` directory and can be served using any static contents hosting service.
+- a licence-key-shaped string in `build/assets/js` or in a tracked file;
+- a Basic-Auth value in a tracked file;
+- a tracked `.env` file;
+- a word from the machine's word list in a tracked file or path.
 
-## Deployment
+The word list is `~/.config/docusaurus-shared/private-words.txt`, one plain file outside every
+repo. A hit prints a path and a number, never the value or the word.
 
-Using SSH:
+| Command | What |
+|---|---|
+| `node scripts/check-public.mjs` | Runs the check by hand, from the top folder, after a build. Exit 0 is clean, 1 found something, 2 could not run. |
+| `node --test scripts/check-public.test.mjs` | The check's tests. |
 
-```bash
-USE_SSH=true yarn deploy
-```
-
-Not using SSH:
-
-```bash
-GIT_USER=<Your GitHub username> yarn deploy
-```
-
-If you are using GitHub pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.
+A machine with no word list refuses with exit 2, and so does a build on Netlify's own servers. To
+let hosted builds pass, add `--allow-missing-word-file` to the command in `netlify.toml`. It changes
+nothing while the list exists, but a lost list then skips the word check with one printed line. The
+script's header says how to change a rule or allow a word in one path.

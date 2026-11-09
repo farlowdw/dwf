@@ -1,0 +1,43 @@
+# .gitignore: the files git leaves out of this public repository.
+# To change it: add a line under the heading it belongs to.
+
+# Dependencies
+/node_modules
+
+# Production
+/build
+
+# Generated files
+.docusaurus
+.cache-loader
+
+# Misc
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local Netlify folder
+.netlify
+
+# Netlify CLI artefact: `netlify dev` and `netlify build` write a Deno lockfile for the
+# edge-functions bootstrap at the root. The site has no edge functions, so it is noise.
+deno.lock
+
+# CUSTOM
+.vscode
+.dwf-ref
+.graphs
+INSTRUCTIONS.md
+z.py
+sandbox.py
+sandbox-networkx.py
+
+0-book-work
+0-course-work
