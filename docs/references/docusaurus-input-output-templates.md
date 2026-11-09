@@ -599,7 +599,7 @@ import ReactPlayer from 'react-player';
 
 ## Icons
 
-[Material-UI icons](https://mui.com/material-ui/material-icons/) can be used.
+[Material UI icons](https://mui.com/material-ui/material-icons/) can be used.
 
 **Input:**
 

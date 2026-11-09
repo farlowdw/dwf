@@ -11,7 +11,7 @@ import DocsLink from '@site/src/components/DocsLink';
 import ResponsiveAboutAvatar from '@site/src/components/ResponsiveAboutAvatar';
 
 <Grid>
-  <Grid item xs={12} md={8}>
+  <Grid>
     <ResponsiveAboutAvatar />
     <Box sx={{ mt: 4, display: 'flex', alignItems: 'center' }}>
       <Box sx={{ flexGrow: 1 }}>

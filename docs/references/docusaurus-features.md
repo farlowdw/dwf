@@ -864,9 +864,9 @@ Or multiple lines:
 >
 > Line 3
 
-## Material-UI
+## Material UI
 
-Content/components from other frameworks can be used such as the `DataGrid` component from Material-UI:
+Content/components from other frameworks can be used such as the `DataGrid` component from Material UI:
 
 <ExportCustomToolbar />
 

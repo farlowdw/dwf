@@ -81,7 +81,7 @@ export default function LC({
 					title={children}
 					placement="top"
 					arrow
-          componentsProps={{
+          slotProps={{
 						tooltip: {
 							sx: {
 								color: '#E3E3E3',

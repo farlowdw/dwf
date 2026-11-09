@@ -61,11 +61,12 @@ export default function SampleDataGrid() {
 				<DataGrid
 					rows={rows}
 					columns={columns}
-					pageSize={5}
-					rowsPerPageOptions={[5]}
+					initialState={{
+						pagination: {paginationModel: {pageSize: 5}},
+					}}
+					pageSizeOptions={[5]}
 					checkboxSelection
-					disableSelectionOnClick
-					experimentalFeatures={{ newEditingApi: true }}
+					disableRowSelectionOnClick
 				/>
 			</Box>
 		</ThemeProvider>

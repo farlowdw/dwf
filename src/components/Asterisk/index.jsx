@@ -20,7 +20,7 @@ export default function Asterisk({
 			title={children}
 			placement="top"
 			arrow
-			componentsProps={{
+			slotProps={{
 				tooltip: {
 					sx: {
 						color: '#E3E3E3',
@@ -28,7 +28,7 @@ export default function Asterisk({
 					},
 				},
 			}}>
-			<span style={{cursor, verticalAlign: 'super', marginLeft: '1px', fontSize: '0.75em'}}><Link color={colorMode == 'dark' ? '#48adf6' : '#0676c8'}>{symbol}</Link></span>
+			<span style={{cursor, verticalAlign: 'super', marginLeft: '1px', fontSize: '0.75em'}}><Link sx={{color: colorMode == 'dark' ? '#48adf6' : '#0676c8'}}>{symbol}</Link></span>
 		</Tooltip>
 	);
 }

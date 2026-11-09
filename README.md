@@ -23,6 +23,7 @@ Install with `npm ci`, never `npm update`: `package-lock.json` holds the exact v
 | `env SKIP_HTML_MINIFICATION=true npm run build` | Production build into `build/`. Netlify builds with that variable set, so set it here too or the HTML differs. |
 | `npm run serve` | Serves `build/` on http://localhost:3000. |
 | `npm run clear` | Removes Docusaurus's caches and `build/`. |
+| `node scripts/check-mui-api.mjs` | Fails on an old MUI API name, such as `componentsProps` or `GridToolbar`. The Netlify build command runs it first, so a hit stops the build in under a second. Exit 0 is clean, 1 found a name, 2 could not run. The script's header says how to change the list. |
 
 ## Deploying
 
