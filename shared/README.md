@@ -75,6 +75,7 @@ npm run test:shared
 `-m` runs the tests, commits `shared/` alone and publishes. Any site can start, so a change goes either
 way. A pull lands as two commits, a squash and its merge: build the site, look at it, then `git push`
 it.
+The site you pushed from holds the change and the rejoin's two commits, a squash and its merge: `git push` it too.
 
 ## Every site at once
 
