@@ -58,6 +58,7 @@
     "docusaurus-plugin-image-zoom": "^2.0.0",
     "docusaurus-plugin-sass": "^0.2.5",
     "hast-util-is-element": "^3.0.0",
+    "katex": "0.16.47",
     "monaco-editor": "0.55.1",
     "my-loaders": "file:plugins/my-loaders",
     "prism-react-renderer": "^2.4.0",
