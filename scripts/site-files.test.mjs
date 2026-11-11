@@ -23,6 +23,12 @@
  *   the five rules          the README's list under "The five rules" says word for word what the list
  *                           under that heading in shared/README.md says, so the copy here never drifts
  *                           from the rules every site keeps
+ *   the docs sidebar stub   src/theme/DocRoot/Layout/Sidebar/index.jsx stays a plain re-export of
+ *                           shared/theme/DocRoot/Layout/Sidebar, the wrapper that keeps the reader's
+ *                           place when the docs sidebar collapses or expands. Nothing else sees it go:
+ *                           shared:status reads a missing stub as "not in use", and without it the
+ *                           theme's plain column comes back and the build passes. The sidebar stays
+ *                           hideable in docusaurus.config.js, or the wrapper has nothing to hold
  *
  * How to change it: a new check is a test below with a line in the list above. A name Finder or an
  * editor leaves in a folder goes in IGNORED_NAMES. A new wording of the README's sentence must still
@@ -76,6 +82,14 @@ const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---/;
 const SLUG_LINE = /^slug:[ \t]*['"]?([^'"\r\n]+?)['"]?[ \t]*\r?$/m;
 const DRAFT_LINE = /^draft:[ \t]*true[ \t]*\r?$/m;
 
+const CONFIG = 'docusaurus.config.js';
+/** The docs sidebar's stub, the one statement it holds once its comments are out, and the file it names. */
+const SIDEBAR_STUB = 'src/theme/DocRoot/Layout/Sidebar/index.jsx';
+const SIDEBAR_STUB_CODE = "export { default } from '@site/shared/theme/DocRoot/Layout/Sidebar';";
+const SIDEBAR_WRAPPER = 'shared/theme/DocRoot/Layout/Sidebar/index.jsx';
+/** themeConfig.docs.sidebar with hideable on: the collapse button and the expand strip exist. */
+const HIDEABLE = /\bdocs:\s*\{\s*sidebar:\s*\{[^}]*\bhideable:\s*true\b/;
+
 /** Every file under a folder of the repo, as paths relative to that folder. */
 function filesUnder(folder) {
   const top = path.join(ROOT, folder);
@@ -89,6 +103,11 @@ function filesUnder(folder) {
 /** The shared static files that this site also keeps a file of its own for, at the same path. */
 function hiddenSharedFiles() {
   return filesUnder(SHARED_STATIC).filter((file) => fs.existsSync(path.join(ROOT, SITE_STATIC, file)));
+}
+
+/** A file's code: its comments taken out, the ends trimmed. */
+function codeOf(file) {
+  return fs.readFileSync(path.join(ROOT, file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').trim();
 }
 
 /** A heading line's level and text, or null for any other line. */
@@ -153,6 +172,16 @@ test('every blog address the site has published still belongs to a post', () => 
   const lost = PUBLISHED_POST_ADDRESSES.filter((address) => !addresses.has(address));
   const advice = 'give the post that moved `slug: <its old address without /blog>` in its front matter';
   assert.deepEqual(lost, [], `no post has ${lost.join(', ')} any more: ${advice}`);
+});
+
+test('the docs sidebar stub hands on the shared wrapper', () => {
+  assert.ok(fs.existsSync(path.join(ROOT, SIDEBAR_STUB)), `${SIDEBAR_STUB} is missing: the theme's plain column is back, and a collapse moves the page`);
+  assert.equal(codeOf(SIDEBAR_STUB), SIDEBAR_STUB_CODE, `${SIDEBAR_STUB} must stay a plain re-export of the shared wrapper`);
+  assert.ok(fs.existsSync(path.join(ROOT, SIDEBAR_WRAPPER)), `${SIDEBAR_WRAPPER} is missing: is shared/ mounted?`);
+});
+
+test('the docs sidebar can be collapsed, so the wrapper has a toggle to hold', () => {
+  assert.match(fs.readFileSync(path.join(ROOT, CONFIG), 'utf8'), HIDEABLE);
 });
 
 test("the README's five rules say what shared/README.md's say", () => {

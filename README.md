@@ -23,7 +23,7 @@ Install with `npm ci`, never `npm update`: `package-lock.json` holds the exact v
 | `env SKIP_HTML_MINIFICATION=true npm run build` | Production build into `build/`. Netlify builds with that variable set, so set it here too or the HTML differs. |
 | `npm run serve` | Serves `build/` on http://localhost:3000. |
 | `npm run clear` | Removes Docusaurus's caches and `build/`. |
-| `node --test scripts/site-files.test.mjs` | Checks on this site's own files that need no build: no file in `static/` hides one in `shared/static/`, the sentence below on `shared/README.md` sends readers to `--help`, every blog address the site has published still belongs to a post (a post whose date changes keeps its address with `slug:` in its front matter), and the five rules below say what `shared/README.md`'s say. The file's header lists them. |
+| `node --test scripts/site-files.test.mjs` | Checks on this site's own files that need no build: no file in `static/` hides one in `shared/static/`, the sentence below on `shared/README.md` sends readers to `--help`, every blog address the site has published still belongs to a post (a post whose date changes keeps its address with `slug:` in its front matter), the five rules below say what `shared/README.md`'s say, and the docs sidebar's stub is still there, with the sidebar hideable. The file's header lists them. |
 | `node shared/scripts/check-mui-api.mjs` | Fails on an old MUI API name, such as `componentsProps` or `GridToolbar`. The Netlify build command runs it first, so a hit stops the build in under a second. Exit 0 is clean, 1 found a name, 2 could not run. The list is `shared/scripts/lib/oldMuiApis.json`, and the script's header says how to change it. |
 
 ## The shared folder
@@ -34,8 +34,10 @@ the admonition types, the global stylesheets (`shared/css/`, with this site's ow
 `src/css/site.scss` and `_site-dark.scss`), and the fonts and icons. A
 file such as `src/components/LC/index.jsx` is a one-line stub, so a note keeps its import path.
 `src/components/BibRef/index.jsx` is a stub too, and it hands
-this site's `bibliography.js` to the shared citation. A doc that imports a shared icon names it under
-`@site/shared/static/`. `static/` keeps no file at a path `shared/static/` holds: it would win over the
+this site's `bibliography.js` to the shared citation. `src/theme/DocRoot/Layout/Sidebar/index.jsx` gives the
+docs sidebar the shared wrapper that keeps the reader's place when the sidebar collapses or expands: without
+the stub the theme's plain column comes back with no error, so `scripts/site-files.test.mjs` holds it. A
+doc that imports a shared icon names it under `@site/shared/static/`. `static/` keeps no file at a path `shared/static/` holds: it would win over the
 shared one, and `scripts/site-files.test.mjs` fails on it. `shared/README.md` says what each piece is and
 how to change it, and the main options of the commands below; `-- --help` lists the rest.
 
