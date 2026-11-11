@@ -29,6 +29,11 @@
  *                           shared:status reads a missing stub as "not in use", and without it the
  *                           theme's plain column comes back and the build passes. The sidebar stays
  *                           hideable in docusaurus.config.js, or the wrapper has nothing to hold
+ *   the deploy sentence     the README never calls `npm run deploy` the same as the two-step line
+ *                           under "Deploying". While that script calls `netlify deploy` without
+ *                           --no-build, the section says what differs: the script runs the netlify-cli
+ *                           installed in this folder and builds again, so what it uploads is not what
+ *                           `netlify build` made and the checks read
  *
  * How to change it: a new check is a test below with a line in the list above. A name Finder or an
  * editor leaves in a folder goes in IGNORED_NAMES. A new wording of the README's sentence must still
@@ -56,6 +61,13 @@ const POINTER_SENTENCE = /`shared\/README\.md` says [^.]*\./;
 /** `-- --help` after an npm command, or `--help` after a node one. */
 const HELP_POINTER = /--help` lists the rest/;
 const FULL_LIST_CLAIM = /\bevery option\b/;
+
+/** The README's section on deploying, the npm script it warns about, and the two wordings the test reads. */
+const DEPLOYING_HEADING = 'Deploying';
+const PACKAGE = 'package.json';
+const DEPLOY_SCRIPT_BUILDS = (line) => /\bnetlify deploy\b/.test(line) && !line.includes('--no-build');
+const SAME_AS_TWO_STEPS = /`npm run deploy` does the same/;
+const OWN_CLI_BUILDS_AGAIN = /`npm run deploy` is not the same: it runs the `netlify-cli` installed in this folder[^.]*\bbuilds again\b/;
 
 const SHARED_README = 'shared/README.md';
 /** The heading both READMEs give the rules, at any level from ## to ####. */
@@ -136,6 +148,19 @@ function numberedItemsUnder(file, heading) {
   return items.map((item) => item.replace(/\s+/g, ' '));
 }
 
+/** The text under the first heading called `heading` (## or deeper), up to the next heading, line breaks as spaces. */
+function textUnder(file, heading) {
+  const lines = fs.readFileSync(path.join(ROOT, file), 'utf8').split('\n');
+  const start = lines.findIndex((line) => {
+    const found = headingOf(line);
+    return found !== null && found.level >= 2 && found.text === heading;
+  });
+  if (start === -1) return '';
+  const rest = lines.slice(start + 1);
+  const end = rest.findIndex((line) => HEADING_LINE.test(line));
+  return rest.slice(0, end === -1 ? rest.length : end).join(' ').replace(/\s+/g, ' ').trim();
+}
+
 /** The address Docusaurus gives one post, or null for a draft, which has no page. */
 function postAddress(relativePath, text) {
   const frontMatter = text.match(FRONT_MATTER)?.[1] ?? '';
@@ -189,4 +214,15 @@ test("the README's five rules say what shared/README.md's say", () => {
   const here = numberedItemsUnder(README, FIVE_RULES_HEADING);
   assert.equal(shared.length, FIVE_RULES_COUNT, `${SHARED_README} has no list of ${FIVE_RULES_COUNT} under "${FIVE_RULES_HEADING}": is shared/ mounted?`);
   assert.deepEqual(here, shared, `${README}'s list under "${FIVE_RULES_HEADING}" differs from ${SHARED_README}'s: copy it from there`);
+});
+
+test("the README does not call `npm run deploy` the same as the two-step deploy", () => {
+  const readme = fs.readFileSync(path.join(ROOT, README), 'utf8').replace(/\s+/g, ' ');
+  assert.ok(!SAME_AS_TWO_STEPS.test(readme), `${README} says \`npm run deploy\` does the same as the two-step line: it does not`);
+  const section = textUnder(README, DEPLOYING_HEADING);
+  assert.ok(section, `${README} has no text under "${DEPLOYING_HEADING}"`);
+  const deployScript = JSON.parse(fs.readFileSync(path.join(ROOT, PACKAGE), 'utf8')).scripts?.deploy ?? '';
+  if (!DEPLOY_SCRIPT_BUILDS(deployScript)) return;
+  const advice = 'say that it runs the `netlify-cli` installed in this folder and builds again';
+  assert.match(section, OWN_CLI_BUILDS_AGAIN, `${README}, "${DEPLOYING_HEADING}", does not say how \`npm run deploy\` differs: ${advice}`);
 });

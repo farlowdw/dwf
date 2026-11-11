@@ -23,7 +23,7 @@ Install with `npm ci`, never `npm update`: `package-lock.json` holds the exact v
 | `env SKIP_HTML_MINIFICATION=true npm run build` | Production build into `build/`. Netlify builds with that variable set, so set it here too or the HTML differs. |
 | `npm run serve` | Serves `build/` on http://localhost:3000. |
 | `npm run clear` | Removes Docusaurus's caches and `build/`. |
-| `node --test scripts/site-files.test.mjs` | Checks on this site's own files that need no build: no file in `static/` hides one in `shared/static/`, the sentence below on `shared/README.md` sends readers to `--help`, every blog address the site has published still belongs to a post (a post whose date changes keeps its address with `slug:` in its front matter), the five rules below say what `shared/README.md`'s say, and the docs sidebar's stub is still there, with the sidebar hideable. The file's header lists them. |
+| `node --test scripts/site-files.test.mjs` | Checks on this site's own files that need no build: no file in `static/` hides one in `shared/static/`, the sentence below on `shared/README.md` sends readers to `--help`, every blog address the site has published still belongs to a post (a post whose date changes keeps its address with `slug:` in its front matter), the five rules below say what `shared/README.md`'s say, the docs sidebar's stub is still there, with the sidebar hideable, and Deploying says how `npm run deploy` differs from its two-step line. The file's header lists them. |
 | `node shared/scripts/check-mui-api.mjs` | Fails on an old MUI API name, such as `componentsProps` or `GridToolbar`. The Netlify build command runs it first, so a hit stops the build in under a second. Exit 0 is clean, 1 found a name, 2 could not run. The list is `shared/scripts/lib/oldMuiApis.json`, and the script's header says how to change it. |
 
 ## The shared folder
@@ -151,9 +151,11 @@ Through Netlify, built on this machine. Link the folder to the Netlify project o
 netlify build && netlify deploy --prod --no-build
 ```
 
-`npm run deploy` does the same in one step. Both read `netlify.toml`, and `netlify build` takes
-`SKIP_HTML_MINIFICATION` from the Netlify project. Never use `docusaurus deploy`: it publishes to
-GitHub Pages, not to Netlify.
+Deploy with the line above, after `nvm use` (Node 22). `npm run deploy` is not the same: it runs the
+`netlify-cli` installed in this folder, not the one on your PATH, and builds again, so the functions
+it uploads are not the ones `netlify build` made. The line above reads `netlify.toml`, and
+`netlify build` takes `SKIP_HTML_MINIFICATION` from the Netlify project. Never use
+`docusaurus deploy`: it publishes to GitHub Pages, not to Netlify.
 
 ## The public check
 
