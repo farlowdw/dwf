@@ -129,6 +129,19 @@ worker from this site, at `/vendor/pdfjs-dist-<version>/`, so no page loads it f
 webpack bundle PDF.js. `src/components/ResumeViewer` is the same viewer at 175% for `/resume`. The props are in the
 viewer's header.
 
+## Maths
+
+Maths in docs and posts is typeset at build time by `rehype-katex`, with the shared `katexOptions()`.
+`katexCssPlugin()` in `docusaurus.config.js` (`shared/plugins/katex-css`) links the installed
+`katex`'s stylesheet, served from this site at `/vendor/katex-<version>/` with its fonts: the version
+that typeset the page. `package.json` pins `katex` exactly.
+
+The `<Pseudocode>` blocks still load `pseudocode.js`, its stylesheet and the KaTeX script it typesets
+with from CDNs (`stylesheets` and `scripts` in the config). Pseudocode's stylesheet imports KaTeX
+0.16.7's stylesheet from cdnjs, and it comes after this site's, so where the two define the same rule
+or font, cdnjs's wins: the KaTeX fonts a page uses still come from cdnjs, each only when a formula
+needs it.
+
 ## Deploying
 
 Through Netlify, built on this machine. Link the folder to the Netlify project once with
