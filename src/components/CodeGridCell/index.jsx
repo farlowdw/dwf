@@ -1,19 +1,8 @@
-import React from 'react';
-import { useColorMode } from '@docusaurus/theme-common';
-
-export default function CodeGridCell({ children, styles={} }) {
-  const { colorMode } = useColorMode();
-  const codeBackgroundColor = colorMode == 'dark' ? 'var(--color-gray-86)' : 'var(--color-gray-4)';
-
-  let baseStyles = {
-    backgroundColor: codeBackgroundColor,
-    overflow: 'auto',
-    maxWidth: '100%',
-  };
-
-  return (
-    <div style={Object.assign({}, baseStyles, styles)}>
-      {children}
-    </div>
-  );
-}
+/**
+ * src/components/CodeGridCell/index.jsx: a stub, so a note keeps importing @site/src/components/CodeGridCell.
+ * The component is shared/components/CodeGridCell.
+ *
+ * HOW TO CHANGE IT  Edit the component there and roll it out (shared/README.md). Data or a default
+ * of this site only goes here, as a wrapper like src/components/BibRef/index.jsx.
+ */
+export { default } from '@site/shared/components/CodeGridCell';
