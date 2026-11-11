@@ -121,6 +121,14 @@ any other file there deploys as a public endpoint, and `npm run test:shared` fai
 `shared/components/CodeEditor/README.md` lists the props, and `shared/functions/code-runner/README.md`
 says what the functions need and how a public site runs them.
 
+## The PDF viewer
+
+`<PDFViewer file=... />` on a doc page is the shared viewer, `shared/components/PDFViewer`, reached through the
+one-line stub `src/components/PDFViewer/index.jsx`. `pdfjsWorkerPlugin()` in `docusaurus.config.js` serves PDF.js's
+worker from this site, at `/vendor/pdfjs-dist-<version>/`, so no page loads it from a CDN; `my-loaders` lets
+webpack bundle PDF.js. `src/components/ResumeViewer` is the same viewer at 175% for `/resume`. The props are in the
+viewer's header.
+
 ## Deploying
 
 Through Netlify, built on this machine. Link the folder to the Netlify project once with

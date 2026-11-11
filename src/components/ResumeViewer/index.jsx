@@ -1,39 +1,18 @@
+/**
+ * src/components/ResumeViewer/index.jsx: the resume on /resume (src/pages/resume.js), in the shared PDF
+ * viewer at 175% on a wide window. Below 1050 px the viewer fits the page to the width, as it does everywhere.
+ *
+ * HOW TO CHANGE IT  The zoom: RESUME_ZOOM. The file: the require below, which webpack turns into the address
+ * of a copy with a content hash. The viewer itself: shared/components/PDFViewer, through its stub.
+ */
 import React from 'react';
-import { useColorMode } from '@docusaurus/theme-common';
-import { Worker, Viewer, SpecialZoomLevel } from '@react-pdf-viewer/core';
-import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
-import { useMediaQuery } from '@mui/material';
+import PDFViewer from '@site/src/components/PDFViewer';
 
-import '@react-pdf-viewer/core/lib/styles/index.css';
-import '@react-pdf-viewer/default-layout/lib/styles/index.css';
+/** The resume's scale on a wide window: 1.75 is 175%. */
+const RESUME_ZOOM = 1.75;
 
-const ResumeViewer = () => {
-	const isSmallScreen = useMediaQuery('(max-width:1050px)');
-	const { colorMode } = useColorMode();
-	const defaultLayoutPluginInstance = defaultLayoutPlugin();
-	return (
-		<>
-			<style>
-				{`@media print {
-            .rpv-print__body-printing #__docusaurus {
-              display: none;
-            }
-        }`}
-			</style>
-			<div style={{ height: '100%', width: '100%' }}>
-				<Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.js">
-					<Viewer
-						fileUrl={
-							require('@site/static/docs/Daniel_Farlow_resume.pdf').default
-						}
-						plugins={[defaultLayoutPluginInstance]}
-						theme={colorMode == 'dark' ? 'dark' : 'light'}
-						defaultScale={isSmallScreen ? SpecialZoomLevel.PageWidth : 1.75}
-					/>
-				</Worker>
-			</div>
-		</>
-	);
-};
+const ResumeViewer = () => (
+	<PDFViewer file={require('@site/static/docs/Daniel_Farlow_resume.pdf').default} zoom={RESUME_ZOOM} />
+);
 
 export default ResumeViewer;

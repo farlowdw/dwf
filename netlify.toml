@@ -79,7 +79,8 @@
     must-revalidate'''
 
 # Monaco, the code editor's own files, is served from this site at /vendor/monaco-editor-<version>/
-# (shared/plugins/monaco-editor). The version is in the folder's name, so an upgrade is a new folder,
+# (shared/plugins/monaco-editor), and the PDF viewer's worker at /vendor/pdfjs-dist-<version>/
+# (shared/plugins/pdfjs-worker). The version is in each folder's name, so an upgrade is a new folder,
 # and each file can be cached for a year and never asked for again. Never put an unversioned file
 # under /vendor. To stop it: remove this block.
 [[headers]]

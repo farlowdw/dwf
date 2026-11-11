@@ -3,8 +3,8 @@
  * docusaurus.config.js: the whole site's configuration: title and URL, the docs, blog and pages,
  * the plugins, the navbar and the footer. The lists every site of the family repeats (admonition
  * keywords, KaTeX options, <DropDownIC>'s MDX plugins, Prism's languages and magic comments) and the
- * code editor's plugin entry come from shared/wiring/index.cjs, and shared/ also holds the global
- * stylesheets (customCss) and static files (staticDirectories).
+ * plugin entries of the code editor and the PDF viewer come from shared/wiring/index.cjs, and shared/
+ * also holds the global stylesheets (customCss) and static files (staticDirectories).
  *
  * HOW TO CHANGE IT
  *   A list from shared/wiring: edit it there and roll it out (shared/README.md). A keyword of this
@@ -16,6 +16,7 @@
  *   strings: require.resolve would write this machine's path into the public bundle.
  *   The code editor: codeRunnerPlugin() in `plugins`, with no options while the two functions keep
  *   their default URLs; its options are shared/plugins/monaco-editor/index.js > OPTIONS.
+ *   The PDF viewer: pdfjsWorkerPlugin() in `plugins` serves its worker; it takes no options.
  *   The options of Docusaurus itself: https://docusaurus.io/docs/api/docusaurus-config
  * (`@type` JSDoc annotations below give editor autocompletion with `@ts-check`.)
  */
@@ -25,10 +26,10 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 // The lists every site shares, the inline dropdown's MDX plugins (<DropDownIC>,
 // shared/components/DropDownIC/mdx.cjs: a title read as markdown and maths, and the paragraph that
-// holds it drawn as a <div>), and the code editor's plugin entry.
+// holds it drawn as a <div>), and the plugin entries of the code editor and the PDF viewer.
 const {
   ADDITIONAL_LANGUAGES, MAGIC_COMMENTS, admonitionsConfig, codeRunnerPlugin, katexOptions,
-  preprocessDropDownIc, rehypeDropDownIc, remarkDropDownIc,
+  pdfjsWorkerPlugin, preprocessDropDownIc, rehypeDropDownIc, remarkDropDownIc,
 } = require('./shared/wiring/index.cjs');
 
 /** @type {import('@docusaurus/types').Config} */
@@ -159,6 +160,9 @@ const config = {
     // /vendor/monaco-editor-<version>/vs instead of a CDN, and tells the editor where its two
     // functions are (netlify/functions, at their default URLs, so no options).
     codeRunnerPlugin(),
+    // The PDF viewer (<PDFViewer>, shared/components/PDFViewer): serves PDF.js's worker from this site at
+    // /vendor/pdfjs-dist-<version>/ instead of a CDN, at the exact version the viewer bundles.
+    pdfjsWorkerPlugin(),
   ],
 
   themeConfig:
