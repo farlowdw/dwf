@@ -23,6 +23,8 @@
  *   a word in the middle of a longer word, with a letter or digit on both sides. Minified code is
  *   full of long names, and a short entry lands inside some of them by chance. An entry that starts
  *   or ends with anything else, a slash say, stands alone wherever it sits.
+ * A built file is read in the same views as a tracked one (lib/wordForms.mjs): as written, without its markup, so
+ * a word split by <em> or by React's <!-- --> between two text nodes is whole, and joined over its line breaks.
  *
  * Run it from the repo's top folder, after the build:
  *   node shared/scripts/check-public.mjs
@@ -349,9 +351,12 @@ function bundleWordEntries(wordEntries) {
 }
 
 function noteBundleWords(relativePath, text, wordEntries, findings) {
-  const lowered = text.toLowerCase();
+  const views = textViews(text, relativePath);
+  const whole = views.lines.map((lines) => lines.join('\n'));
+  const joined = views.joined.map((view) => view.joined);
   for (const entry of wordEntries) {
-    const count = countEntryHits(lowered, entry);
+    const texts = entry.multiPart ? [...whole, ...joined] : whole;
+    const count = Math.max(...texts.map((one) => countEntryHits(one, entry)));
     if (count > 0) {
       const check = `word list line ${entry.lineNumber}`;
       findings.push({ check, where: relativePath, detail: `${count} found`, fix: BUILT_WORD_FIX });

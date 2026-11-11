@@ -1,0 +1,29 @@
+{
+ "request": {
+  "language": "python",
+  "version": "3.12.0",
+  "files": [
+   {
+    "name": "main.py",
+    "content": "x = \"\ud83c\udf89\" + 1  # a party\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "Traceback (most recent call last):\n  File \"/box/submission/main.py\", line 1, in <module>\n    x = \"\ud83c\udf89\" + 1  # a party\n        ~~~~^~~\nTypeError: can only concatenate str (not \"int\") to str\n",
+   "code": 1,
+   "output": "Traceback (most recent call last):\n  File \"/box/submission/main.py\", line 1, in <module>\n    x = \"\ud83c\udf89\" + 1  # a party\n        ~~~~^~~\nTypeError: can only concatenate str (not \"int\") to str\n",
+   "memory": 3512000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 22,
+   "wall_time": 25
+  },
+  "language": "python",
+  "version": "3.12.0"
+ }
+}

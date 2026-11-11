@@ -1,0 +1,29 @@
+{
+ "request": {
+  "language": "python",
+  "version": "3.9.4",
+  "files": [
+   {
+    "name": "main.py",
+    "content": "print(\"\u65e5\u672c\" 1)\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "  File \"/box/submission/main.py\", line 1\n    print(\"\u65e5\u672c\" 1)\n                   ^\nSyntaxError: invalid syntax\n",
+   "code": 1,
+   "output": "  File \"/box/submission/main.py\", line 1\n    print(\"\u65e5\u672c\" 1)\n                   ^\nSyntaxError: invalid syntax\n",
+   "memory": 3260000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 25,
+   "wall_time": 34
+  },
+  "language": "python",
+  "version": "3.9.4"
+ }
+}

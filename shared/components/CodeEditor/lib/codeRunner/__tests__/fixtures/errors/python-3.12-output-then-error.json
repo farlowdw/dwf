@@ -1,0 +1,29 @@
+{
+ "request": {
+  "language": "python",
+  "version": "3.12.0",
+  "files": [
+   {
+    "name": "main.py",
+    "content": "print(\"one\")\nprint(\"two\")\nraise ValueError(\"bad value\")\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "one\ntwo\n",
+   "stderr": "Traceback (most recent call last):\n  File \"/box/submission/main.py\", line 3, in <module>\n    raise ValueError(\"bad value\")\nValueError: bad value\n",
+   "code": 1,
+   "output": "one\ntwo\nTraceback (most recent call last):\n  File \"/box/submission/main.py\", line 3, in <module>\n    raise ValueError(\"bad value\")\nValueError: bad value\n",
+   "memory": 3520000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 29,
+   "wall_time": 33
+  },
+  "language": "python",
+  "version": "3.12.0"
+ }
+}

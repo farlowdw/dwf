@@ -1,0 +1,38 @@
+{
+ "input": {
+  "language": "bash",
+  "readerCode": "add() {\n  echo $(( $1 + $2 ))\n}\n\ngreet() {\n  printf '%s\\n' \"hello, $1\"\n}\n\nred() {\n  printf '\\e[31m%s\\e[0m' \"$1\"\n}\n\necho \"solution loaded\"\n",
+  "harness": "check \"add 2 3\" \"$(add 2 3)\" 5\ncheck \"add 2 2\" \"$(add 2 2)\" 5\ncheck \"greet\" \"$(greet \"world\")\" \"hello, world\"\ncheck 'quotes and \\\\' 'say \"hi\" \\\\ tab' 'say \"hi\" \\\\ tab'\ncheck \"tab\" \"$(printf 'a\\tb')\" \"a b\"\ncheck \"colour\" \"$(red hi)\" \"hi\"\ncheck \"amp & tilde\" \"a&b~\" \"a&b~\"\n"
+ },
+ "request": {
+  "language": "bash",
+  "version": "5.2.0",
+  "files": [
+   {
+    "name": "main.sh",
+    "content": "source ./solution.sh\n\n# --- check helper (src/lib/codeRunner/checkHelpers.js) ---\ndwf_escape() {\n\tlocal text=$1 format=$2 code hex char escaped\n\ttext=${text//'\\'/'\\\\'}\n\ttext=${text//'\"'/'\\\"'}\n\ttext=${text//$'\\n'/'\\n'}\n\ttext=${text//$'\\r'/'\\r'}\n\ttext=${text//$'\\t'/'\\t'}\n\tif [[ $text == *[[:cntrl:]]* ]]; then\n\t\tfor (( code = 1; code < 32; code++ )); do\n\t\t\tprintf -v hex '%02x' \"$code\"\n\t\t\tprintf -v char \"\\\\x$hex\"\n\t\t\tprintf -v escaped \"$format\" \"$code\"\n\t\t\ttext=${text//\"$char\"/\"$escaped\"}\n\t\tdone\n\tfi\n\tDWF_ESCAPED=$text\n}\n\ndwf_json() {\n\tdwf_escape \"$1\" '\\\\u%04x'\n\tprintf '\"%s\"' \"$DWF_ESCAPED\"\n}\n\ndwf_show() {\n\tdwf_escape \"$1\" '\\\\x%02x'\n\tlocal text=\"\\\"$DWF_ESCAPED\\\"\"\n\tif (( ${#text} > 300 )); then\n\t\ttext=\"${text:0:300}…\"\n\tfi\n\tprintf '%s' \"$text\"\n}\n\ncheck() {\n\tlocal name=$1 got=$2 expected=$3 pass=false\n\tif [[ \"$got\" == \"$expected\" ]]; then\n\t\tpass=true\n\tfi\n\tprintf '@@check@@ {\"name\":%s,\"pass\":%s,\"got\":%s,\"expected\":%s}\\n' \\\n\t\t\"$(dwf_json \"$name\")\" \"$pass\" \"$(dwf_json \"$(dwf_show \"$got\")\")\" \"$(dwf_json \"$(dwf_show \"$expected\")\")\"\n\treturn 0\n}\n\ndwf_check_done() {\n\tprintf '%s\\n' '@@check@@ {\"done\":true}'\n}\n# --- end of the check helper ---\ncheck \"add 2 3\" \"$(add 2 3)\" 5\ncheck \"add 2 2\" \"$(add 2 2)\" 5\ncheck \"greet\" \"$(greet \"world\")\" \"hello, world\"\ncheck 'quotes and \\\\' 'say \"hi\" \\\\ tab' 'say \"hi\" \\\\ tab'\ncheck \"tab\" \"$(printf 'a\\tb')\" \"a b\"\ncheck \"colour\" \"$(red hi)\" \"hi\"\ncheck \"amp & tilde\" \"a&b~\" \"a&b~\"\ndwf_check_done\n"
+   },
+   {
+    "name": "solution.sh",
+    "content": "add() {\n  echo $(( $1 + $2 ))\n}\n\ngreet() {\n  printf '%s\\n' \"hello, $1\"\n}\n\nred() {\n  printf '\\e[31m%s\\e[0m' \"$1\"\n}\n\necho \"solution loaded\"\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "solution loaded\n@@check@@ {\"name\":\"add 2 3\",\"pass\":true,\"got\":\"\\\"5\\\"\",\"expected\":\"\\\"5\\\"\"}\n@@check@@ {\"name\":\"add 2 2\",\"pass\":false,\"got\":\"\\\"4\\\"\",\"expected\":\"\\\"5\\\"\"}\n@@check@@ {\"name\":\"greet\",\"pass\":true,\"got\":\"\\\"hello, world\\\"\",\"expected\":\"\\\"hello, world\\\"\"}\n@@check@@ {\"name\":\"quotes and \\\\\\\\\",\"pass\":true,\"got\":\"\\\"say \\\\\\\"hi\\\\\\\" \\\\\\\\\\\\\\\\ tab\\\"\",\"expected\":\"\\\"say \\\\\\\"hi\\\\\\\" \\\\\\\\\\\\\\\\ tab\\\"\"}\n@@check@@ {\"name\":\"tab\",\"pass\":false,\"got\":\"\\\"a\\\\tb\\\"\",\"expected\":\"\\\"a b\\\"\"}\n@@check@@ {\"name\":\"colour\",\"pass\":false,\"got\":\"\\\"\\\\x1b[31mhi\\\\x1b[0m\\\"\",\"expected\":\"\\\"hi\\\"\"}\n@@check@@ {\"name\":\"amp & tilde\",\"pass\":true,\"got\":\"\\\"a&b~\\\"\",\"expected\":\"\\\"a&b~\\\"\"}\n@@check@@ {\"done\":true}\n",
+   "stderr": "",
+   "code": 0,
+   "output": "solution loaded\n@@check@@ {\"name\":\"add 2 3\",\"pass\":true,\"got\":\"\\\"5\\\"\",\"expected\":\"\\\"5\\\"\"}\n@@check@@ {\"name\":\"add 2 2\",\"pass\":false,\"got\":\"\\\"4\\\"\",\"expected\":\"\\\"5\\\"\"}\n@@check@@ {\"name\":\"greet\",\"pass\":true,\"got\":\"\\\"hello, world\\\"\",\"expected\":\"\\\"hello, world\\\"\"}\n@@check@@ {\"name\":\"quotes and \\\\\\\\\",\"pass\":true,\"got\":\"\\\"say \\\\\\\"hi\\\\\\\" \\\\\\\\\\\\\\\\ tab\\\"\",\"expected\":\"\\\"say \\\\\\\"hi\\\\\\\" \\\\\\\\\\\\\\\\ tab\\\"\"}\n@@check@@ {\"name\":\"tab\",\"pass\":false,\"got\":\"\\\"a\\\\tb\\\"\",\"expected\":\"\\\"a b\\\"\"}\n@@check@@ {\"name\":\"colour\",\"pass\":false,\"got\":\"\\\"\\\\x1b[31mhi\\\\x1b[0m\\\"\",\"expected\":\"\\\"hi\\\"\"}\n@@check@@ {\"name\":\"amp & tilde\",\"pass\":true,\"got\":\"\\\"a&b~\\\"\",\"expected\":\"\\\"a&b~\\\"\"}\n@@check@@ {\"done\":true}\n",
+   "memory": 1644000,
+   "message": null,
+   "status": null,
+   "cpu_time": 49,
+   "wall_time": 55
+  },
+  "language": "bash",
+  "version": "5.2.0"
+ }
+}

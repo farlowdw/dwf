@@ -1,0 +1,29 @@
+{
+ "request": {
+  "language": "bash",
+  "version": "5.2.0",
+  "files": [
+   {
+    "name": "main.sh",
+    "content": "cat <<EOF\nhello\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "hello\n",
+   "stderr": "main.sh: line 2: warning: here-document at line 1 delimited by end-of-file (wanted `EOF')\n",
+   "code": 0,
+   "output": "main.sh: line 2: warning: here-document at line 1 delimited by end-of-file (wanted `EOF')\nhello\n",
+   "memory": 1136000,
+   "message": null,
+   "status": null,
+   "cpu_time": 7,
+   "wall_time": 11
+  },
+  "language": "bash",
+  "version": "5.2.0"
+ }
+}

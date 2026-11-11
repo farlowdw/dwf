@@ -1,0 +1,791 @@
+/* styles.module.css — the look of <CodeEditor>: one bordered frame holding the header bar
+   (.toolbar), the notices (.banner), the editor box (.editorBox, with its loading .cover), the
+   resize strip under it (.resizeHandle, ResizeHandle.jsx), the stdin field (.stdin) and the
+   output area (.output). The server-rendered placeholder
+   (index.jsx) uses the same classes, so the real editor replaces it without a jump; its own
+   pieces (.iconSpacer, .runSpacer, .stdinPlaceholder, .retryButton) are sized from the --ce-*
+   properties below, which mirror MUI's sizes (a small IconButton, a small Button, a small
+   multi-line TextField). Up to 620 px wide (phones, a phone on its side, a narrow split
+   view) the header ALWAYS takes two lines (the actions get a line of their own),
+   and the title's line is at least a button tall, so the placeholder's header and the real one,
+   with or without its pickers, are the same height. (The pickers arrive with the runtimes list,
+   after the placeholder: between 481 and about 610 px an ordinary editor's header used to fit
+   on one line without them and wrap with them, a 30 px jump; found 2026-10-25, once the Theme
+   button had made the actions 32 px wider.) Below 341 px the actions drop their gaps, so the
+   six icons and Run still share one line. Above 620 px, an exercise's or a TypeScript editor's
+   header puts its pickers or version text in a slot of one fixed width (.runtimeSlot,
+   --ce-runtime-slot), which the placeholder draws empty: both headers then wrap at the same
+   widths whatever text arrives later. An ordinary editor with a long `title` can still wrap
+   once its pickers arrive there.
+
+   COLOURS  The editor's theme's (2026-10-25: the reader picks one in the header's Theme menu;
+   every theme is in editorThemes.js), and the frame around Monaco takes the same colours, so it
+   reads as one panel: --ce-editor-bg is the theme's editor background (the editor box and its
+   loading cover, so nothing flashes while Monaco loads), --ce-header-bg its tab-bar shade,
+   --ce-border its widget borders, --ce-control-bg its dropdowns and inputs, --ce-output-block-bg
+   the output's code block. The real editor sets them all inline on the frame
+   (editorThemes.js > frameAttributesOf). The values below are the DEFAULT theme's, VS Code's
+   own 'vs' / 'vs-dark' (chosen on 2026-10-24): what the placeholder draws, and what
+   the editor sets for that theme too (the same values: __tests__/editorThemes.test.js compares
+   them). Light values on .frame, dark ones under the dark rule (THE EDITOR'S MODE).
+   THE EDITOR'S MODE  The frame of the real editor carries data-ce-mode="light" | "dark", its
+   THEME's mode, which may differ from the site's (Dracula is dark on the light site too), and
+   every rule of the editor's CSS modules that differs by mode switches on it
+   ([data-ce-mode='dark'] …), never on the site's html[data-theme]. The frame also takes the
+   mode's color-scheme, so the browser's own scrollbars and form controls inside it (the output
+   block, the exercise diff, the stdin field) are drawn for a dark panel inside a dark theme on
+   the light site. The placeholder (index.jsx) has no mode of its own: it draws the default
+   theme in the site's mode (html[data-theme='dark'] .frame:not([data-ce-mode])) and keeps the
+   page's color-scheme.
+   THE CODE-LINE TOKENS  The marked lines' bands and bars, the error rows and the exercise diff
+   take the colours of the site's code blocks (shared/css: --code-line-<kind>-bg / -bar / -ink,
+   light in :root and dark under html[data-theme='dark'], shared/css/_code-blocks.scss) — read
+   here as the editor's own --ce-line-* on the frame, each with a BUILT-IN FALLBACK equal to
+   shared/css's value (`--ce-line-error-bg: var(--code-line-error-bg, rgba(255, 0, 0, 0.125))`),
+   so on a stock Docusaurus site without those tokens the editor looks the same. Only the
+   --ce-line-* names are read by the editor's stylesheets (guided.module.css,
+   ErrorList.module.css, ExercisePanel.module.css) and by editorThemes.js. The light set is on
+   .frame, the dark set on the dark rule (THE EDITOR'S MODE).
+   shared/__tests__/codeEditorTokens.test.mjs keeps each fallback, and each literal of a frame
+   in the other mode, equal to shared/css/_code-blocks.scss.
+   A THEME IN THE OTHER MODE  The site's own mode-dependent colours used inside the frame are set
+   again on it when its theme's mode is not the site's (a dark theme on the light site): the
+   site's code-line token NAMES, declared again on the frame as the other mode's literals (the
+   two rules under THE CODE-LINE TOKENS IN THE OTHER MODE below — a custom property is read on
+   the element that declares it, so the var() reads above then resolve to the theme's mode; on
+   a stock site the fallbacks already do), and the rules under A THEME IN THE OTHER MODE below
+   (the text of the small buttons, a code block's rule lines, inline code's background). With
+   VS Code's themes the modes always agree, so none of this applies.
+   --ce-text (the frame's own text) and --ce-output-block-fg (the output block's text) are
+   unset for VS Code's themes: the frame inherits the page's text, the output block keeps the
+   site's Prism colour, as before. That is safe only because those themes always take the
+   site's mode (a page cannot pin a theme: props.js > PAGE_THEME_WARNING), and a test checks
+   that every theme a reader can reach in the other mode sets both.
+   INLINE CODE IN THE FRAME'S PROSE (2026-10-28)  A hint's and a step note's inline `code`
+   (codeSpans.js) keeps the site's inline-code look but sits on the text's BASELINE (the rule
+   after A THEME IN THE OTHER MODE below, for the whole frame). Infima aligns inline code by
+   its middle (`code { vertical-align: middle }`): in the frame's 14 px prose, whose code is
+   the same size as its words, that dropped the code a pixel under the words and its box
+   below the line (found in a hint, 2026-10-28). The site's paragraphs keep Infima's rule.
+   THE TEACHING LAYER'S BANDS  A theme may give its own (editorThemes.js > LAYER_PROPERTIES:
+   --ce-band-*, --ce-type-chip-bg, set inline on the frame): the stylesheets of the bands, the
+   exercise diff and the type chip read them before their own values. Nothing here sets them.
+   TEXT CONTRAST  Coloured text keeps 4.5:1 on the editor background (WCAG AA for its 14 px
+   size): the light failure red is the site's error ink (--code-line-error-ink, #d1242f, 5.2:1
+   on #fffffe; the same red as the error rows), not --ifm-color-danger-dark (#d95c5c, 3.7:1).
+
+   SIZES  The editor box's height is set inline (sizing.js: 50vh, the page's `height`, or with
+   height="fit" the code's height between a minimum and `maxHeight`); the reader's drags on the
+   resize strip set it too (resize.js). The stdin placeholder's rows are set inline
+   (--ce-stdin-rows, sizing.js > stdinRows). Long program output scrolls inside its block
+   (.outputBlock pre: max-height). MUI's own parts (the Select's padding) are adjusted with `sx`
+   in Toolbar.jsx, where MUI expects it.
+
+   MUI'S STYLES LOAD AFTER THESE  In the production build MUI's emotion <style> tags come after
+   the site's stylesheets, so a ONE-class rule here on an MUI component (a Button, an icon, a
+   LinearProgress) loses to MUI's own class of the same weight: Run's width, the progress bar's
+   position and the status icon's size were silently dropped (found 2026-10-25). Such rules use
+   TWO classes (.actions .runButton, .output .progress, .status .statusIcon), which always win.
+
+   THE TEACHING LAYER (2026-10-25)  Its panels have their own CSS modules beside them
+   (StepBar, ErrorList, ExercisePanel, SolutionPanel, HintList, guided, twoslash), using the
+   --ce-* properties below (they cascade from .frame). Here: the Check button and its
+   placeholder space, the actions' wrapping on a phone when an exercise adds buttons, the
+   runtime slot (.runtimeSlot), the light bulb in the idle line's hint cue (.cueIcon,
+   IdleLine.jsx), the waiting placeholder's code text (.waitingCode, index.jsx), and .anchor
+   (the element around a named or lazily loaded editor).
+
+   HOW TO CHANGE IT  Colours: the themes in editorThemes.js (a new --ce-* colour: there AND
+   here, the default's values equal). The width below which the header takes two lines: the
+   (max-width: 620px) query at the end (a media query cannot read a custom property; keep it
+   above the widest header that fits on one line WITHOUT its pickers, and check 500 to 620 px
+   with a runtimes list, README.md > How to change it). The
+   resize strip: --ce-resize-height, .resizeHandle, .resizeGrip. Header height: --ce-toolbar-min-height.
+   The runtime slot's widths: --ce-runtime-slot / --ce-runtime-slot-several (as wide as the
+   widest picker or text they hold; a wider one is cut with an ellipsis). The waiting
+   placeholder's text column: --ce-code-text-left (Monaco's, measured).
+   Output scroll height: --ce-output-max-height. Spacing: the rules below. After changing the
+   size of a header button or of the stdin field (in Toolbar.jsx / CodeEditorClient.jsx), set
+   the matching --ce-* size here, or the placeholder stops matching. */
+
+/* The element around a named or lazily loaded editor (index.jsx: the DOM id <CodeRef> scrolls
+   to, the box useNearViewport watches). It takes over the frame's bottom margin, so a
+   container's `> :last-child { margin-bottom: 0 }` (an admonition, a tab, a <DropDownIC> box,
+   the end of the page) still reaches the editor. An editor with neither `id` nor
+   loadWhenVisible has no such element. */
+.anchor {
+	margin-bottom: var(--ifm-leading);
+}
+
+.anchor > .frame {
+	margin-bottom: 0;
+}
+
+.frame {
+	/* VS Code's default light theme ('vs') */
+	--ce-editor-bg: #fffffe;
+	--ce-header-bg: #f3f3f3;
+	--ce-border: #e5e5e5;
+	--ce-control-bg: #ffffff;
+	--ce-output-block-bg: #f3f3f3;
+	--ce-handle-hover: #e8e8e8;
+	--ce-grip: #767676;
+	--ce-muted: #616161;
+	--ce-editor-fg: #000000;
+	/* THE CODE-LINE TOKENS (see the header): the site's, with shared/css's light values as the fallbacks */
+	--ce-line-highlighted-bg: var(--code-line-highlighted-bg, rgba(28, 38, 47, 0.09));
+	--ce-line-error-bg: var(--code-line-error-bg, rgba(255, 0, 0, 0.125));
+	--ce-line-error-bar: var(--code-line-error-bar, rgba(255, 0, 0, 0.5));
+	--ce-line-error-ink: var(--code-line-error-ink, #d1242f);
+	--ce-line-success-bg: var(--code-line-success-bg, rgba(0, 255, 0, 0.125));
+	--ce-line-success-bar: var(--code-line-success-bar, rgba(0, 200, 0, 0.6));
+	--ce-line-success-ink: var(--code-line-success-ink, #1a7f37);
+	--ce-line-warning-bg: var(--code-line-warning-bg, rgba(255, 255, 0, 0.21));
+	--ce-line-warning-bar: var(--code-line-warning-bar, rgba(230, 180, 0, 0.75));
+	--ce-line-warning-ink: var(--code-line-warning-ink, #9a6700);
+	--ce-line-removed-bg: var(--code-line-removed-bg, rgba(255, 0, 0, 0.125));
+	--ce-line-removed-ink: var(--code-line-removed-ink, #d1242f);
+	--ce-line-added-bg: var(--code-line-added-bg, rgba(0, 255, 149, 0.125));
+	--ce-line-added-ink: var(--code-line-added-ink, #047857);
+	--ce-success: var(--ifm-color-success-darkest);
+	--ce-failure: var(--ce-line-error-ink); /* #d1242f: 5.2:1 on #fffffe (see TEXT CONTRAST) */
+	--ce-toolbar-min-height: 2.75rem;
+	--ce-resize-height: 12px;
+	--ce-output-max-height: 20rem;
+	/* MUI's sizes, for the placeholder (index.jsx) and the title's line */
+	--ce-icon-button-size: calc(1.25rem + 10px); /* a small IconButton: a 1.25rem icon + 5px padding each side */
+	--ce-button-height: calc(0.8125rem * 1.75 + 8px); /* a small Button: 0.8125rem text, line-height 1.75, 4px padding top and bottom */
+	--ce-stdin-row-height: 1.4375rem; /* a row of the stdin field: MUI's 1.4375em line of 1rem text */
+	--ce-stdin-padding: 17px; /* the stdin field's padding: 8.5px top and bottom (a small multi-line field) */
+	/* the header's runtime slot (measured 2026-10-25, IBM Plex Sans 13 px): the widest single
+	   control is the "JavaScript 20.11.1 (node)" menu, 197 px ("TypeScript 5.9.3 · Node 20.11.1"
+	   is 186 px); with a language picker, the "JavaScript" and "20.11.1 (node)" menus, 248 px */
+	--ce-runtime-slot: 13rem;
+	--ce-runtime-slot-several: 16rem;
+	/* where Monaco's text starts in the box (its line numbers, glyph and fold margins at 14 px; measured 2026-10-25) */
+	--ce-code-text-left: 68px;
+
+	margin-bottom: var(--ifm-leading);
+	border: 1px solid var(--ce-border);
+	border-radius: var(--ifm-code-border-radius, var(--ifm-global-radius));
+	background: var(--ce-editor-bg);
+	color: var(--ce-text); /* the theme's text; unset (VS Code's themes): the page's, inherited as before */
+	overflow: hidden; /* the rounded corners; menus, tooltips and Monaco's hovers are drawn outside it */
+}
+
+/* VS Code's default dark theme ('vs-dark'): a dark theme's frame, and the placeholder (which has
+   no mode of its own) on the dark site (THE EDITOR'S MODE in the header) */
+.frame[data-ce-mode='dark'],
+:global(html[data-theme='dark']) .frame:not([data-ce-mode]) {
+	--ce-editor-bg: #1e1e1e;
+	--ce-header-bg: #252526;
+	--ce-border: #3c3c3c;
+	--ce-control-bg: #3c3c3c;
+	--ce-output-block-bg: #252526;
+	--ce-handle-hover: #2a2d2e;
+	--ce-grip: #858585;
+	--ce-muted: #a0a0a0;
+	--ce-editor-fg: #d4d4d4;
+	/* THE CODE-LINE TOKENS (see the header): the site's, with shared/css's dark values as the fallbacks */
+	--ce-line-highlighted-bg: var(--code-line-highlighted-bg, rgba(90, 120, 150, 0.125));
+	--ce-line-error-bg: var(--code-line-error-bg, rgba(255, 0, 0, 0.14));
+	--ce-line-error-bar: var(--code-line-error-bar, rgba(255, 90, 90, 0.75));
+	--ce-line-error-ink: var(--code-line-error-ink, #ff7b72);
+	--ce-line-success-bg: var(--code-line-success-bg, rgba(0, 255, 0, 0.11));
+	--ce-line-success-bar: var(--code-line-success-bar, rgba(80, 220, 120, 0.75));
+	--ce-line-success-ink: var(--code-line-success-ink, #56d364);
+	--ce-line-warning-bg: var(--code-line-warning-bg, rgba(255, 255, 0, 0.12));
+	--ce-line-warning-bar: var(--code-line-warning-bar, rgba(255, 220, 60, 0.75));
+	--ce-line-warning-ink: var(--code-line-warning-ink, #e3b341);
+	--ce-line-removed-bg: var(--code-line-removed-bg, rgba(255, 0, 0, 0.14));
+	--ce-line-removed-ink: var(--code-line-removed-ink, #ff7b72);
+	--ce-line-added-bg: var(--code-line-added-bg, rgba(0, 255, 149, 0.11));
+	--ce-line-added-ink: var(--code-line-added-ink, #3fd69e);
+	--ce-success: var(--ifm-color-success-light);
+	--ce-failure: var(--ifm-color-danger-light);
+}
+
+/* the browser's own scrollbars and form controls in the frame, for the theme's mode (see THE
+   EDITOR'S MODE): only the real editor's frame, which carries data-ce-mode; with VS Code's
+   themes this is the page's own color-scheme, so nothing changes for them */
+.frame[data-ce-mode='light'] {
+	color-scheme: light;
+}
+
+.frame[data-ce-mode='dark'] {
+	color-scheme: dark;
+}
+
+/* A THEME IN THE OTHER MODE (see the header): the site's mode-dependent colours used inside the
+   frame, in the theme's colours — the text of Discard, Retry, Go to line and the step buttons
+   (Infima's --ifm-font-color-base), the rule lines of the output's code blocks and of the
+   exercise's blocks (--ifm-color-emphasis-300), and the background of inline code in a step's
+   note, a hint or a type error (the site's own rule in shared/css/custom.scss and
+   _custom-dark.scss, outranked here). Never matches while the theme's mode is the site's
+   (VS Code's themes always are). */
+:global(html:not([data-theme='dark'])) .frame[data-ce-mode='dark'],
+:global(html[data-theme='dark']) .frame[data-ce-mode='light'] {
+	--ifm-font-color-base: var(--ce-text);
+	--ifm-color-emphasis-300: var(--ce-border);
+}
+
+/* THE CODE-LINE TOKENS IN THE OTHER MODE (see the header): the site's token names, declared
+   again on the frame as the theme's mode's literals (the same values as the fallbacks above),
+   so the --ce-line-* reads resolve to the theme's mode on a site that sets those tokens too. */
+:global(html:not([data-theme='dark'])) .frame[data-ce-mode='dark'] {
+	--code-line-highlighted-bg: rgba(90, 120, 150, 0.125);
+	--code-line-error-bg: rgba(255, 0, 0, 0.14);
+	--code-line-error-bar: rgba(255, 90, 90, 0.75);
+	--code-line-error-ink: #ff7b72;
+	--code-line-success-bg: rgba(0, 255, 0, 0.11);
+	--code-line-success-bar: rgba(80, 220, 120, 0.75);
+	--code-line-success-ink: #56d364;
+	--code-line-warning-bg: rgba(255, 255, 0, 0.12);
+	--code-line-warning-bar: rgba(255, 220, 60, 0.75);
+	--code-line-warning-ink: #e3b341;
+	--code-line-removed-bg: rgba(255, 0, 0, 0.14);
+	--code-line-removed-ink: #ff7b72;
+	--code-line-added-bg: rgba(0, 255, 149, 0.11);
+	--code-line-added-ink: #3fd69e;
+}
+
+:global(html[data-theme='dark']) .frame[data-ce-mode='light'] {
+	--code-line-highlighted-bg: rgba(28, 38, 47, 0.09);
+	--code-line-error-bg: rgba(255, 0, 0, 0.125);
+	--code-line-error-bar: rgba(255, 0, 0, 0.5);
+	--code-line-error-ink: #d1242f;
+	--code-line-success-bg: rgba(0, 255, 0, 0.125);
+	--code-line-success-bar: rgba(0, 200, 0, 0.6);
+	--code-line-success-ink: #1a7f37;
+	--code-line-warning-bg: rgba(255, 255, 0, 0.21);
+	--code-line-warning-bar: rgba(230, 180, 0, 0.75);
+	--code-line-warning-ink: #9a6700;
+	--code-line-removed-bg: rgba(255, 0, 0, 0.125);
+	--code-line-removed-ink: #d1242f;
+	--code-line-added-bg: rgba(0, 255, 149, 0.125);
+	--code-line-added-ink: #047857;
+}
+
+:global(html:not([data-theme='dark'])) .frame[data-ce-mode='dark'] :where(:not(pre)) > code,
+:global(html[data-theme='dark']) .frame[data-ce-mode='light'] :where(:not(pre)) > code {
+	background-color: var(--ce-handle-hover);
+}
+
+/* INLINE CODE IN THE FRAME'S PROSE (the header): a hint's or a step note's `code` sits on the
+   text's baseline, not Infima's middle. A code block's own <pre> > code is left alone. */
+.frame :where(:not(pre)) > code {
+	vertical-align: baseline;
+}
+
+/* ---- the header bar: title + pickers on the left, actions on the right (two lines on a phone) ---- */
+
+.toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.25rem 0.75rem;
+	min-height: var(--ce-toolbar-min-height);
+	padding: 0.25rem 0.5rem 0.25rem 0.75rem;
+	border-bottom: 1px solid var(--ce-border);
+	background: var(--ce-header-bg);
+}
+
+.identity {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+	min-width: 0;
+	min-height: var(--ce-button-height); /* as tall with plain text as with a picker */
+}
+
+.title {
+	max-width: 100%;
+	overflow: hidden;
+	font-family: var(--ifm-font-family-monospace);
+	font-size: 0.875rem;
+	font-weight: var(--ifm-font-weight-semibold);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.select {
+	min-width: 0;
+	background: var(--ce-control-bg);
+}
+
+.versionText {
+	color: var(--ce-muted);
+	font-size: 0.8125rem;
+	white-space: nowrap;
+}
+
+/* The runtime slot (Toolbar.jsx > RuntimeControls; empty in the placeholder, index.jsx): an
+   exercise's or a TypeScript editor's pickers or version text in ONE fixed width (props.js >
+   runtimeSlotFor), so the real header and the placeholder wrap at the same widths whatever
+   text arrives. As tall as a header button in both, so a slot that wraps under the title adds
+   the same height to either. A picker or text wider than the slot is cut with an ellipsis. */
+.runtimeSlot {
+	display: flex;
+	flex: none;
+	align-items: center;
+	gap: 0.5rem;
+	box-sizing: border-box;
+	width: var(--ce-runtime-slot);
+	max-width: 100%;
+	height: var(--ce-button-height);
+	overflow: hidden;
+}
+
+.runtimeSlot[data-slot='several'] {
+	width: var(--ce-runtime-slot-several);
+}
+
+.runtimeSlot .versionText {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* The actions wrap only when they cannot fit on one line: an exercise's Hint, Solution and Check
+   on a phone. An editor without them fits on one line down to 320 px (below 341 px without the
+   gaps: the query at the end), and the placeholder's spaces share this rule, so they wrap the
+   same way. */
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 0.125rem;
+	margin-left: auto;
+}
+
+/* a disabled button takes no pointer events: the tooltip listens on this wrapper instead */
+.tooltipAnchor {
+	display: inline-flex;
+}
+
+/* Run and Stop share one width (and one button), so the header does not shift when a run starts;
+   Check and its Stop the same. Two classes: MUI's own Button rules load after these (see the
+   header). The placeholder's spaces carry the same classes inside .actions, so they match. */
+.actions .runButton,
+.actions .checkButton {
+	min-width: 5.25rem;
+	margin-left: 0.25rem;
+}
+
+/* An exercise's Check and Run, kept together: when the actions wrap on a phone they move to the
+   next line as a pair, so Run never sits alone on a line (checked at 375 px, 2026-10-25). The
+   placeholder's two spaces sit in the same group. An editor without Check keeps Run on the
+   icons' line by the 340 px query at the end instead. */
+.runGroup {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+}
+
+/* the placeholder's buttons: empty spaces of the real buttons' size (index.jsx) */
+.iconSpacer {
+	flex: none;
+	width: var(--ce-icon-button-size);
+	height: var(--ce-icon-button-size);
+}
+
+.runSpacer,
+.checkSpacer {
+	flex: none;
+	height: var(--ce-button-height);
+}
+
+/* read by screen readers only (the copy result, the marks in words, a <CodeRef>'s result) */
+.visuallyHidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+/* ---- notices under the header (version fallback, language missing, editor failed) ---- */
+
+.banner {
+	border-bottom: 1px solid var(--ce-border);
+}
+
+/* ---- the editor box ---- */
+
+.editorBox {
+	position: relative;
+	background: var(--ce-editor-bg);
+}
+
+/* covers the box while Monaco loads, while a language's first folds close, and (in the
+   placeholder) when the editor's code failed to load: the message and the Retry button */
+.cover {
+	position: absolute;
+	inset: 0;
+	z-index: 2;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem 0.75rem;
+	padding: 0.5rem;
+	background: var(--ce-editor-bg);
+	color: var(--ce-muted);
+	font-size: 0.875rem;
+	text-align: center;
+}
+
+.retryButton {
+	padding: 0.25rem 0.75rem;
+	border: 1px solid var(--ce-border);
+	border-radius: var(--ifm-global-radius);
+	background: var(--ce-control-bg);
+	color: var(--ifm-font-color-base);
+	font: inherit;
+	cursor: pointer;
+}
+
+/* a blue border and the resize strip's hover shade; the text keeps its colour (the site's blue
+   as text on the control colour would be 2.9:1 dark, 3.8:1 light: too faint) */
+.retryButton:hover:not(:disabled) {
+	border-color: var(--ifm-color-primary);
+	background: var(--ce-handle-hover);
+}
+
+/* the draft notice's Discard while the editor loads */
+.retryButton:disabled {
+	opacity: 0.45;
+	cursor: default;
+}
+
+.retryButton:focus-visible {
+	outline: 2px solid var(--ifm-color-primary);
+	outline-offset: 2px;
+}
+
+/* The waiting placeholder's code (index.jsx: a loadWhenVisible editor that is not near yet):
+   the snippet as plain text where Monaco will draw it — its font, size, line height, top
+   padding and tab width come inline (props.js > waitingCodeStyle), its left edge is Monaco's
+   text column (--ce-code-text-left) — clipped to the box, so the box keeps its size. Two
+   classes: Infima styles every <pre>. */
+.editorBox .waitingCode {
+	position: absolute;
+	inset: 0;
+	margin: 0;
+	padding: 0 0 0 var(--ce-code-text-left);
+	overflow: hidden;
+	border-radius: 0;
+	background: transparent;
+	color: var(--ce-editor-fg);
+	white-space: pre;
+}
+
+/* The print copy of the loading placeholder's and the failure frame's snippet (index.jsx >
+   PrintOnlyCode): nothing on screen — `display: none` must stay, so find-in-page and a copy of
+   the page never meet the text twice; shown under @media print below. */
+.printOnly {
+	display: none;
+}
+
+/* PRINT (2026-10-26): every editor's whole code, in paper ink, whatever the page's state.
+   --ce-print-fg is the ink of every print copy (this file's, PrintCopy.module.css's): black,
+   never the theme's --ce-editor-fg, which the frame carries inline — a dark theme's light text
+   would be near-invisible on white (measured 1.1:1 for Dracula). Each copy carries its own white
+   paper under that ink (2026-11-10), printed even with backgrounds off (print-color-adjust:
+   exact): with backgrounds on, a transparent copy let the dark frame show through (black on
+   #1e1e1e, 1.26:1). The box's height is inline, hence the !important. */
+@media print {
+	.frame {
+		--ce-print-fg: #000000;
+	}
+
+	/* a waiting editor's box prints its whole snippet, not a box cut at its height; the failure
+	   frame's box prints its message and Retry button above the snippet's print copy */
+	.editorBoxWaiting,
+	.editorBoxFailed {
+		height: auto !important;
+		min-height: 0 !important;
+		max-height: none !important;
+	}
+
+	.editorBox .waitingCode {
+		position: static;
+		overflow: visible;
+		background: #ffffff;
+		color: var(--ce-print-fg);
+		white-space: pre-wrap;
+		print-color-adjust: exact;
+		-webkit-print-color-adjust: exact;
+	}
+
+	.editorBoxFailed .cover {
+		position: static;
+		background: #ffffff;
+		color: var(--ce-print-fg);
+		print-color-adjust: exact;
+		-webkit-print-color-adjust: exact;
+	}
+
+	/* The loaded editor's box (Monaco: a window that prints a few lines), the loading
+	   placeholder's box (only "Loading editor…") and the resize strip are left out; the print
+	   copy of the code (PrintCopy.jsx after the loaded box, PrintOnlyCode after the other two,
+	   shown only in print) takes their place. The waiting placeholder prints its own text. */
+	.editorBox:not(.editorBoxWaiting):not(.editorBoxFailed),
+	.resizeHandle {
+		display: none;
+	}
+
+	/* the same block as PrintCopy.module.css prints: wrapped, at Monaco's text column, in paper ink on its own paper */
+	.printOnly {
+		display: block;
+		margin: 0;
+		padding: 0 0 0 var(--ce-code-text-left);
+		overflow: visible;
+		border-radius: 0;
+		background: #ffffff;
+		color: var(--ce-print-fg);
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		print-color-adjust: exact;
+		-webkit-print-color-adjust: exact;
+	}
+}
+
+/* Infima's global `code` rule (node_modules/infima: a 0.1rem border, font-size 90%,
+   vertical-align: middle) reaches into Monaco's own <code> elements — the inline code of a hover
+   or of a suggestion's details. Monaco styles the rest itself (`.monaco-hover code`: its
+   background, padding, radius and font), so only these three are undone. Hovers are drawn inside
+   the editor's element (fixedOverflowWidgets keeps them there), so the rule reaches them. */
+.frame :global(.monaco-editor) code {
+	border: 0;
+	font-size: inherit;
+	vertical-align: baseline;
+}
+
+/* ---- the resize strip under the code (ResizeHandle.jsx): the whole strip drags, the grip marks it ---- */
+
+.resizeHandle {
+	position: relative;
+	box-sizing: border-box;
+	height: var(--ce-resize-height);
+	border-top: 1px solid var(--ce-border);
+	background: var(--ce-header-bg);
+	cursor: ns-resize;
+	touch-action: none; /* a finger's drag resizes instead of scrolling the page */
+	user-select: none;
+}
+
+/* the grab pill in the middle: the usual "drag me" mark */
+.resizeHandle::before {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 2rem;
+	height: 3px;
+	border-radius: 2px;
+	background: var(--ce-grip);
+	transform: translate(-50%, -50%);
+}
+
+.resizeHandle:hover,
+.resizeHandleActive {
+	background: var(--ce-handle-hover);
+}
+
+/* the placeholder's strip (index.jsx): the same size, pill and grip, but it does nothing yet */
+.resizeHandleInert,
+.resizeHandleInert:hover {
+	background: var(--ce-header-bg);
+	cursor: default;
+}
+
+/* a finger needs a taller target (WCAG 2.5.8: 24 px); the placeholder shares the class, so it still matches */
+@media (pointer: coarse) {
+	.frame {
+		--ce-resize-height: 24px;
+	}
+}
+
+.resizeHandle:focus-visible {
+	outline: 2px solid var(--ifm-color-primary);
+	outline-offset: -2px;
+}
+
+.resizeGrip {
+	position: absolute;
+	right: 2px;
+	bottom: 1px;
+	width: 9px;
+	height: 9px;
+	fill: none;
+	stroke: var(--ce-grip);
+	stroke-width: 1.5;
+	stroke-linecap: round;
+	pointer-events: none;
+}
+
+/* ---- the program input ---- */
+
+.stdin {
+	padding: 0.75rem;
+	border-top: 1px solid var(--ce-border);
+	background: var(--ce-header-bg);
+}
+
+.stdinField textarea {
+	font-family: var(--ifm-font-family-monospace);
+	font-size: 0.875rem;
+}
+
+/* the placeholder's stdin field: as tall as the field's rows will be */
+.stdinPlaceholder {
+	box-sizing: border-box;
+	height: calc(var(--ce-stdin-rows, 2) * var(--ce-stdin-row-height) + var(--ce-stdin-padding));
+	border: 1px solid var(--ce-border);
+	border-radius: var(--ifm-global-radius);
+}
+
+/* ---- the output area ---- */
+
+.output {
+	/* the exercise panel's plain <pre>s (ExercisePanel.jsx, ExpectedOutput.jsx): Infima's own
+	   `pre { background-color: var(--ifm-pre-background) }` reads it on every Docusaurus site.
+	   The Docusaurus code blocks (Output, the compiler block) are painted below instead. */
+	--ifm-pre-background: var(--ce-output-block-bg);
+	position: relative;
+	padding: 0.625rem 0.75rem 0.75rem;
+	border-top: 1px solid var(--ce-border);
+}
+
+/* two classes: MUI's LinearProgress rules load after these (see the header) */
+.output .progress {
+	position: absolute;
+	top: 0;
+	right: 0;
+	left: 0;
+}
+
+.hint {
+	margin: 0;
+	color: var(--ce-muted);
+	font-size: 0.875rem;
+}
+
+/* the light bulb in the idle line's hint cue (IdleLine.jsx: "click [bulb] to reveal"): the
+   header's icon at the text's size and in its muted colour, sitting on the line like a letter
+   (MUI's glyph fills about 14 of its 24 units across and 20 down, so 1.2em draws it a little
+   taller than a capital); the placeholder draws the same line, so it never moves */
+.cueIcon {
+	width: 1.2em;
+	height: 1.2em;
+	fill: currentColor;
+	vertical-align: -0.25em;
+}
+
+/* the placeholder's "Expected output" block is inert until the editor arrives (ExpectedOutput.jsx):
+   its summary should not look clickable */
+.output [inert] summary {
+	cursor: default;
+}
+
+.status {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	margin: 0 0 0.5rem;
+	font-size: 0.875rem;
+	font-weight: var(--ifm-font-weight-semibold);
+}
+
+.statusSuccess {
+	color: var(--ce-success);
+}
+
+.statusFailure {
+	color: var(--ce-failure);
+}
+
+/* two classes: MUI's icon rules load after these (see the header) */
+.status .statusIcon {
+	flex: none;
+	font-size: 1.15em;
+}
+
+.notice {
+	margin: 0;
+}
+
+/* Docusaurus code blocks inside the output area: no page margin after the last, a scroll for
+   long output, and THE THEME'S BACKGROUND ON ANY SITE (2026-10-26): Docusaurus's Container sets
+   --prism-background-color INLINE from the site's Prism theme and paints the block with it, and
+   its <pre> carries background-color inline too, so only !important reaches them (the same trap
+   as the text colour below). Without this a stock site keeps its Prism block (palenight, github)
+   under the editor's forced text colour: Dracula's light text on a light block, unreadable. Two
+   classes: this also outranks the one-class override in shared/css/_code-blocks.scss,
+   which resolves to the same value here. The line-number gutter reads the <pre>'s
+   --ifm-pre-background (Docusaurus redeclares it from the Prism variable) and the copy button is
+   transparent over the container, so both follow. */
+.output .outputBlock {
+	--prism-background-color: var(--ce-output-block-bg) !important;
+	margin-bottom: 0.5rem;
+	background: var(--ce-output-block-bg) !important;
+}
+
+/* their text and their copy / wrap buttons in the theme's colour (--ce-output-block-fg); unset
+   for VS Code's themes: the site's Prism colour (--prism-color, what Docusaurus's own rules
+   use), as before. Two classes: Docusaurus's rules have one. The <pre> and each line also carry
+   the Prism theme's text colour INLINE (prism-react-renderer's plain colour, the light site's
+   github text on a Dracula block): only !important reaches an inline style (the same trap as
+   shared/css/_code-blocks.scss's backgrounds). With the theme's colour unset the fallback is that
+   very colour (--prism-color is the plain colour, set inline on the block), so VS Code's
+   themes draw exactly what they did. */
+.output .outputBlock,
+.output .outputBlock button {
+	color: var(--ce-output-block-fg, var(--prism-color));
+}
+
+.output .outputBlock pre,
+.output .outputBlock :global(.token-line) {
+	color: var(--ce-output-block-fg, var(--prism-color)) !important;
+}
+
+.output .outputBlock:last-child {
+	margin-bottom: 0;
+}
+
+.output .outputBlock pre {
+	max-height: var(--ce-output-max-height);
+	background-color: var(--ce-output-block-bg) !important; /* the <pre>'s inline Prism background (see above) */
+}
+
+/* a phone, a phone on its side, a narrow split view (see the header): the actions always take a
+   line of their own, so the header is two lines whatever the title holds and whenever the
+   pickers arrive */
+@media (max-width: 620px) {
+	.actions {
+		flex-basis: 100%;
+		justify-content: flex-end;
+	}
+}
+
+@media (max-width: 480px) {
+	.toolbar {
+		padding: 0.375rem 0.5rem;
+	}
+}
+
+/* the narrowest phones (320 px): without their 2 px gaps the six icons and Run still fit on one
+   line (268 of the 270 px the actions get), so Run never sits alone on a third line */
+@media (max-width: 340px) {
+	.actions {
+		gap: 0;
+	}
+}

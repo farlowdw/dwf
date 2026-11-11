@@ -4,7 +4,8 @@
  * plugins, the navbar and the footer. The lists every site of the family repeats (admonition keywords,
  * KaTeX options, <DropDownIC>'s MDX plugins, Prism's languages) come from shared/wiring/index.cjs, and
  * shared/ also holds the stylesheets, fonts and icons (customCss, staticDirectories). This site's own
- * rules go in src/css/site.scss. plugins/katex-css serves KaTeX's stylesheet and fonts from the site.
+ * rules go in src/css/site.scss. katexCssPlugin(), shared/plugins/katex-css, serves KaTeX's stylesheet and
+ * fonts from the site.
  *
  * HOW TO CHANGE IT
  *   The title, address and repository: the three constants below. A list from shared/wiring: edit it
@@ -24,7 +25,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 // The lists every site shares, and the inline dropdown's MDX plugins (<DropDownIC>).
 const {
-  ADDITIONAL_LANGUAGES, MAGIC_COMMENTS, admonitionsConfig, katexOptions,
+  ADDITIONAL_LANGUAGES, MAGIC_COMMENTS, admonitionsConfig, katexCssPlugin, katexOptions,
   preprocessDropDownIc, rehypeDropDownIc, remarkDropDownIc,
 } = require('./shared/wiring/index.cjs');
 
@@ -100,7 +101,7 @@ const config = {
 
   plugins: [
     'docusaurus-plugin-sass',
-    './plugins/katex-css',
+    katexCssPlugin(),
     '@docusaurus/theme-mermaid',
   ],
 

@@ -14,7 +14,8 @@
  * Run it from the site's top folder:
  *   node shared/scripts/check-mui-api.mjs
  *   node --test shared/scripts/__tests__/check-mui-api.test.mjs
- * The hub holds no site to read, so there it refuses. Its test mounts the hub's tree and reads that.
+ * The hub holds no site to read, so there it refuses, even though its plugins/ folder has a site folder's
+ * name. Its test mounts the hub's tree and reads that.
  *
  * A site runs it where it runs its other checks: first in its test script, or, with no test script,
  * first in netlify.toml's [build] command. A new site has it first in test:site, and shared:join writes
@@ -22,7 +23,8 @@
  * move, and it takes under a second.
  *
  * Exit codes: 0 clean, 1 an old name was found, 2 refused because the check could not run. A check
- * that could not run is never a pass: no git repo, no files to read, or no list it can use.
+ * that could not run is never a pass: no git repo, no files to read, the shared tree itself, or no
+ * list it can use.
  *
  * Flags:
  *   --root <folder>   the site's top folder, if it is not the current folder
@@ -65,6 +67,9 @@ const ROW_FIELDS = Object.freeze(['name', 'pattern', 'instead']);
 const SCANNED_FOLDERS = Object.freeze(['src', 'plugins', 'docs', 'blog', 'shared']);
 
 const SCANNED_ENDINGS = Object.freeze(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.md', '.mdx', '.css', '.scss']);
+
+/** The top of the tree this script sits in: the hub, or shared/ in a site. Neither is a site's top folder. */
+const SHARED_TREE = fileURLToPath(new URL('..', import.meta.url));
 
 /** A test here may name an old API to prove it is gone. */
 const SKIPPED_FOLDERS = Object.freeze(['__tests__']);
@@ -148,6 +153,11 @@ function listFiles(root) {
   return result.stdout.split('\0').filter(isScanned);
 }
 
+/** True at the top of the shared tree, where a plugins/ folder alone would read as a site with one file. */
+function isSharedTree(root) {
+  return fs.realpathSync(root) === fs.realpathSync(SHARED_TREE);
+}
+
 /** A file's text, or an empty string for a path git lists that is not a file on disk now. */
 function readText(root, file) {
   const absolute = path.join(root, file);
@@ -193,6 +203,7 @@ function checkSite(root) {
 
   const files = listFiles(root);
   if (files === null) throw new Refusal(`git could not list the files of ${path.basename(root)}`);
+  if (isSharedTree(root)) throw new Refusal('this is the shared tree, not a site: run it from a site\'s top folder');
   if (files.length === 0) throw new Refusal(`no files to read in ${SCANNED_FOLDERS.join(', ')}`);
 
   const hits = files.flatMap((file) => hitsIn(file, readText(root, file), rows));

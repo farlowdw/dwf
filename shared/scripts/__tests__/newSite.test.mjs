@@ -23,6 +23,7 @@ import { FILES_SUBJECT, LOCK_SUBJECT, START_SUBJECT } from '../lib/newSiteSettin
 import { fillTokens } from '../lib/newSiteFiles.mjs';
 import { NPM_COMMAND_ENV, REMOTE_URL_ENV, WORD_LIST_ENV } from '../lib/settings.mjs';
 import { readRequest } from '../new-site.mjs';
+import { VERIFY_TIMEOUT_SECONDS } from '../lib/bumpSettings.mjs';
 import { WORD_LIST, fixtureFor, runScript, writeFiles } from './fixture.mjs';
 import { SHARED_ROOT } from './joinFixture.mjs';
 
@@ -506,4 +507,12 @@ test('the parts of a request read as one object', () => {
   assert.equal(request.url, 'https://my-site.example.com');
   assert.equal(request.publicSite, true);
   assert.deepEqual(request.exclude, ['a/', 'b/']);
+  assert.equal(request.verifyTimeout, VERIFY_TIMEOUT_SECONDS, 'the default limit of a new site\'s shared:verify');
+});
+
+test('--verify-timeout gives a new site\'s suites longer, and anything but seconds is a usage error', () => {
+  assert.equal(readRequest(['../my-site', ...GOOD_ARGS, '--verify-timeout', '1800']).verifyTimeout, 1800);
+  for (const value of ['soon', '0', '-5']) {
+    assert.throws(() => readRequest(['../my-site', ...GOOD_ARGS, '--verify-timeout', value]), (error) => error.code === EXIT.USAGE, value);
+  }
 });

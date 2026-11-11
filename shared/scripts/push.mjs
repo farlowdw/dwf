@@ -49,12 +49,18 @@ import { counted, shellWord, short } from './lib/phrases.mjs';
 import { NO_WORD_LIST_FLAG, freshState, passGates, refuseDirty, refusal, stateRefusal } from './lib/preflight.mjs';
 import { describeHit, readTexts, scanCommits, scanNames, scanTexts, shapeHits, wordHits } from './lib/privacy.mjs';
 import { mixedPublished, recordMessage } from './lib/published.mjs';
-import { BRANCH, PREFIX, REMOTE, UPSTREAM_REF } from './lib/settings.mjs';
+import { BRANCH, MS_PER_SECOND, PREFIX, REMOTE, UPSTREAM_REF } from './lib/settings.mjs';
 import { findSiblings } from './lib/siblings.mjs';
 import { RELATIONS, STATES, commitsToPublish, fetchHub, fetchReason, readState } from './lib/state.mjs';
 import { runSharedTests } from './lib/testGate.mjs';
 
 const SCRIPT = 'shared:push';
+
+/**
+ * The push to the hub may wait this long, then it is stopped with the ssh it started: a connection that goes quiet
+ * would otherwise hold it for hours. A push of a few commits takes seconds. DOCUSAURUS_SHARED_PUSH_LIMIT (ms) moves it.
+ */
+const PUSH_TIMEOUT_MS = Number(process.env.DOCUSAURUS_SHARED_PUSH_LIMIT) > 0 ? Number(process.env.DOCUSAURUS_SHARED_PUSH_LIMIT) : 300_000;
 const YES_FLAG = '--yes';
 const SKIP_TESTS_FLAG = '--skip-tests';
 const HELP_FLAG = '--help';
@@ -264,11 +270,30 @@ function declinedLines(run, upstream) {
   return ['The hub declined it: read the remote: lines above, fix what they name, then run this again.'];
 }
 
-/** Sends the exact commit that was scanned. Exit 0 from git is the only way on to the rejoin. */
+/** True when the hub, fetched again, holds `split` as its tip: a push stopped at its limit that arrived even so. */
+function hubTookIt(run, split) {
+  if (!fetchHub(run.root, run.env).ok) return false;
+  return gitValue(['rev-parse', '--verify', '--quiet', `${UPSTREAM_REF}^{commit}`], { cwd: run.root, env: run.env, read: true }) === split;
+}
+
+/**
+ * Sends the exact commit that was scanned. Exit 0 from git is the way on to the rejoin, and so is a push stopped at
+ * PUSH_TIMEOUT_MS that the hub, asked again, holds: a push can land in the instant before its limit.
+ */
 async function publishAndRejoin(run, split, upstream) {
   const refspec = `${split}:refs/heads/${BRANCH}`;
-  const pushed = await gitLive(['push', REMOTE, refspec], { cwd: run.root, env: run.env });
+  const options = { cwd: run.root, env: run.env, group: true, timeout: PUSH_TIMEOUT_MS };
+  const pushed = await gitLive(['push', REMOTE, refspec], options);
   if (pushed.ok) return rejoin(run, split);
+  if (pushed.timedOut && hubTookIt(run, split)) {
+    console.log(`The push ran past ${PUSH_TIMEOUT_MS / MS_PER_SECOND} s and was stopped, and the hub holds it: it is published.`);
+    return rejoin(run, split);
+  }
+  if (pushed.timedOut) {
+    console.error(`The push gave no answer within ${PUSH_TIMEOUT_MS / MS_PER_SECOND} s and was stopped, and the hub does not hold it. No rejoin ran, and nothing was published.`);
+    console.error('Fix: check the network and the hub, then run this again.');
+    return EXIT.GIT;
+  }
   const site = run.options.message === null
     ? 'so this site is as it was'
     : `and the commit made with -m stays: npm run ${SCRIPT} publishes it later`;
@@ -351,7 +376,10 @@ function refuseOwnSubject(subject, list) {
   throw refusal(SCRIPT, `the subject you gave ${what}.`, { fix: 'write another subject' });
 }
 
-/** -m needs a site that a commit on top could still publish from. */
+/**
+ * -m needs a site that a commit on top could still publish from. The fix prints the subject, so it runs only after
+ * refuseOwnSubject: a subject with a listed word or a key shape is never printed.
+ */
 function refuseCommitOnState(run, state) {
   if ([STATES.IN_SYNC, STATES.AHEAD].includes(state.state) || rejoinedWithoutPush(state)) return;
   if (![STATES.BEHIND, STATES.DIVERGED].includes(state.state)) throw stateRefusal(SCRIPT, state, run.list, run.env, run.root);
@@ -371,9 +399,9 @@ function refuseBeforeCommit(run, state) {
   const { root, env, list, options } = run;
   const outside = dirtyPaths(root, env).filter((file) => !file.startsWith(`${PREFIX}/`));
   refuseDirty(root, { script: SCRIPT, env, fix: 'commit or stash them first: -m commits shared/ alone', paths: outside });
+  refuseOwnSubject(options.message, list);
   refuseCommitOnState(run, state);
   if (!hasPendingWork(run)) throw refusal(SCRIPT, `nothing to commit under ${PREFIX}/.`, { fix: 'run it without -m' });
-  refuseOwnSubject(options.message, list);
   refuseFiles(pendingContext(run));
   readOutgoing(run, state);
 }

@@ -7,10 +7,16 @@
  * Point it at a machine's own places with the variables in lib/compareSettings.mjs:
  *     env DOCUSAURUS_SHARED_CACHE=<folder> DOCUSAURUS_SHARED_CHROME=<path> node --test scripts/__tests__/compare.test.mjs
  *
+ * No test here waits on a file alone or guesses a free port. A run picks its own ports and report.json names them
+ * (`origins`); a test that follows a run waits for its report OR its end, under FIRST_REPORT_MS (waitForRunning).
+ * Two copies of this suite on one machine take ports from the same counter, so a port that was free a moment ago
+ * may be another run's now: that is how a test here once polled for seven hours.
+ *
  * HOW TO CHANGE IT
  *   A new option gets a line in the first half. A new way for a run to end gets a browser test, and
  *   that test checks the exit code and that no server is left. A stand-in for the site's serve-handler
- *   is in STATIC_HANDLER, so the fixture needs nothing from npm.
+ *   is in STATIC_HANDLER, so the fixture needs nothing from npm. A test that follows a running compare uses
+ *   waitForRunning, never a loop of its own.
  */
 
 import assert from 'node:assert/strict';
@@ -28,7 +34,7 @@ import {
 } from '../lib/compareBrowser.mjs';
 import { VERDICT, VIEW } from '../lib/compareDiff.mjs';
 import { loadAtRest, themedUrl } from '../lib/comparePage.mjs';
-import { summaryLines, viewLines, writeReport } from '../lib/compareReport.mjs';
+import { REPORT_FILE, summaryLines, viewLines, writeReport } from '../lib/compareReport.mjs';
 import { serveBuild } from '../lib/compareServers.mjs';
 import {
   BUSY_NOTE, BUSY_RETRIES, CACHE_ENV, CHROME_ARGS, CHROME_ENV, CHROME_REFUSED_PORTS, REFUSED_PORT_ERROR, STABILITY_CSS,
@@ -36,7 +42,7 @@ import {
 } from '../lib/compareSettings.mjs';
 import { EXIT } from '../lib/exitCodes.mjs';
 import { compareSummary } from '../lib/siteGate.mjs';
-import { stopProcess } from './fixture.mjs';
+import { PROCESS_LIFE_MS, hangCode, stopProcess } from './fixture.mjs';
 
 const SCRIPT = fileURLToPath(new URL('../compare.mjs', import.meta.url));
 const BROWSER_MODULE = new URL('../lib/compareBrowser.mjs', import.meta.url).href;
@@ -51,6 +57,37 @@ const PAGE_BODY = '<nav class="top" style="color: rgb(1, 2, 3)">x</nav><main><p>
  * quiet Mac and up to a few minutes at a load average of 60. A run that cannot end is stopped, and its test fails.
  */
 const RUN_TIMEOUT_MS = 480_000;
+
+/**
+ * How long a run may take to write its first report: both servers and the browser up, about 2 s on a quiet Mac.
+ * A run that has not by then, and has not ended, is a failure that says so, never a wait for ever.
+ */
+const FIRST_REPORT_MS = 120_000;
+const POLL_MS = 50;
+
+/** The two sides a compare serves. */
+const SIDES = ['before', 'after'];
+
+/**
+ * A second process that takes the next ports the system hands out, as a second suite beside this one does. It has
+ * the fixture's ends: the test's `after`, a closed stdin, and PROCESS_LIFE_MS.
+ */
+const NEIGHBOUR_EVERY_MS = 5;
+const NEIGHBOUR_HOLDS = 400;
+const NEIGHBOUR_SCRIPT = `const net = require('node:net');
+const held = [];
+setInterval(() => {
+  const server = net.createServer();
+  server.on('error', () => {});
+  server.listen(0, '127.0.0.1');
+  held.push(server);
+  if (held.length > ${NEIGHBOUR_HOLDS}) held.shift().close();
+}, ${NEIGHBOUR_EVERY_MS});
+process.stdin.on('end', () => process.exit(0));
+process.stdin.resume();
+setTimeout(() => process.exit(0), ${PROCESS_LIFE_MS});
+console.log('up');
+`;
 
 /** How long the stand-in browser's helper holds its output, and how much sooner than that the stop must end. */
 const HELPER_HOLDS_SECONDS = 60;
@@ -419,6 +456,103 @@ function runScript(t, root, args, env = runEnv(t)) {
   });
 }
 
+/** A child's output as it comes, stdout and stderr together. */
+function collectOutput(child) {
+  const output = { text: '' };
+  child.stdout?.on('data', (chunk) => { output.text += chunk; });
+  child.stderr?.on('data', (chunk) => { output.text += chunk; });
+  return output;
+}
+
+/** report.json as it reads now, or null. */
+function readReportFile(file) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Waits until the run's report.json reads running with both origins, and returns it. Fails, with the run's output,
+ * the moment the run ends first, and at `limitMs` while it still runs: never a wait on the file alone, since a run
+ * that refused (a port taken, a lock held) writes no running report at all.
+ */
+async function waitForRunning(child, reportFile, output, limitMs = FIRST_REPORT_MS) {
+  const deadline = Date.now() + limitMs;
+  for (;;) {
+    const report = readReportFile(reportFile);
+    if (report?.state === 'running' && report.origins) return report;
+    if (child.exitCode !== null || child.signalCode !== null) {
+      const state = report === null ? 'no report.json' : `report.json reads ${report.state}`;
+      throw new Error(`the run ended before its servers were up (exit ${child.exitCode ?? child.signalCode}, ${state}). Its output:\n${output.text}`);
+    }
+    if (Date.now() > deadline) throw new Error(`no running report.json after ${limitMs} ms, and the run still runs. Its output:\n${output.text}`);
+    await new Promise((resolve) => { setTimeout(resolve, POLL_MS); });
+  }
+}
+
+/** Starts NEIGHBOUR_SCRIPT and waits until it takes ports. It ends with the test, or when this process dies. */
+function startNeighbour(t) {
+  const child = spawn(process.execPath, ['-e', NEIGHBOUR_SCRIPT], { stdio: ['pipe', 'pipe', 'ignore'] });
+  t.after(() => stopProcess(child));
+  return new Promise((resolve, reject) => {
+    child.stdout.once('data', () => resolve(child));
+    child.once('exit', (code) => reject(new Error(`the neighbour ended before it took a port: ${code}`)));
+  });
+}
+
+/**
+ * A compare of four views per page, stopped by SIGTERM while it runs: its servers, its browser and its lock must
+ * go, and its report must read stopped. The run picks its own ports and the test reads them from the report.
+ */
+async function stopHalfway(t) {
+  const root = makeSite(t);
+  const env = runEnv(t);
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'compare-out-'));
+  t.after(() => fs.rmSync(out, { recursive: true, force: true }));
+  const args = [SCRIPT, '--before', 'keep', '--pages', '/,/,/,/', '--out', out];
+  const child = spawn(process.execPath, args, { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'] });
+  t.after(() => stopProcess(child));
+  const output = collectOutput(child);
+  const reportFile = path.join(out, REPORT_FILE);
+  const running = await waitForRunning(child, reportFile, output);
+  assert.equal(running.pid, child.pid, 'the report names the run');
+  const ports = SIDES.map((side) => Number(new URL(running.origins[side]).port));
+  for (const port of ports) assert.equal(await isListening(port), true, `the server on ${port} was up`);
+  const closed = new Promise((resolve) => { child.once('close', resolve); });
+  child.kill('SIGTERM');
+  assert.equal(await closed, 143, output.text);
+  for (const port of ports) assert.equal(await isListening(port), false, `the server on ${port} stopped`);
+  assert.equal(readReportFile(reportFile).state, 'stopped');
+  assert.equal(fs.existsSync(env[SWEEP_LOCK_ENV]), false);
+}
+
+test('a run that ends before its report is read as ended at once, with its output', async (t) => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'compare-out-'));
+  t.after(() => fs.rmSync(folder, { recursive: true, force: true }));
+  const code = "console.error('No free port in 4100-4101. Nothing was compared.'); process.exit(4)";
+  const child = spawn(process.execPath, ['-e', code], { stdio: ['ignore', 'pipe', 'pipe'] });
+  t.after(() => stopProcess(child));
+  const output = collectOutput(child);
+  const started = Date.now();
+  await assert.rejects(waitForRunning(child, path.join(folder, REPORT_FILE), output), (error) => {
+    assert.match(error.message, /the run ended before its servers were up \(exit 4, no report\.json\)/);
+    assert.match(error.message, /No free port in 4100-4101/);
+    return true;
+  });
+  assert.ok(Date.now() - started < FIRST_REPORT_MS / 4, 'it did not wait for the limit');
+});
+
+test('a run that writes no report in time is given up on at the limit, while it still runs', async (t) => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'compare-out-'));
+  t.after(() => fs.rmSync(folder, { recursive: true, force: true }));
+  const child = spawn(process.execPath, ['-e', hangCode()], { stdio: ['pipe', 'pipe', 'pipe'] });
+  t.after(() => stopProcess(child));
+  const limitMs = 300;
+  await assert.rejects(waitForRunning(child, path.join(folder, REPORT_FILE), collectOutput(child), limitMs), /no running report\.json after 300 ms, and the run still runs/);
+});
+
 /** True when something accepts a connection on the port. */
 function isListening(port) {
   return new Promise((resolve) => {
@@ -603,21 +737,10 @@ test('in a browser: a held lock refuses before anything starts, and a free one i
 });
 
 test('in a browser: stopped halfway it stops its servers, the browser and the lock', { skip: noBrowser }, async (t) => {
-  const root = makeSite(t);
-  const env = runEnv(t);
-  const port = await deadPort();
-  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'compare-out-'));
-  t.after(() => fs.rmSync(out, { recursive: true, force: true }));
-  const args = [SCRIPT, '--before', 'keep', '--pages', '/,/,/,/', '--ports', `${port}-${port + 1}`, '--out', out];
-  const child = spawn(process.execPath, args, { cwd: root, env, stdio: 'ignore' });
-  t.after(() => stopProcess(child));
-  const report = path.join(out, 'report.json');
-  while (!fs.existsSync(report)) await new Promise((resolve) => { setTimeout(resolve, 50); });
-  assert.equal(await isListening(port), true, 'the server was up');
-  const closed = new Promise((resolve) => { child.once('close', resolve); });
-  child.kill('SIGTERM');
-  assert.equal(await closed, 143);
-  assert.equal(await isListening(port), false);
-  assert.equal(JSON.parse(fs.readFileSync(report, 'utf8')).state, 'stopped');
-  assert.equal(fs.existsSync(env[SWEEP_LOCK_ENV]), false);
+  await stopHalfway(t);
+});
+
+test('in a browser: stopped halfway while another process takes the next free ports, it still stops cleanly', { skip: noBrowser }, async (t) => {
+  await startNeighbour(t);
+  await stopHalfway(t);
 });

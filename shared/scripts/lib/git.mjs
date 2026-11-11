@@ -115,22 +115,29 @@ function lineReader(onLine) {
   return { push, end };
 }
 
-/** Runs git and hands out its filtered output line by line. Resolves with its real exit code. */
+/**
+ * Runs git and hands out its filtered output line by line. Resolves with { ok, status, lines, timedOut }: its real
+ * exit code, or status null when it could not start or ran out of time. With `group: true` and `timeout` (ms), the
+ * timed runner stops git and everything git started at the limit, as for git() (a push that waits on ssh for good).
+ */
 export function gitLive(args, options = {}) {
   const { onLine = (line) => console.log(line) } = options;
+  const { command, commandArgs } = commandOf(args, options);
   const lines = [];
   const reader = lineReader((line) => {
     lines.push(line);
     onLine(line);
   });
   return new Promise((resolve) => {
-    const child = spawn('git', args, { ...spawnOptions(options), stdio: ['inherit', 'pipe', 'pipe'] });
+    const child = spawn(command, commandArgs, { ...spawnOptions(options), stdio: ['inherit', 'pipe', 'pipe'] });
     child.stdout.setEncoding('utf8').on('data', reader.push);
     child.stderr.setEncoding('utf8').on('data', reader.push);
-    child.on('error', () => resolve({ ok: false, status: null, lines }));
-    child.on('close', (status) => {
+    child.on('error', () => resolve({ ok: false, status: null, lines, timedOut: false }));
+    child.on('close', (code) => {
       reader.end();
-      resolve({ ok: status === 0, status, lines });
+      const timedOut = command !== 'git' && code === TIMED_OUT;
+      const status = command !== 'git' && [TIMED_OUT, NOT_STARTED].includes(code) ? null : code;
+      resolve({ ok: status === 0, status, lines, timedOut });
     });
   });
 }

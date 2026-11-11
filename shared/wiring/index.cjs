@@ -7,10 +7,12 @@
  *
  * A .cjs file on purpose: plain Node at config time, never bundled. The config is read once, through a
  * loader webpack's cache does not follow, so a change here needs `npm run clear`, then a restart of the
- * dev server or a new build. A plain restart does show a katex-macros.cjs change on docs pages, because the
- * docs plugin hands its options to every doc through a file of its own, while pages of the pages plugin keep
- * the old macros until the clear: one docs page proves nothing. remark-math and rehype-katex stay imported by
- * the site (they are ESM-only packages).
+ * dev server or a new build. A plain restart (or a cached build) does show a katex-macros.cjs or keyword
+ * change on docs pages, because the docs plugin hands its options to every doc through a file of its own,
+ * while blog posts and pages of the pages plugin keep the old macros and the old keywords until the clear;
+ * magic comments are themeConfig, read in the browser, and change on every page after a plain restart. So
+ * neither one docs page nor one code block proves the change was taken. remark-math and rehype-katex stay
+ * imported by the site (they are ESM-only packages).
  *
  * HOW TO CHANGE IT
  *   A new admonition: its keyword in ADMONITION_KEYWORDS, its file in shared/theme/Admonition, its
@@ -19,6 +21,14 @@
  *   `...admonitionsConfig` in its docs, blog and pages blocks.
  *   A new kind of marked code line: an entry in MAGIC_COMMENTS, drawn by shared/css/_code-blocks.scss.
  *   A new maths macro: shared/wiring/katex-macros.cjs.
+ *   The code editor's plugin entry: codeRunnerPlugin below. Its options are the plugin's own
+ *   (shared/plugins/monaco-editor/index.js > OPTIONS). A change to the plugin's own code needs a
+ *   restart of the dev server, not a clear (a running server keeps the old plugin).
+ *   KaTeX's stylesheet plugin entry, for a site with maths: katexCssPlugin below (shared/plugins/katex-css).
+ *   The PDF viewer's worker plugin entry: pdfjsWorkerPlugin below (shared/plugins/pdfjs-worker); the
+ *   same restart applies.
+ *   The build id's plugin entry: buildIdPlugin below. It takes no options. What reads the id is
+ *   shared/lib/pageReload, started by a client module of the site (shared/lib/README.md).
  */
 
 const { preprocessDropDownIc, rehypeDropDownIc, remarkDropDownIc } = require('../components/DropDownIC/mdx.cjs');
@@ -57,6 +67,44 @@ const MAGIC_COMMENTS = [
   { className: 'code-block-added-line', line: 'highlight-add-next-line', block: { start: 'highlight-add-start', end: 'highlight-add-end' } },
 ];
 
+/**
+ * The code editor's plugin, as a site's config names it. Docusaurus reads a relative name from the
+ * config file, and a relative name keeps this machine's folders out of a site's main chunk.
+ */
+const CODE_RUNNER_PLUGIN = './shared/plugins/monaco-editor';
+
+/**
+ * The entry for a site's `plugins` list when it uses shared/components/CodeEditor: `codeRunnerPlugin()`.
+ * The plugin serves Monaco from the site and tells the editor where its two functions are. Pass
+ * { executeUrl, runtimesUrl } only when a site keeps them somewhere other than the defaults.
+ */
+const codeRunnerPlugin = (options) => (options === undefined ? CODE_RUNNER_PLUGIN : [CODE_RUNNER_PLUGIN, options]);
+
+/** KaTeX's stylesheet and fonts, served from the site (shared/plugins/katex-css), named the same way. */
+const KATEX_CSS_PLUGIN = './shared/plugins/katex-css';
+
+/** The entry for a site's `plugins` list when its pages hold maths: `katexCssPlugin()`. It takes no options. */
+const katexCssPlugin = () => KATEX_CSS_PLUGIN;
+
+/** The PDF viewer's worker plugin, as a site's config names it: relative, for the reason above. */
+const PDFJS_WORKER_PLUGIN = './shared/plugins/pdfjs-worker';
+
+/**
+ * The entry for a site's `plugins` list when it uses shared/components/PDFViewer: `pdfjsWorkerPlugin()`.
+ * The plugin serves PDF.js's worker from the site and hands the viewer its URL; it takes no options.
+ */
+const pdfjsWorkerPlugin = () => PDFJS_WORKER_PLUGIN;
+
+/** The plugin that gives each production build an id, named the same relative way. */
+const BUILD_ID_PLUGIN = './shared/plugins/build-id';
+
+/**
+ * The entry for a site's `plugins` list when an open tab should reload itself after a deploy:
+ * `buildIdPlugin()`. The plugin writes the id into every page and into /build-id.json;
+ * shared/lib/pageReload compares the two. It takes no options.
+ */
+const buildIdPlugin = () => BUILD_ID_PLUGIN;
+
 /** Prism's extra languages, the same 76 on every site. */
 const ADDITIONAL_LANGUAGES = [
   'apacheconf', 'applescript', 'asciidoc', 'aspnet', 'awk', 'bash', 'basic', 'c', 'clojure', 'cpp',
@@ -74,7 +122,11 @@ module.exports = {
   ADMONITION_KEYWORDS,
   MAGIC_COMMENTS,
   admonitionsConfig,
+  buildIdPlugin,
+  codeRunnerPlugin,
+  katexCssPlugin,
   katexOptions,
+  pdfjsWorkerPlugin,
   preprocessDropDownIc,
   rehypeDropDownIc,
   remarkDropDownIc,

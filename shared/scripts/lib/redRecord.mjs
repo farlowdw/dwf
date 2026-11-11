@@ -6,6 +6,11 @@
  * shared:pull and shared:bump read it, so a red site never reads green and a pull there waits for the undo. The next
  * green proof at that site takes the file away.
  *
+ * While a shared:all turn runs at a site it takes the record up (takeRecord): the file moves aside as TAKEN_FILE with
+ * the turn's process id, so the turn's own pull and bump do not refuse, and the turn's end writes, clears or puts it
+ * back. A turn killed outright never ends: its taken file then reads as the record again (readRecord), so a site that
+ * held a red never reads green because a run died there.
+ *
  * A file and not the history, because a red is about the work tree and node_modules as much as the commits, the undo
  * resets the commits away, and nothing about a red may ever reach the hub or a public site.
  *
@@ -16,10 +21,12 @@
  *             shared:all refuse.
  *   waiting   the undo ran, and the change is still ahead: a plain pull would bring the same hub commit back, or
  *             the hub's pin is still the version that went red. Status warns with the way on.
- *   settled   the site is past it: it holds a later hub commit, or it took the same hub commit again in a pull of
- *             its own after the undo, as a site does when the red was its own code, or the pin moved off that
- *             version and the site stands on its own pin. Nothing reads it any more, and the next shared:all turn
- *             there removes it.
+ *   taken     it took the same hub commit again in a pull of its own after the undo, as a site does when the red
+ *             was its own code: nothing has proved it here since. Status warns, with the proof to run; pull, bump
+ *             and shared:all go on. A green `shared:all -- run shared:verify` there, or a pull or bump turn that
+ *             proves the site, removes the file.
+ *   settled   the site is past it: it holds a later hub commit, or the pin moved off that version and the site
+ *             stands on its own pin. Nothing reads it any more, and the next shared:all turn there removes it.
  *
  * HOW TO CHANGE IT
  *   The file's name: RECORD_FILE, and RECORD_FORMAT when its fields change. What a red says: the phrases below,
@@ -41,6 +48,9 @@ import { isAncestor, readState } from './state.mjs';
 /** The file, below the site's git folder. */
 const RECORD_FILE = 'docusaurus-shared-red.json';
 
+/** The record while a shared:all turn holds it, with that turn's process id as `takenBy`. */
+const TAKEN_FILE = 'docusaurus-shared-red.taken.json';
+
 /** The shape of the file's fields. A file of another shape is read as none. */
 const RECORD_FORMAT = 1;
 
@@ -48,7 +58,10 @@ const RECORD_FORMAT = 1;
 export const KINDS = Object.freeze({ PULL: 'pull', BUMP: 'bump' });
 
 /** Where a red stands now. */
-export const STANDINGS = Object.freeze({ HOLDS: 'holds', WAITING: 'waiting', SETTLED: 'settled' });
+export const STANDINGS = Object.freeze({ HOLDS: 'holds', WAITING: 'waiting', TAKEN: 'taken', SETTLED: 'settled' });
+
+/** The site's own proof of a red taken again by hand, and the run that clears the record with it. */
+const VERIFY_HERE_LINE = 'npm run shared:verify';
 
 /** The two scripts that write a record. */
 export const RECORD_SCRIPTS = Object.freeze({ ALL: 'shared:all', BUMP: 'shared:bump' });
@@ -60,14 +73,13 @@ const ALL_PULL_LINE = 'npm run shared:all -- pull';
 const ALL_BUMP_LINE = 'npm run shared:all -- bump';
 
 /** Where a site's record lives. Null outside a repository. */
-export function recordPath(root, env = process.env) {
-  const where = gitValue(['rev-parse', '--git-path', RECORD_FILE], { cwd: root, env, read: true });
+export function recordPath(root, env = process.env, name = RECORD_FILE) {
+  const where = gitValue(['rev-parse', '--git-path', name], { cwd: root, env, read: true });
   return where === null ? null : path.resolve(root, where);
 }
 
-/** The site's record, or null when there is none or it cannot be read. */
-export function readRecord(root, env = process.env) {
-  const file = recordPath(root, env);
+/** A record file's record, or null when there is none or it cannot be read. */
+function recordIn(file) {
   if (file === null) return null;
   try {
     const record = JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -77,16 +89,55 @@ export function readRecord(root, env = process.env) {
   }
 }
 
+/** True while a process exists. A process this user may not signal exists too. */
+function isAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 1) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error.code === 'EPERM';
+  }
+}
+
+/**
+ * The site's record, or null when there is none or it cannot be read. A record a turn took up counts while that turn
+ * is gone (killed before its end), and not while it runs. `ownOnly` reads the record file alone.
+ */
+export function readRecord(root, env = process.env, { ownOnly = false } = {}) {
+  const record = recordIn(recordPath(root, env));
+  if (record !== null || ownOnly) return record;
+  const taken = recordIn(recordPath(root, env, TAKEN_FILE));
+  if (taken === null || isAlive(taken.takenBy)) return null;
+  const { takenBy, ...rest } = taken;
+  return rest;
+}
+
+/** Takes the site's record up for a turn: moved aside with this process's id. Returns it, or null. */
+export function takeRecord(root, env = process.env) {
+  const record = readRecord(root, env);
+  if (record === null) return null;
+  const taken = recordPath(root, env, TAKEN_FILE);
+  fs.writeFileSync(taken, `${JSON.stringify({ ...record, takenBy: process.pid }, null, 2)}\n`);
+  fs.rmSync(recordPath(root, env), { force: true });
+  return record;
+}
+
 /** Writes the site's record, over any one before it. */
 export function writeRecord(root, record, env = process.env) {
   const file = recordPath(root, env);
-  if (file !== null) fs.writeFileSync(file, `${JSON.stringify({ format: RECORD_FORMAT, ...record }, null, 2)}\n`);
+  if (file === null) return;
+  const { takenBy, ...rest } = record;
+  fs.writeFileSync(file, `${JSON.stringify({ ...rest, format: RECORD_FORMAT }, null, 2)}\n`);
+  fs.rmSync(recordPath(root, env, TAKEN_FILE), { force: true });
 }
 
-/** Removes the site's record. Nothing happens when there is none. */
+/** Removes the site's record, and one a turn took up. Nothing happens when there is none. */
 export function removeRecord(root, env = process.env) {
-  const file = recordPath(root, env);
-  if (file !== null) fs.rmSync(file, { force: true });
+  for (const name of [RECORD_FILE, TAKEN_FILE]) {
+    const file = recordPath(root, env, name);
+    if (file !== null) fs.rmSync(file, { force: true });
+  }
 }
 
 /** True while a bump's leftovers are here: a package file changed against HEAD, or node_modules off package.json. */
@@ -138,8 +189,13 @@ export function standingOf(root, record, { state, env = process.env }) {
   const tookItIn = record.kind === KINDS.PULL || record.moved;
   if (tookItIn && recorded === record.hub && keepsTurnCommits(root, record, env)) return STANDINGS.HOLDS;
   if (record.kind === KINDS.BUMP) return bumpStanding(root, record, env);
-  if (recorded === record.hub) return STANDINGS.SETTLED;
+  if (recorded === record.hub) return STANDINGS.TAKEN;
   return isAncestor(root, record.hub, recorded, env) ? STANDINGS.SETTLED : STANDINGS.WAITING;
+}
+
+/** The run of shared:all that proves a site, and clears a red it took again by hand. */
+export function verifyAllLine(siteName) {
+  return `npm run shared:all -- run shared:verify --only ${siteName}`;
 }
 
 /** A site's record and where it stands, or null without one. `state` is read only when there is a record. */
@@ -228,6 +284,10 @@ export function redLine(root, red, state, env = process.env) {
   if (red.standing === STANDINGS.HOLDS) {
     return { held: true, text: heldText(record), fix: undoLine(record), details: movedOnDetails(root, record, env) };
   }
+  if (red.standing === STANDINGS.TAKEN) {
+    const text = `${runPhrase(record)} ${endPhrase(record)}, was undone, and this site took it again by hand: not proven here since`;
+    return { held: false, details: [], text, fix: `${VERIFY_HERE_LINE} here, then ${verifyAllLine(record.site)}` };
+  }
   return { held: false, details: [], ...waitingLine(root, record, state, env) };
 }
 
@@ -238,7 +298,6 @@ export function heldRefusal(record) {
 
 /** Why a red no longer stands, in words, for the line that says it is cleared. */
 export function clearedReason(root, record, state, env = process.env) {
-  if (record.kind === KINDS.PULL && state?.recorded === record.hub) return `it took hub ${short(record.hub)} again in a pull of its own`;
   if (record.kind === KINDS.PULL) return `it holds hub ${short(state?.recorded ?? '')}, past ${short(record.hub)}`;
   const pin = hubPin(root, env).version;
   return pin === record.version ? `it stands on ${record.version}` : `the hub's pin is ${pin ?? 'another version'} now`;

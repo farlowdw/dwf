@@ -1,0 +1,50 @@
+{
+ "input": {
+  "language": "c",
+  "readerCode": "#include <stdio.h>\n\nint add(int a, int b) {\n    return a + c;\n}\n",
+  "harness": "check(\"add\", add(1, 2), 3);\n"
+ },
+ "request": {
+  "language": "c",
+  "version": "10.2.0",
+  "files": [
+   {
+    "name": "main",
+    "content": "/* --- check helper: headers (src/lib/codeRunner/checkHelpers.js) --- */\n#include <stdio.h>\n\n/* --- check helper (src/lib/codeRunner/checkHelpers.js) --- */\n#define DWF_SHOWN_MAX 300\n#define DWF_TEXT_SIZE (DWF_SHOWN_MAX + 16)\n#define DWF_TOLERANCE 1e-9\n#define DWF_SINGLE_TOLERANCE 0.000001\n#define DWF_SINGLE_FORMAT \"%.7g\"\n#define DWF_CUT \"…\"\n\ntypedef _Bool dwf_bool_t;\ntypedef char dwf_char_t;\ntypedef char *dwf_string_t;\ntypedef const char *dwf_const_string_t;\ntypedef float dwf_float_t;\ntypedef double dwf_double_t;\ntypedef long double dwf_long_double_t;\ntypedef unsigned int dwf_uint_t;\ntypedef unsigned long dwf_ulong_t;\ntypedef unsigned long long dwf_ullong_t;\n\ntypedef struct {\n\tchar text[DWF_TEXT_SIZE];\n\tsize_t length;\n\tint full;\n} dwf_text;\n\nstatic size_t dwf_length(const char *text) {\n\tsize_t length = 0;\n\twhile (text[length] != '\\0') length++;\n\treturn length;\n}\n\nstatic void dwf_copy(char *to, const char *from) {\n\tsize_t index;\n\tfor (index = 0; from[index] != '\\0'; index++) to[index] = from[index];\n\tto[index] = '\\0';\n}\n\nstatic int dwf_same_text(const char *one, const char *other) {\n\tsize_t index = 0;\n\twhile (one[index] != '\\0' && one[index] == other[index]) index++;\n\treturn one[index] == other[index];\n}\n\nstatic void dwf_append(dwf_text *shown, const char *part) {\n\tsize_t part_length = dwf_length(part);\n\tif (shown->full) return;\n\tif (shown->length + part_length > DWF_SHOWN_MAX) {\n\t\tdwf_copy(shown->text + shown->length, DWF_CUT);\n\t\tshown->length += dwf_length(DWF_CUT);\n\t\tshown->full = 1;\n\t\treturn;\n\t}\n\tdwf_copy(shown->text + shown->length, part);\n\tshown->length += part_length;\n}\n\nstatic void dwf_append_char(dwf_text *shown, char c, char quote) {\n\tchar part[8];\n\tif (c == quote || c == '\\\\') snprintf(part, sizeof part, \"\\\\%c\", c);\n\telse if (c == '\\n') dwf_copy(part, \"\\\\n\");\n\telse if (c == '\\r') dwf_copy(part, \"\\\\r\");\n\telse if (c == '\\t') dwf_copy(part, \"\\\\t\");\n\telse if ((unsigned char)c < 0x20) snprintf(part, sizeof part, \"\\\\x%02x\", (unsigned char)c);\n\telse snprintf(part, sizeof part, \"%c\", c);\n\tdwf_append(shown, part);\n}\n\nstatic void dwf_show_string(dwf_text *shown, const char *value) {\n\tif (value == NULL) {\n\t\tdwf_append(shown, \"NULL\");\n\t\treturn;\n\t}\n\tdwf_append(shown, \"\\\"\");\n\tfor (const char *p = value; *p != '\\0' && !shown->full; p++) dwf_append_char(shown, *p, '\"');\n\tdwf_append(shown, \"\\\"\");\n}\n\nstatic void dwf_print_json(const char *text) {\n\tputchar('\"');\n\tfor (const unsigned char *p = (const unsigned char *)text; *p != '\\0'; p++) {\n\t\tif (*p == '\"' || *p == '\\\\') printf(\"\\\\%c\", *p);\n\t\telse if (*p == '\\n') fputs(\"\\\\n\", stdout);\n\t\telse if (*p == '\\r') fputs(\"\\\\r\", stdout);\n\t\telse if (*p == '\\t') fputs(\"\\\\t\", stdout);\n\t\telse if (*p < 0x20) printf(\"\\\\u%04x\", *p);\n\t\telse putchar(*p);\n\t}\n\tputchar('\"');\n}\n\nstatic int dwf_report(const char *name, int pass, const char *got, const char *expected) {\n\tfputs(\"@@check@@ {\\\"name\\\":\", stdout);\n\tdwf_print_json(name == NULL ? \"\" : name);\n\tprintf(\",\\\"pass\\\":%s,\\\"got\\\":\", pass ? \"true\" : \"false\");\n\tdwf_print_json(got);\n\tfputs(\",\\\"expected\\\":\", stdout);\n\tdwf_print_json(expected);\n\tfputs(\"}\\n\", stdout);\n\tfflush(stdout);\n\treturn pass;\n}\n\nstatic int dwf_close_enough(double got, double expected, double tolerance) {\n\tdouble scale = 1.0;\n\tif (got == expected) return 1;\n\tif (__builtin_isnan(got) && __builtin_isnan(expected)) return 1;\n\tif (__builtin_isinf(got) || __builtin_isinf(expected)) return 0;\n\tif (__builtin_fabs(got) > scale) scale = __builtin_fabs(got);\n\tif (__builtin_fabs(expected) > scale) scale = __builtin_fabs(expected);\n\treturn __builtin_fabs(got - expected) <= tolerance * scale;\n}\n\nstatic int dwf_check_integer(const char *name, long long got, long long expected) {\n\tchar got_text[32], expected_text[32];\n\tsnprintf(got_text, sizeof got_text, \"%lld\", got);\n\tsnprintf(expected_text, sizeof expected_text, \"%lld\", expected);\n\treturn dwf_report(name, got == expected, got_text, expected_text);\n}\n\nstatic int dwf_check_unsigned(const char *name, unsigned long long got, unsigned long long expected) {\n\tchar got_text[32], expected_text[32];\n\tsnprintf(got_text, sizeof got_text, \"%llu\", got);\n\tsnprintf(expected_text, sizeof expected_text, \"%llu\", expected);\n\treturn dwf_report(name, got == expected, got_text, expected_text);\n}\n\nstatic int dwf_check_double(const char *name, double got, double expected) {\n\tchar got_text[40], expected_text[40];\n\tsnprintf(got_text, sizeof got_text, \"%.15g\", got);\n\tsnprintf(expected_text, sizeof expected_text, \"%.15g\", expected);\n\treturn dwf_report(name, dwf_close_enough(got, expected, DWF_TOLERANCE), got_text, expected_text);\n}\n\nstatic int dwf_check_float(const char *name, float got, float expected) {\n\tchar got_text[40], expected_text[40];\n\tsnprintf(got_text, sizeof got_text, DWF_SINGLE_FORMAT, got);\n\tsnprintf(expected_text, sizeof expected_text, DWF_SINGLE_FORMAT, expected);\n\treturn dwf_report(name, dwf_close_enough(got, expected, DWF_SINGLE_TOLERANCE), got_text, expected_text);\n}\n\nstatic int dwf_check_bool(const char *name, _Bool got, _Bool expected) {\n\treturn dwf_report(name, got == expected, got ? \"true\" : \"false\", expected ? \"true\" : \"false\");\n}\n\nstatic int dwf_check_char(const char *name, char got, char expected) {\n\tdwf_text got_text = { { 0 }, 0, 0 };\n\tdwf_text expected_text = { { 0 }, 0, 0 };\n\tdwf_append(&got_text, \"'\");\n\tdwf_append_char(&got_text, got, '\\'');\n\tdwf_append(&got_text, \"'\");\n\tdwf_append(&expected_text, \"'\");\n\tdwf_append_char(&expected_text, expected, '\\'');\n\tdwf_append(&expected_text, \"'\");\n\treturn dwf_report(name, got == expected, got_text.text, expected_text.text);\n}\n\nstatic int dwf_check_string(const char *name, const char *got, const char *expected) {\n\tdwf_text got_text = { { 0 }, 0, 0 };\n\tdwf_text expected_text = { { 0 }, 0, 0 };\n\tint pass = (got == NULL || expected == NULL) ? got == expected : dwf_same_text(got, expected);\n\tdwf_show_string(&got_text, got);\n\tdwf_show_string(&expected_text, expected);\n\treturn dwf_report(name, pass, got_text.text, expected_text.text);\n}\n\nstatic void dwf_check_done(void) {\n\tputs(\"@@check@@ {\\\"done\\\":true}\");\n\tfflush(stdout);\n}\n/* --- end of the check helper --- */\nstatic void dwf_run_checks(void);\nint main(void) {\n\tdwf_run_checks();\n\tdwf_check_done();\n\treturn 0;\n}\n#define DWF_CHECK_HARNESS 1\n#define main reader_main\n#include \"reader.c\"\n#undef main\n\n/* --- check helper: the macro (src/lib/codeRunner/checkHelpers.js) --- */\n#define DWF_INTEGER_OR_FLOATING(expected, integer_check) _Generic((expected), \\\n\tdwf_float_t: dwf_check_float, \\\n\tdwf_double_t: dwf_check_double, \\\n\tdwf_long_double_t: dwf_check_double, \\\n\tdefault: integer_check)\n#define check(name, got, expected) _Generic((got), \\\n\tdwf_bool_t: dwf_check_bool, \\\n\tdwf_char_t: dwf_check_char, \\\n\tdwf_string_t: dwf_check_string, \\\n\tdwf_const_string_t: dwf_check_string, \\\n\tdwf_float_t: dwf_check_float, \\\n\tdwf_double_t: dwf_check_double, \\\n\tdwf_long_double_t: dwf_check_double, \\\n\tdwf_uint_t: DWF_INTEGER_OR_FLOATING((expected), dwf_check_unsigned), \\\n\tdwf_ulong_t: DWF_INTEGER_OR_FLOATING((expected), dwf_check_unsigned), \\\n\tdwf_ullong_t: DWF_INTEGER_OR_FLOATING((expected), dwf_check_unsigned), \\\n\tdefault: DWF_INTEGER_OR_FLOATING((expected), dwf_check_integer))((name), (got), (expected))\nstatic void dwf_run_checks(void) {\ncheck(\"add\", add(1, 2), 3);\n}\n"
+   },
+   {
+    "name": "reader",
+    "content": "#ifdef DWF_CHECK_HARNESS\n#line 1 \"solution.c\"\n#include <stdio.h>\n\nint add(int a, int b) {\n    return a + c;\n}\n#endif\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "compile": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "In file included from main.c:182:\nsolution.c: In function 'add':\nsolution.c:4:16: error: 'c' undeclared (first use in this function)\nsolution.c:4:16: note: each undeclared identifier is reported only once for each function it appears in\nchmod: cannot access 'a.out': No such file or directory\n",
+   "code": 1,
+   "output": "In file included from main.c:182:\nsolution.c: In function 'add':\nsolution.c:4:16: error: 'c' undeclared (first use in this function)\nsolution.c:4:16: note: each undeclared identifier is reported only once for each function it appears in\nchmod: cannot access 'a.out': No such file or directory\n",
+   "memory": 7620000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 106,
+   "wall_time": 110
+  },
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "In file included from main.c:182:\nsolution.c: In function 'add':\nsolution.c:4:16: error: 'c' undeclared (first use in this function)\nsolution.c:4:16: note: each undeclared identifier is reported only once for each function it appears in\nchmod: cannot access 'a.out': No such file or directory\n",
+   "code": 1,
+   "output": "In file included from main.c:182:\nsolution.c: In function 'add':\nsolution.c:4:16: error: 'c' undeclared (first use in this function)\nsolution.c:4:16: note: each undeclared identifier is reported only once for each function it appears in\nchmod: cannot access 'a.out': No such file or directory\n",
+   "memory": 7620000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 106,
+   "wall_time": 110
+  },
+  "language": "c",
+  "version": "10.2.0"
+ }
+}

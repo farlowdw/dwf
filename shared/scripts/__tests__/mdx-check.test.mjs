@@ -311,6 +311,7 @@ test('a comment fails with --strict and compiles without it', (t) => {
   const { status, stderr } = runOn(t, files, ['--strict']);
   assert.equal(status, EXIT_FOUND);
   assert.match(stderr, /docs\/a\.md:1: unexpected-character/);
+  assert.match(stderr, /write \{\/\* truncate \*\/\} for <!-- truncate -->/, 'the hit names the fix');
 });
 
 test('a legacy title is a hit with --strict, line by line, on one page', (t) => {

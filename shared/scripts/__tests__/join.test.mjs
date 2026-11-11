@@ -174,7 +174,7 @@ test('--check on an older site says what the join does and what stays by hand, a
   assert.match(stdout, /^info netlify\s+no netlify\.toml/m);
   assert.match(stdout, /^warn mui\s+@mui\/material 6\.5\.0 is outside/m);
   assert.match(stdout, /^warn dotenv\s+docusaurus2-dotenv is listed/m);
-  assert.match(stdout, /^info admonition\s+no src\/theme\/Admonition\/Types\.js/m);
+  assert.match(stdout, /^info theme\s+no src\/theme\/Admonition\/Types\.js: the join writes the stub$/m);
   assert.match(stdout, /^info mount\s+no shared\/: the join adds it/m);
   assert.match(stdout, /shared:join can run here$/m);
 });
@@ -550,6 +550,77 @@ test('a piece with no default export gets the stub its row asks for, and status 
   assert.deepEqual(readStub(site, stubPath), { path: stubPath, exists: true, target: '@site/shared/components/Flags', plain: true });
 });
 
+// Rows inside another row's folder, as CodeRef and unsavedWork.js sit inside CodeEditor's
+
+const PART_STUB = 'src/components/Widget/Part/index.jsx';
+const FLAGS_STUB = 'src/components/Widget/flags.js';
+const PART = 'export default function Part() {\n  return null;\n}\n';
+const FLAGS = 'export const flags = {};\n';
+
+/** The hub with a row nested in Widget's folder (Part) and a one-file row there (flags.js, with no default). */
+function nestedHub(fixture) {
+  const table = fixture.git(['show', 'main:requirements.cjs'], fixture.hub).replace(
+    '  ENTRIES: [\n',
+    "  ENTRIES: [\n    { name: 'Part', kind: 'component', stub: 'src/components/Widget/Part/index.jsx', packages: [], suites: [] },\n"
+      + "    { name: 'flags', kind: 'component', stub: 'src/components/Widget/flags.js', namedOnly: true, packages: [], suites: [] },\n",
+  );
+  fixture.commitToHub({ 'requirements.cjs': `${table}\n`, 'components/Widget/Part/index.jsx': PART, 'components/Widget/flags.js': FLAGS }, 'Nest two pieces in the widget');
+}
+
+/** A site that holds the whole Widget tree as a copy of the hub's, with `files` over it. */
+function nestedCopy(fixture, name, files = {}) {
+  return olderSite(fixture, name, { [PART_STUB]: PART, [FLAGS_STUB]: FLAGS, ...files });
+}
+
+test('stubs for a piece and the one nested in it, and no file of a third row: nothing reads as a copy', (t) => {
+  const { fixture, join, check } = setUp(t);
+  nestedHub(fixture);
+  const site = olderSite(fixture, 'stubbed', {
+    'src/components/Widget/index.jsx': "export { default } from '@site/shared/components/Widget';\n",
+    [PART_STUB]: "export { default } from '@site/shared/components/Widget/Part';\n",
+  });
+  const { output } = join(site, '.');
+  assert.doesNotMatch(output, /flags/, 'no stub to write by hand for a row the site does not use');
+  assert.match(check(site).stdout, /^ok {3}stubs\s+no copies of shared components/m);
+});
+
+test('a copy that differs outside its nested row keeps that row and the one-file row as they are', (t) => {
+  const { fixture, join, check } = setUp(t);
+  nestedHub(fixture);
+  const site = nestedCopy(fixture, 'changed', { 'src/components/Widget/index.jsx': 'export default function Widget() {\n  return 1;\n}\n' });
+  join(site, '.');
+  assert.equal(read(site, PART_STUB), PART, "Part's copy stays");
+  assert.equal(read(site, FLAGS_STUB), FLAGS);
+  assert.equal(readStub(site, PART_STUB).target, null);
+  const { stdout } = check(site);
+  assert.match(stdout, /^warn stubs\s+1 copied folder unlike shared\/: they stay/m);
+  assert.match(stdout, /Widget: index\.jsx; Part, flags stay with it/);
+});
+
+test('a whole copy of a tree becomes three stubs, and its folder holds only them', (t) => {
+  const { fixture, join } = setUp(t);
+  nestedHub(fixture);
+  const site = nestedCopy(fixture, 'whole');
+  const { status, output } = join(site, '.');
+  assert.equal(status, EXIT.OK, output);
+  assert.equal(readStub(site, 'src/components/Widget/index.jsx').target, '@site/shared/components/Widget');
+  assert.equal(readStub(site, PART_STUB).target, '@site/shared/components/Widget/Part');
+  assert.match(read(site, FLAGS_STUB), /^export \* from '@site\/shared\/components\/Widget\/flags';$/m);
+  const tracked = fixture.git(['ls-files', '--', 'src/components/Widget'], site).split('\n').sort();
+  assert.deepEqual(tracked, ['src/components/Widget/Part/index.jsx', 'src/components/Widget/flags.js', 'src/components/Widget/index.jsx']);
+});
+
+test('a copy whose nested row differs is kept whole: the matching rows around it are not stubbed', (t) => {
+  const { fixture, join, check } = setUp(t);
+  nestedHub(fixture);
+  const site = nestedCopy(fixture, 'part-changed', { [PART_STUB]: 'export default function Part() {\n  return 2;\n}\n' });
+  const before = fixture.git(['ls-files', '-s', '--', 'src/components/Widget'], site);
+  join(site, '.');
+  assert.equal(fixture.git(['ls-files', '-s', '--', 'src/components/Widget'], site), before, 'nothing in the tree moved');
+  assert.equal(readStub(site, 'src/components/Widget/index.jsx').target, null);
+  assert.match(check(site).stdout, /Part: index\.jsx; flags, Widget stay with it/);
+});
+
 test('a copy with a file of the site\'s own stays, and the check names the file', (t) => {
   const { fixture, join } = setUp(t);
   const site = olderSite(fixture, 'data', { 'src/components/Widget/items.js': 'export default [];\n' });
@@ -794,6 +865,49 @@ test('a site with no MUI X packages, or past the MUI step, hears nothing of them
   lock.packages = { ...lock.packages, 'node_modules/@mui/material': { version: '9.4.0' } };
   fixture.commitToSite(moved, { 'package-lock.json': `${JSON.stringify(lock, null, 2)}\n` }, 'Move to MUI 9');
   assert.doesNotMatch(check(moved).stdout, /^warn mui-x/m);
+});
+
+/** A second theme piece's stub, beyond the admonition types. */
+const THEME_STUB = 'src/theme/Layout/Sidebar/index.jsx';
+
+/** The hub's table with that second theme piece, and the piece's file in the hub. */
+function addThemePiece(fixture) {
+  const row = `{ name: 'Layout/Sidebar', kind: 'theme', stub: '${THEME_STUB}', packages: ['react'], suites: [] },`;
+  const text = read(fixture.hubWork, 'requirements.cjs').replace("    {\n      name: 'Widget',", `    ${row}\n    {\n      name: 'Widget',`);
+  assert.match(text, /name: 'Layout\/Sidebar'/);
+  fixture.commitToHub({
+    'requirements.cjs': text,
+    'theme/Layout/Sidebar/index.jsx': 'export default function Sidebar() {\n  return null;\n}\n',
+  }, 'Share a sidebar wrapper');
+}
+
+test('a theme piece beyond the admonition types gets its stub from the join, and --check names each stub under theme', (t) => {
+  const { fixture, join, check } = setUp(t);
+  addThemePiece(fixture);
+  const site = olderSite(fixture);
+  const { status, output } = join(site, '.');
+  assert.equal(status, EXIT.OK, output);
+  const stub = readStub(site, THEME_STUB);
+  assert.deepEqual([stub.target, stub.plain], ['@site/shared/theme/Layout/Sidebar', true]);
+  const { stdout } = check(site);
+  assert.match(stdout, /^ok {3}theme\s+src\/theme\/Admonition\/Types\.js points at shared\/$/m);
+  assert.match(stdout, /^ok {3}theme\s+src\/theme\/Layout\/Sidebar\/index\.jsx points at shared\/$/m);
+  assert.doesNotMatch(stdout, /^\S+\s+admonition\s/m, 'no line calls another theme piece the admonition stub');
+});
+
+test('a theme file of the site\'s own stays as it is, and the by-hand list says what to do with each kind', (t) => {
+  const { fixture, join, check } = setUp(t);
+  addThemePiece(fixture);
+  const own = 'export default function Sidebar() {\n  return null;\n}\n';
+  const types = 'export default {};\n';
+  const site = olderSite(fixture, 'own-theme', { [THEME_STUB]: own, 'src/theme/Admonition/Types.js': types });
+  const { status, stdout, output } = join(site, '.');
+  assert.equal(status, EXIT.OK, output);
+  assert.deepEqual([read(site, THEME_STUB), read(site, 'src/theme/Admonition/Types.js')], [own, types]);
+  assert.match(stdout, /src\/theme\/Admonition is the site's own\. Move any type of its own into a Types\.js as shared\/README\.md shows\./);
+  assert.match(stdout, /These theme files are the site's own, where shared\/ holds the piece: src\/theme\/Layout\/Sidebar\/index\.jsx\. Delete one that holds nothing of the site's own and run npm run shared:join -- \., which writes the stub\. Make any other a wrapper round the shared piece: "When one site needs something different" in shared\/README\.md shows one\./);
+  assert.doesNotMatch(stdout, /site's own, where shared\/ holds the piece: [^.]*Admonition/, 'the admonition types have their own step');
+  assert.match(check(site).stdout, /^warn theme\s+src\/theme\/Layout\/Sidebar\/index\.jsx is a local copy {2}\(fix: by hand, see "Join an existing site" in shared\/README\.md\)$/m);
 });
 
 test('the MUI step prints its own install line, MUI\'s two packages together', (t) => {

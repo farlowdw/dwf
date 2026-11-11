@@ -25,17 +25,30 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from '../bump.mjs';
 import { COMPARE_SCRIPT_ENV, commitSubject } from '../lib/bumpSettings.mjs';
 import { deployLine } from '../lib/deployLine.mjs';
+import { LOCK_WAIT_SECONDS } from '../lib/compareSettings.mjs';
 import { EXIT } from '../lib/exitCodes.mjs';
+import { compareLimitSeconds } from '../lib/siteGate.mjs';
 import {
-  FROM, MINIFIED_PAGE, MUI_KEY, MUI_X_KEY, PIN, bumpSite, installFromLock, isRunning, lineStarting, lockOn, pageOf, siteFiles, waitFor,
+  FROM, MINIFIED_PAGE, MUI_KEY, MUI_X_KEY, PIN, bumpSite, installFromLock, isRunning, lineStarting, lockOn, pageOf, siteFiles, stopGently,
+  waitFor, waitForPidFile,
 } from './bumpFixture.mjs';
-import { assertLine, startServer, stopProcess, writeFiles } from './fixture.mjs';
+
+/** Every call of the stand-in compare in this fixture, in order. */
+function readCompareCalls(context) {
+  const file = path.join(context.base, 'compare-calls.jsonl');
+  return fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\n').filter(Boolean) : [];
+}
+
+/** How long a bump may take to reach its install, which a stand-in holds: about 2 s quiet. */
+const INSTALL_REACHED_MS = 60_000;
+import { assertLine, startServer, writeFiles } from './fixture.mjs';
 
 const SCRIPTS_FOLDER = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const BUMP_FILES = [
@@ -581,9 +594,9 @@ for (const [name, verify] of [['a hung suite', 'hang'], ['a hung suite that igno
   });
 }
 
-test('the default timeout is the plan\'s 180 seconds', async () => {
+test('the default timeout is 900 seconds: a site\'s whole shared:verify took longer than 180 under load', async () => {
   const { VERIFY_TIMEOUT_SECONDS } = await import('../lib/bumpSettings.mjs');
-  assert.equal(VERIFY_TIMEOUT_SECONDS, 180);
+  assert.equal(VERIFY_TIMEOUT_SECONDS, 900);
 });
 
 test('a site without shared:verify gets test:shared, and that reaches its real tests', (t) => {
@@ -633,6 +646,35 @@ for (const code of [EXIT.CHECKS, EXIT.REFUSED, EXIT.USAGE, EXIT.UNEXPECTED]) {
   });
 }
 
+test('a compare that refused before it compared, a lock still held or a port taken, is tried once more', (t) => {
+  const context = bumpSite(t, { compareFirst: EXIT.REFUSED });
+  const report = context.bump(NEXT);
+  assert.equal(report.status, EXIT.OK, report.output);
+  assert.match(report.stdout, /^compare +it refused before it compared: once more$/m);
+  assert.equal(readCompareCalls(context).length, 2);
+});
+
+test('a compare whose every red view ran out of time is tried once more, and a page that broke is red at once', (t) => {
+  const slow = bumpSite(t, { compareFirst: EXIT.CHECKS, firstReport: 'timeouts' });
+  const again = slow.bump(NEXT);
+  assert.equal(again.status, EXIT.OK, again.output);
+  assert.match(again.stdout, /^compare +every view it failed ran out of time: once more$/m);
+  const broken = bumpSite(t, { compareFirst: EXIT.CHECKS, firstReport: 'broken' });
+  assertRed(broken, broken.bump(NEXT), /RED at the compare: exit code 3/);
+  assert.equal(readCompareCalls(broken).length, 1);
+});
+
+test('the compare step has a limit: its lock wait, then a minute for each load it plans', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'compare-limit-'));
+  try {
+    fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ comparePages: ['/', '/a/'] }));
+    assert.equal(compareLimitSeconds({ root, lockWait: '60' }), 60 + 2 * 2 * 2 * 2 * 60);
+    assert.equal(compareLimitSeconds({ root, pages: '/', lockWait: undefined }), LOCK_WAIT_SECONDS + 8 * 60);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('a tracked file changed by a step stops the commit', (t) => {
   const context = bumpSite(t, { build: 'touch' });
   assertRed(context, context.bump(NEXT), /a step changed docs\/intro\.md, so nothing was committed/);
@@ -652,12 +694,11 @@ test('a signal stops the running step and prints the undo', async (t) => {
   const context = bumpSite(t, { install: 'hang' });
   const script = path.join(SCRIPTS_FOLDER, 'bump.mjs');
   const child = spawn(process.execPath, [script, NEXT, '--keep', context.keep], { cwd: context.site, env: context.env, stdio: ['ignore', 'pipe', 'pipe'] });
-  t.after(() => stopProcess(child));
+  t.after(() => stopGently(child));
   let stderr = '';
   child.stderr.setEncoding('utf8').on('data', (text) => { stderr += text; });
   child.stdout.resume();
-  const hung = path.join(context.base, 'hung.pid');
-  assert.ok(await waitFor(() => fs.existsSync(hung), 10_000), 'the install started');
+  await waitForPidFile(child, path.join(context.base, 'hung.pid'), () => stderr, INSTALL_REACHED_MS);
   child.kill('SIGTERM');
   const code = await new Promise((resolve) => { child.on('close', resolve); });
   assert.equal(code, 143);

@@ -46,7 +46,7 @@ import { refuseNpmKeptOptions } from './lib/npmArgs.mjs';
 import { capped, counted, short } from './lib/phrases.mjs';
 import { refusal } from './lib/preflight.mjs';
 import { MANIFEST_FILE, PREFIX, REMOTE, SITE_BRANCH } from './lib/settings.mjs';
-import { LEAVE_SCRIPT, LEAVE_SUBJECT, editManifest, isSharedLine, readScripts, sharedLineNames } from './lib/siteLines.mjs';
+import { LEAVE_BODY_START, LEAVE_SCRIPT, LEAVE_SUBJECT, editManifest, isSharedLine, readScripts, sharedLineNames } from './lib/siteLines.mjs';
 import { STATES, readState } from './lib/state.mjs';
 
 const CHECK_FLAG = '--check';
@@ -62,7 +62,7 @@ const USAGE = [
 const WAY_BACK = 'node shared/scripts/join.mjs && npm run shared:pull';
 
 /** The second paragraph of the leave's commit message. */
-const LEAVE_BODY = `The shared npm lines go and the shared remote with them. To come back, in the site: ${WAY_BACK}`;
+const LEAVE_BODY = `${LEAVE_BODY_START} To come back, in the site: ${WAY_BACK}`;
 
 /** An npm line that runs another line: `npm run <name>`. */
 const NPM_RUN = /\bnpm run ([\w:.-]+)/g;

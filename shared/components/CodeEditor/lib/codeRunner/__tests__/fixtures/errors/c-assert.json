@@ -1,0 +1,41 @@
+{
+ "request": {
+  "language": "c",
+  "version": "10.2.0",
+  "files": [
+   {
+    "name": "main",
+    "content": "#include <assert.h>\nint main(void) {\n    int x = 0;\n    assert(x > 0);\n    return 0;\n}\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "compile": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "",
+   "code": 0,
+   "output": "",
+   "memory": 7632000,
+   "message": null,
+   "status": null,
+   "cpu_time": 140,
+   "wall_time": 146
+  },
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "a.out: main.c:4: main: Assertion `x > 0' failed.\n/piston/packages/gcc/10.2.0/run: line 6:     3 Aborted                 (core dumped) ./a.out \"$@\"\n",
+   "code": 134,
+   "output": "a.out: main.c:4: main: Assertion `x > 0' failed.\n/piston/packages/gcc/10.2.0/run: line 6:     3 Aborted                 (core dumped) ./a.out \"$@\"\n",
+   "memory": 716000,
+   "message": "Exited with error status 134",
+   "status": "RE",
+   "cpu_time": 5,
+   "wall_time": 257
+  },
+  "language": "c",
+  "version": "10.2.0"
+ }
+}

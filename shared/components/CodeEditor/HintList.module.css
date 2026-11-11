@@ -1,0 +1,154 @@
+/* HintList.module.css — the look of an exercise's hints area (HintList.jsx), between the code and
+   the output while the header's light bulb is pressed: the revealed hints stacked as boxes (a
+   header row on the editor header's grey, "Hint 2 of 3" on the left and the eye button on the
+   far right, then the hint's text), and "Show hint 3 of 3" under the last one. The wrapper
+   (.hints) has no box of its own: closed, the area takes no space at all, and the live region
+   inside the wrapper is visually hidden.
+
+   COLOURS  The editor's --ce-* properties only (defined on .frame in styles.module.css, light
+   and dark, and set by every theme of the Theme menu: editorThemes.js), so the area takes the
+   reader's theme like the step bar: borders --ce-border, the header rows --ce-header-bg, "Hint 2
+   of 3" and the eye --ce-muted (the step bar's counter colour on the same grey), the hover shade
+   --ce-handle-hover, the button --ce-control-bg. The text is the frame's own colour on the
+   editor's background, like the output area; inline `code` in a hint keeps the site's
+   inline-code look, on the text's baseline (styles.module.css > INLINE CODE IN THE FRAME'S
+   PROSE; its A THEME IN THE OTHER MODE gives it the theme's shade when the theme's mode is not
+   the site's). Nothing here differs by mode, so nothing keys on data-ce-mode.
+
+   SIZES  The eye and the button are 1.75rem tall (28 px: above WCAG 2.5.8's 24 px for a finger),
+   as the step bar's buttons. A folded hint is its header row alone (the text keeps `hidden`, so
+   no rule here may give .text a display of its own).
+
+   Infima's `.markdown li + li` (a gap between list items) and its list padding reach into the
+   editor, which sits in a note's .markdown: the list rules below use two classes, so they win.
+
+   HOW TO CHANGE IT  Spacing and type: the rules below (--hl-control: the eye's and the button's
+   size). The words: HintList.jsx > WORDS. The icons: HintList.jsx > EYE_PATHS. */
+
+.hints {
+	min-width: 0;
+}
+
+.area {
+	--hl-control: 1.75rem;
+
+	padding: 0.5rem 0.75rem 0.625rem;
+	border-top: 1px solid var(--ce-border);
+	font-size: 0.875rem;
+}
+
+.area .list {
+	display: grid;
+	gap: 0.5rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.list .hint {
+	margin: 0;
+	overflow: hidden; /* the rounded corners of the header row */
+	border: 1px solid var(--ce-border);
+	border-radius: var(--ifm-global-radius);
+}
+
+.header {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	min-height: var(--hl-control);
+	padding: 0.125rem 0.25rem 0.125rem 0.625rem;
+	background: var(--ce-header-bg);
+}
+
+.label {
+	color: var(--ce-muted);
+	font-size: 0.8125rem;
+	font-weight: var(--ifm-font-weight-semibold);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+/* the eye: a round icon button at the far right of the header row */
+.eye {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: var(--hl-control);
+	height: var(--hl-control);
+	margin-left: auto;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: transparent;
+	color: var(--ce-muted);
+	cursor: pointer;
+}
+
+.eye:hover {
+	background: var(--ce-handle-hover);
+}
+
+.eye:focus-visible {
+	outline: 2px solid var(--ifm-color-primary);
+	outline-offset: -2px;
+}
+
+.eyeIcon {
+	width: 1.125rem;
+	height: 1.125rem;
+	fill: currentColor;
+}
+
+/* the hint's text, under its header row (folded: `hidden`, see SIZES) */
+.text {
+	padding: 0.375rem 0.625rem 0.5rem;
+	border-top: 1px solid var(--ce-border);
+	line-height: 1.5;
+	overflow-wrap: anywhere;
+}
+
+/* "Show hint 3 of 3": the step bar's small button, under the last revealed hint */
+.next {
+	display: inline-flex;
+	align-items: center;
+	box-sizing: border-box;
+	height: var(--hl-control);
+	margin-top: 0.5rem;
+	padding: 0 0.625rem;
+	border: 1px solid var(--ce-border);
+	border-radius: var(--ifm-global-radius);
+	background: var(--ce-control-bg);
+	color: var(--ifm-font-color-base);
+	font: inherit;
+	font-size: 0.8125rem;
+	line-height: 1;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+/* a blue border and the resize strip's hover shade; the text keeps its colour (the site's blue
+   as text on the control colour would be too faint: StepBar.module.css > HOVER) */
+.next:hover {
+	border-color: var(--ifm-color-primary);
+	background: var(--ce-handle-hover);
+}
+
+.next:focus-visible {
+	outline: 2px solid var(--ifm-color-primary);
+	outline-offset: 2px;
+}
+
+/* read by screen readers only (the hint a reveal brought: HintList.jsx > ACCESSIBILITY) */
+.visuallyHidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+	border: 0;
+}

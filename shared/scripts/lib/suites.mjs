@@ -23,6 +23,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { git, gitValue } from './git.mjs';
+import { short } from './phrases.mjs';
 import { tableProblems } from './requirements.mjs';
 import { PREFIX, SCRIPTS_FOLDER } from './settings.mjs';
 import { hubRecords, pickRecorded, readRecords } from './state.mjs';
@@ -93,7 +94,8 @@ export function readScriptsChange(root, env = process.env) {
   const here = gitValue(['rev-parse', '--verify', '--quiet', `HEAD:${folder}`], options);
   const there = gitValue(['rev-parse', '--verify', '--quiet', `${recorded.sha}:${SCRIPTS_FOLDER}`], options);
   if (here !== there) return { run: true, why: `${SCRIPTS_SUITES}: ${folder} differs from the hub commit this site recorded` };
-  return { run: false, why: `${SCRIPTS_SUITES}: ${folder} has not changed. To run them: ${SCRIPTS_COMMAND}` };
+  const hub = short(recorded.sha);
+  return { run: false, why: `${SCRIPTS_SUITES}: ${folder} matches hub ${hub}, the commit this site recorded, so the hub's own run of them covers it. To run them: ${SCRIPTS_COMMAND}` };
 }
 
 /** How the way a site reaches a piece reads in a sentence. */

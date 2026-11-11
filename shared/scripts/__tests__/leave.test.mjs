@@ -264,6 +264,9 @@ test('the round trip: a site leaves, the others take a change quietly, it comes 
   const linesBefore = manifestText(two);
   assert.equal(leave(two).status, EXIT.OK);
   assert.equal(linesBeforeLeave(two, fixture.env)['shared:verify'], OWN_VERIFY);
+  const body = fixture.git(['log', '-1', '--format=%b'], two);
+  fixture.git(['commit', '-q', '--amend', '-m', 'Take two off the hub for a while', '-m', body], two);
+  assert.equal(linesBeforeLeave(two, fixture.env)['shared:verify'], OWN_VERIFY, 'a leave commit reworded by hand is still found');
   fixture.commitToSite(one, { 'shared/css/custom.scss': 'taken while two was out\n' }, 'Change the styles while two is out');
   const pushed = pushIn(fixture, one, stubTests(fixture));
   assert.equal(pushed.status, EXIT.OK, pushed.output);

@@ -1,0 +1,41 @@
+{
+ "request": {
+  "language": "c++",
+  "version": "10.2.0",
+  "files": [
+   {
+    "name": "main",
+    "content": "#include <vector>\n#include <string>\nint main() {\n    std::vector<int> v;\n    v.push_back(std::string(\"a\"));\n}\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "compile": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "main.cpp: In function 'int main()':\nmain.cpp:5:33: error: no matching function for call to 'std::vector<int>::push_back(std::string)'\n    5 |     v.push_back(std::string(\"a\"));\n      |                                 ^\nIn file included from /piston/packages/gcc/10.2.0/include/c++/10.2.0/vector:67,\n                 from main.cpp:1:\n/piston/packages/gcc/10.2.0/include/c++/10.2.0/bits/stl_vector.h:1187:7: note: candidate: 'void std::vector<_Tp, _Alloc>::push_back(const value_type&) [with _Tp = int; _Alloc = std::allocator<int>; std::vector<_Tp, _Alloc>::value_type = int]'\n 1187 |       push_back(const value_type& __x)\n      |       ^~~~~~~~~\n/piston/packages/gcc/10.2.0/include/c++/10.2.0/bits/stl_vector.h:1187:35: note:   no known conversion for argument 1 from 'std::string' {aka 'std::__cxx11::basic_string<char>'} to 'const value_type&' {aka 'const int&'}\n 1187 |       push_back(const value_type& __x)\n      |                 ~~~~~~~~~~~~~~~~~~^~~\n/piston/packages/gcc/10.2.0/include/c++/10.2.0/bits/stl_vector.h:1203:7: note: candidate: 'void std::vector<_Tp, _Alloc>::push_back(std::vector<_Tp, _Alloc>::value_type&&) [with _Tp = int; _Alloc = std::allocator<int>; std::vector<_Tp, _Alloc>::value_type = int]'\n 1203 |       push_back(value_type&& __x)\n      |       ^~~~~~~~~\n/piston/packages/gcc/10.2.0/include/c++/10.2.0/bits/stl_vector.h:1203:30: note:   no known conversion for argument 1 from 'std::string' {aka 'std::__cxx11::basic_string<char>'} to 'std::vector<int>::value_type&&' {aka 'int&&'}\n 1203 |       push_back(value_type&& __x)\n      |                 ~~~~~~~~~~~~~^~~\nchmod: cannot access 'a.out': No such file or directory\n",
+   "code": 1,
+   "output": "main.cpp: In function 'int main()':\nmain.cpp:5:33: error: no matching function for call to 'std::vector<int>::push_back(std::string)'\n    5 |     v.push_back(std::string(\"a\"));\n      |                                 ^\nIn file included from /piston/packages/gcc/10.2.0/include/c++/10.2.0/vector:67,\n                 from main.cpp:1:\n/piston/packages/gcc/10.2.0/include/c++/10.2.0/bits/stl_vector.h:1187:7: note: candidate: 'void std::vector<_Tp, _Alloc>::push_back(const value_type&) [with _Tp = int; _Alloc = std::allocator<int>; std::vector<_Tp, _Alloc>::value_type = int]'\n 1187 |       push_back(const value_type& __x)\n      |       ^~~~~~~~~\n/piston/packages/gcc/10.2.0/include/c++/10.2.0/bits/stl_vector.h:1187:35: note:   no known conversion for argument 1 from 'std::string' {aka 'std::__cxx11::basic_string<char>'} to 'const value_type&' {aka 'const int&'}\n 1187 |       push_back(const value_type& __x)\n      |                 ~~~~~~~~~~~~~~~~~~^~~\n/piston/packages/gcc/10.2.0/include/c++/10.2.0/bits/stl_vector.h:1203:7: note: candidate: 'void std::vector<_Tp, _Alloc>::push_back(std::vector<_Tp, _Alloc>::value_type&&) [with _Tp = int; _Alloc = std::allocator<int>; std::vector<_Tp, _Alloc>::value_type = int]'\n 1203 |       push_back(value_type&& __x)\n      |       ^~~~~~~~~\n/piston/packages/gcc/10.2.0/include/c++/10.2.0/bits/stl_vector.h:1203:30: note:   no known conversion for argument 1 from 'std::string' {aka 'std::__cxx11::basic_string<char>'} to 'std::vector<int>::value_type&&' {aka 'int&&'}\n 1203 |       push_back(value_type&& __x)\n      |                 ~~~~~~~~~~~~~^~~\nchmod: cannot access 'a.out': No such file or directory\n",
+   "memory": 31732000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 512,
+   "wall_time": 519
+  },
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "main.cpp: In function 'int main()':\nmain.cpp:5:33: error: no matching function for call to 'std::vector<int>::push_back(std::string)'\n    5 |     v.push_back(std::string(\"a\"));\n      |                                 ^\nIn file included from /piston/packages/gcc/10.2.0/include/c++/10.2.0/vector:67,\n                 from main.cpp:1:\n/piston/packages/gcc/10.2.0/include/c++/10.2.0/bits/stl_vector.h:1187:7: note: candidate: 'void std::vector<_Tp, _Alloc>::push_back(const value_type&) [with _Tp = int; _Alloc = std::allocator<int>; std::vector<_Tp, _Alloc>::value_type = int]'\n 1187 |       push_back(const value_type& __x)\n      |       ^~~~~~~~~\n/piston/packages/gcc/10.2.0/include/c++/10.2.0/bits/stl_vector.h:1187:35: note:   no known conversion for argument 1 from 'std::string' {aka 'std::__cxx11::basic_string<char>'} to 'const value_type&' {aka 'const int&'}\n 1187 |       push_back(const value_type& __x)\n      |                 ~~~~~~~~~~~~~~~~~~^~~\n/piston/packages/gcc/10.2.0/include/c++/10.2.0/bits/stl_vector.h:1203:7: note: candidate: 'void std::vector<_Tp, _Alloc>::push_back(std::vector<_Tp, _Alloc>::value_type&&) [with _Tp = int; _Alloc = std::allocator<int>; std::vector<_Tp, _Alloc>::value_type = int]'\n 1203 |       push_back(value_type&& __x)\n      |       ^~~~~~~~~\n/piston/packages/gcc/10.2.0/include/c++/10.2.0/bits/stl_vector.h:1203:30: note:   no known conversion for argument 1 from 'std::string' {aka 'std::__cxx11::basic_string<char>'} to 'std::vector<int>::value_type&&' {aka 'int&&'}\n 1203 |       push_back(value_type&& __x)\n      |                 ~~~~~~~~~~~~~^~~\nchmod: cannot access 'a.out': No such file or directory\n",
+   "code": 1,
+   "output": "main.cpp: In function 'int main()':\nmain.cpp:5:33: error: no matching function for call to 'std::vector<int>::push_back(std::string)'\n    5 |     v.push_back(std::string(\"a\"));\n      |                                 ^\nIn file included from /piston/packages/gcc/10.2.0/include/c++/10.2.0/vector:67,\n                 from main.cpp:1:\n/piston/packages/gcc/10.2.0/include/c++/10.2.0/bits/stl_vector.h:1187:7: note: candidate: 'void std::vector<_Tp, _Alloc>::push_back(const value_type&) [with _Tp = int; _Alloc = std::allocator<int>; std::vector<_Tp, _Alloc>::value_type = int]'\n 1187 |       push_back(const value_type& __x)\n      |       ^~~~~~~~~\n/piston/packages/gcc/10.2.0/include/c++/10.2.0/bits/stl_vector.h:1187:35: note:   no known conversion for argument 1 from 'std::string' {aka 'std::__cxx11::basic_string<char>'} to 'const value_type&' {aka 'const int&'}\n 1187 |       push_back(const value_type& __x)\n      |                 ~~~~~~~~~~~~~~~~~~^~~\n/piston/packages/gcc/10.2.0/include/c++/10.2.0/bits/stl_vector.h:1203:7: note: candidate: 'void std::vector<_Tp, _Alloc>::push_back(std::vector<_Tp, _Alloc>::value_type&&) [with _Tp = int; _Alloc = std::allocator<int>; std::vector<_Tp, _Alloc>::value_type = int]'\n 1203 |       push_back(value_type&& __x)\n      |       ^~~~~~~~~\n/piston/packages/gcc/10.2.0/include/c++/10.2.0/bits/stl_vector.h:1203:30: note:   no known conversion for argument 1 from 'std::string' {aka 'std::__cxx11::basic_string<char>'} to 'std::vector<int>::value_type&&' {aka 'int&&'}\n 1203 |       push_back(value_type&& __x)\n      |                 ~~~~~~~~~~~~~^~~\nchmod: cannot access 'a.out': No such file or directory\n",
+   "memory": 31732000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 512,
+   "wall_time": 519
+  },
+  "language": "c++",
+  "version": "10.2.0"
+ }
+}

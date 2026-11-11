@@ -1,0 +1,29 @@
+{
+ "request": {
+  "language": "go",
+  "version": "1.16.2",
+  "files": [
+   {
+    "name": "main",
+    "content": "package main\n\nimport \"log\"\n\nfunc main() {\n\tlog.SetFlags(log.Lshortfile)\n\tlog.Println(\"starting\")\n\tx := 3\n\tlog.Printf(\"x is %d\", x)\n}\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "main.go:7: starting\nmain.go:9: x is 3\n",
+   "code": 0,
+   "output": "main.go:7: starting\nmain.go:9: x is 3\n",
+   "memory": 59532000,
+   "message": null,
+   "status": null,
+   "cpu_time": 400,
+   "wall_time": 682
+  },
+  "language": "go",
+  "version": "1.16.2"
+ }
+}

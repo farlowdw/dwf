@@ -1,0 +1,29 @@
+{
+ "request": {
+  "language": "bash",
+  "version": "5.2.0",
+  "files": [
+   {
+    "name": "main.sh",
+    "content": "echo start\nfoo_not_a_command\necho end\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "start\nend\n",
+   "stderr": "main.sh: line 2: foo_not_a_command: command not found\n",
+   "code": 0,
+   "output": "start\nmain.sh: line 2: foo_not_a_command: command not found\nend\n",
+   "memory": 1212000,
+   "message": null,
+   "status": null,
+   "cpu_time": 9,
+   "wall_time": 16
+  },
+  "language": "bash",
+  "version": "5.2.0"
+ }
+}

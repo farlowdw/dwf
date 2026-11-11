@@ -1,0 +1,41 @@
+{
+ "request": {
+  "language": "c",
+  "version": "10.2.0",
+  "files": [
+   {
+    "name": "main",
+    "content": "#include <stdio.h>\nint main(void) {\n    int x = y + 1;\n    printf(\"%d\\n\", x)\n    return 0;\n}\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "compile": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "main.c: In function 'main':\nmain.c:3:13: error: 'y' undeclared (first use in this function)\n    3 |     int x = y + 1;\n      |             ^\nmain.c:3:13: note: each undeclared identifier is reported only once for each function it appears in\nmain.c:4:22: error: expected ';' before 'return'\n    4 |     printf(\"%d\\n\", x)\n      |                      ^\n      |                      ;\n    5 |     return 0;\n      |     ~~~~~~            \nchmod: cannot access 'a.out': No such file or directory\n",
+   "code": 1,
+   "output": "main.c: In function 'main':\nmain.c:3:13: error: 'y' undeclared (first use in this function)\n    3 |     int x = y + 1;\n      |             ^\nmain.c:3:13: note: each undeclared identifier is reported only once for each function it appears in\nmain.c:4:22: error: expected ';' before 'return'\n    4 |     printf(\"%d\\n\", x)\n      |                      ^\n      |                      ;\n    5 |     return 0;\n      |     ~~~~~~            \nchmod: cannot access 'a.out': No such file or directory\n",
+   "memory": 20224000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 133,
+   "wall_time": 227
+  },
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "main.c: In function 'main':\nmain.c:3:13: error: 'y' undeclared (first use in this function)\n    3 |     int x = y + 1;\n      |             ^\nmain.c:3:13: note: each undeclared identifier is reported only once for each function it appears in\nmain.c:4:22: error: expected ';' before 'return'\n    4 |     printf(\"%d\\n\", x)\n      |                      ^\n      |                      ;\n    5 |     return 0;\n      |     ~~~~~~            \nchmod: cannot access 'a.out': No such file or directory\n",
+   "code": 1,
+   "output": "main.c: In function 'main':\nmain.c:3:13: error: 'y' undeclared (first use in this function)\n    3 |     int x = y + 1;\n      |             ^\nmain.c:3:13: note: each undeclared identifier is reported only once for each function it appears in\nmain.c:4:22: error: expected ';' before 'return'\n    4 |     printf(\"%d\\n\", x)\n      |                      ^\n      |                      ;\n    5 |     return 0;\n      |     ~~~~~~            \nchmod: cannot access 'a.out': No such file or directory\n",
+   "memory": 20224000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 133,
+   "wall_time": 227
+  },
+  "language": "c",
+  "version": "10.2.0"
+ }
+}

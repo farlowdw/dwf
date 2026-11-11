@@ -1,0 +1,7 @@
+{
+	"//": "A local Docusaurus plugin that serves the PDF.js worker from /vendor/pdfjs-dist-<version>/ (index.js). Its name is the key of usePluginData('pdfjs-worker').",
+	"name": "pdfjs-worker",
+	"version": "0.0.0",
+	"private": true,
+	"main": "index.js"
+}

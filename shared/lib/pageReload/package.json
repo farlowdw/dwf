@@ -1,0 +1,4 @@
+{
+	"//": "Marks the .js files of this folder as ES modules, so that `node --test` runs them without guessing (webpack reads ES modules either way). To change it: keep the type while the files use import and export.",
+	"type": "module"
+}

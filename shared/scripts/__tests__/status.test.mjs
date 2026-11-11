@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { EXIT } from '../lib/exitCodes.mjs';
-import { CHECKS, formatResult, redCheck, restoreLine, stubsCheck } from '../lib/checks.mjs';
+import { CHECKS, formatResult, fasterCheck, redCheck, restoreLine, stubsCheck } from '../lib/checks.mjs';
 import { MAX_DETAILS } from '../lib/phrases.mjs';
 import { parseArgs, summary } from '../status.mjs';
 import { assertLine, fixtureFor, startServer, writeFiles } from './fixture.mjs';
@@ -26,7 +26,8 @@ function counts(report) {
 }
 
 /** Checks that print nothing on a clean site: the red line speaks only while a red run here still stands. */
-const SILENT_WHEN_CLEAN = [redCheck];
+/** Checks that print nothing on a clean site: no red, and no @docusaurus/faster with the sass plugin. */
+const SILENT_WHEN_CLEAN = [redCheck, fasterCheck];
 
 test('a clean site: every check ok, exit 0', (t) => {
   const fixture = fixtureFor(t);
@@ -227,7 +228,7 @@ test('open: a revert or a rebase that waits is named, with its own way on and ou
   fixture.commitToSite(site, { 'shared/notes.txt': 'two\n' }, 'Change it again');
   assert.notEqual(gitExit(fixture, ['revert', '--no-edit', first], site), 0);
   const reverting = fixture.status(site);
-  assertLine(reverting, 'FAIL', 'open', /a revert is still open.*git revert --continue; or git revert --abort/);
+  assertLine(reverting, 'FAIL', 'open', /a revert is still open.*git revert --continue; or git revert --abort; or git revert --quit, which keeps the commits it made/);
   assertLine(reverting, 'FAIL', 'markers', /remove them from each file, then git add the resolved files, then git revert --continue; or git revert --abort/);
   assertLine(reverting, 'warn', 'hub', /ahead of the hub.*fix: see the open line first/);
   assert.doesNotMatch(reverting.stdout, /git reset --keep/);
@@ -387,6 +388,20 @@ test('node_modules, ignored files and a bad table each fail', (t) => {
   assert.match(bad.stdout, /A: unknown kind mystery/);
 });
 
+test('@docusaurus/faster with the plain sass plugin fails until the plugin has charset: false, and no line without faster', (t) => {
+  const fixture = fixtureFor(t);
+  const site = fixture.addSite('one');
+  const config = (options) => `module.exports = { future: { experimental_faster: true }, plugins: [${options}] };\n`;
+  fixture.commitToSite(site, { 'docusaurus.config.js': config("'docusaurus-plugin-sass'") }, 'Build with faster');
+  const report = fixture.status(site);
+  const line = assertLine(report, 'FAIL', 'faster', /the sass plugin and no charset: false: the dark rules are dropped/);
+  assert.ok(line.includes("sassOptions: { charset: false }"), line);
+  fixture.commitToSite(site, { 'docusaurus.config.js': config("['docusaurus-plugin-sass', { sassOptions: { charset: false } }]") }, 'Turn the charset off');
+  assertLine(fixture.status(site), 'ok', 'faster', /charset off/);
+  fixture.commitToSite(site, { 'docusaurus.config.js': "module.exports = { plugins: ['docusaurus-plugin-sass'] };\n" }, 'Build without faster');
+  assert.doesNotMatch(fixture.status(site).stdout, /^\S+\s+faster\s/m);
+});
+
 test('conflict markers committed into shared/ fail with file and line', (t) => {
   const fixture = fixtureFor(t);
   const site = fixture.addSite('one');
@@ -396,6 +411,8 @@ test('conflict markers committed into shared/ fail with file and line', (t) => {
   assert.equal(report.status, EXIT.CHECKS);
   assertLine(report, 'FAIL', 'markers', /1 conflict marker .*git reset --keep HEAD~1, then npm run shared:pull/);
   assert.match(report.stdout, /shared\/css\/custom\.scss:2/);
+  const hub = assertLine(report, 'warn', 'hub', /ahead of the hub/);
+  assert.match(hub, /fix: see the markers line first: a push refuses while they are there/, 'never a bare push, which refuses');
 });
 
 test('conflict markers in an open merge point at the two ways out, not at the undo', (t) => {
@@ -550,6 +567,43 @@ test('stubs: deleted in turn, each one is reported; a local copy warns', (t) => 
   }
   writeFiles(site, { 'src/components/Widget/index.jsx': 'export default function Widget() {\n  return null;\n}\n' });
   assertLine(fixture.status(site), 'warn', 'stubs', /1 local copy where a stub belongs/);
+});
+
+/** The fixture's table with a plugin line the widget needs in the site's config. */
+const WIDGET_NEEDS_PLUGIN = `module.exports = {
+  RANGES: {},
+  ENTRIES: [{
+    name: 'Widget', kind: 'component', stub: 'src/components/Widget/index.jsx',
+    needsConfig: [{ text: 'widgetPlugin(', what: 'the widget plugin, widgetPlugin() in plugins' }],
+  }],
+};
+`;
+
+test('config: a piece in use without a line its row needs fails, a commented-out line is no line, and the line itself mends it', (t) => {
+  const fixture = fixtureFor(t);
+  fixture.commitToHub({ 'requirements.cjs': WIDGET_NEEDS_PLUGIN }, 'The widget needs its plugin');
+  const site = fixture.addSite('one');
+  const report = fixture.status(site);
+  assert.equal(report.status, EXIT.CHECKS, report.output);
+  assertLine(report, 'FAIL', 'config', /1 config line missing {2}\(fix: add each to docusaurus\.config\.js, see the README\)$/);
+  assert.match(report.stdout, /^ {18}Widget needs the widget plugin, widgetPlugin\(\) in plugins: no widgetPlugin\( found$/m);
+  const config = fs.readFileSync(path.join(site, 'docusaurus.config.js'), 'utf8');
+  writeFiles(site, { 'docusaurus.config.js': `${config}// module.exports.plugins = [widgetPlugin()];\n` });
+  assertLine(fixture.status(site), 'FAIL', 'config', /1 config line missing/);
+  writeFiles(site, { 'docusaurus.config.js': `${config}module.exports.plugins = [widgetPlugin()];\n` });
+  const mended = fixture.status(site);
+  assert.doesNotMatch(mended.stdout, /^\S+\s+config\s/m, 'a site with every line prints no config line');
+  assertLine(mended, 'ok', 'stubs', /1 of 1 stub present/);
+});
+
+test('config: a site that does not use the piece needs none of its lines', (t) => {
+  const fixture = fixtureFor(t);
+  fixture.commitToHub({ 'requirements.cjs': WIDGET_NEEDS_PLUGIN }, 'The widget needs its plugin');
+  const site = fixture.addSite('one');
+  fs.rmSync(path.join(site, 'src/components/Widget/index.jsx'));
+  const report = fixture.status(site);
+  assert.doesNotMatch(report.stdout, /^\S+\s+config\s/m);
+  assertLine(report, 'ok', 'stubs', /0 of 1 stub present, the rest not in use/);
 });
 
 test('MUI X: a refused term in shared code fails, a README may name it', (t) => {
@@ -720,6 +774,20 @@ test('stubs: one stub in the table reads as one', () => {
   const piece = { row: { stub: 'src/one.js' }, stub: { exists: true, target: 'shared/one.js' }, missingStub: false };
   const result = stubsCheck({ table: () => ({}), pieces: () => [piece] });
   assert.equal(result.text, '1 of 1 stub present, the rest not in use');
+});
+
+test('config: two lines missing count as two, each with its piece, beside the stubs line of another piece', () => {
+  const widget = {
+    row: { name: 'Widget', stub: 'src/one.js' }, stub: { exists: true, target: 'shared/one.js' }, missingStub: false,
+    missingConfig: [{ text: 'onePlugin(', what: 'the first plugin' }, { text: "'loader'", what: 'the loader' }],
+  };
+  const gone = { row: { name: 'Gone', stub: 'src/two.js' }, stub: { exists: false, target: null }, missingStub: true, missingConfig: [] };
+  const results = stubsCheck({ table: () => ({}), pieces: () => [widget, gone] });
+  assert.deepEqual(results.map(({ level, label, text }) => [level, label, text]), [
+    ['FAIL', 'stubs', '1 stub missing'],
+    ['FAIL', 'config', '2 config lines missing'],
+  ]);
+  assert.deepEqual(results[1].details, ['Widget needs the first plugin: no onePlugin( found', "Widget needs the loader: no 'loader' found"]);
 });
 
 test('formatResult puts the fix on the line and the details under it', () => {

@@ -23,7 +23,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { SCRIPT } from './allArgs.mjs';
 import { lastLines, runGroup, runLogged } from './bumpRun.mjs';
-import { LOG_TAIL_LINES } from './bumpSettings.mjs';
+import { KILL_GRACE_MS, LOG_TAIL_LINES } from './bumpSettings.mjs';
 import { EXIT, ScriptError } from './exitCodes.mjs';
 import { git, gitOrThrow } from './git.mjs';
 import { counted, short } from './phrases.mjs';
@@ -31,10 +31,16 @@ import { hubPin } from './pin.mjs';
 import { NO_WORD_LIST_FLAG, freshState, refusal } from './preflight.mjs';
 import { PREFIX, SCRIPTS_FOLDER, TEMPLATE_FOLDER } from './settings.mjs';
 import {
-  buildAfter, compareArgs, compareBuilds, gateJob, keepBefore, runSuites, stepLine, stoppedError, timedStep,
+  COMPARE_GRACE_MS, buildAfter, compareArgs, compareBuilds, gateJob, keepBefore, runSuites, stepLine, stoppedError, timedStep,
 } from './siteGate.mjs';
 import { isDone } from '../bump.mjs';
 import { PULLABLE } from '../pull.mjs';
+
+/**
+ * A site's own shared:bump gets this long to stop after SIGTERM: longer than its steps' own grace (a compare's
+ * COMPARE_GRACE_MS), so it can stop its step, write its record and set build/ aside before it is killed.
+ */
+const OUTER_BUMP_GRACE_MS = COMPARE_GRACE_MS + KILL_GRACE_MS + 5000;
 
 const PULL_FILE = 'pull.mjs';
 const BUMP_FILE = 'bump.mjs';
@@ -132,7 +138,7 @@ async function bumpSite(run, site, job, { target }) {
   const options = ['--keep', job.keep, '--before', job.before, '--verify-timeout', String(job.verifyTimeout), ...compareArgs(job)];
   const args = [ownScript(BUMP_FILE), target, ...options];
   const stdio = ['ignore', 'inherit', 'inherit'];
-  const result = await runGroup({ command: process.execPath, args, cwd: site.root, env: job.stepEnv, stdio });
+  const result = await runGroup({ command: process.execPath, args, cwd: site.root, env: job.stepEnv, stdio, graceMs: OUTER_BUMP_GRACE_MS });
   if (result.stopped !== null) throw stoppedError(job, result.stopped);
   if (result.code === EXIT.OK || result.code === EXIT.TO_READ) return result.code;
   throw new ScriptError(`${site.name}: shared:bump stopped with exit code ${result.code}`, result.code ?? EXIT.CHECKS);

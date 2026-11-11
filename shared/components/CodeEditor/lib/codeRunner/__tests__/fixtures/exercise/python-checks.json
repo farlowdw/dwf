@@ -1,0 +1,42 @@
+{
+ "input": {
+  "language": "python",
+  "readerCode": "def max(a, b):\n    return a if a > b else b\n\n\ndef add(a, b):\n    return a + b\n\n\ndef ratio(a, b):\n    return a / b\n\n\ndef is_even(n):\n    return 1 if n % 2 == 0 else 0\n\n\nclass Box:\n    def __init__(self, size):\n        self.size = size\n\n    def __repr__(self):\n        return f\"Box({self.size})\"\n\n\nprint(\"solution loaded\")\n\nif __name__ == \"__main__\":\n    print(\"demo: not run by a check\")\n",
+  "harness": "check(\"add(2, 3)\", add(2, 3), 5)\ncheck(\"add(2, 2)\", add(2, 2), 5)\ncheck(\"ratio(1, 3)\", ratio(1, 3), 0.333333333333)\ncheck(\"0.1 + 0.2\", add(0.1, 0.2), 0.3)\ncheck(\"lists\", [add(1, 1), 3.0], [2, 3])\ncheck(\"dict\", {\"a\": add(1, 2)}, {\"a\": 3})\ncheck(\"is_even(4)\", is_even(4), True)\ncheck(\"text\", \"say \\\"hi\\\"\\n\", \"say \\\"hi\\\"\\n\")\ncheck(\"infinities\", float(\"-inf\"), float(\"inf\"))\ncheck(\"reader max\", max(2, 3), 3)\ncheck(\"box\", Box(1), Box(1))\n"
+ },
+ "request": {
+  "language": "python",
+  "version": "3.12.0",
+  "files": [
+   {
+    "name": "main.py",
+    "content": "from solution import *\nfrom dwf_check import check, check_done as _dwf_check_done\ncheck(\"add(2, 3)\", add(2, 3), 5)\ncheck(\"add(2, 2)\", add(2, 2), 5)\ncheck(\"ratio(1, 3)\", ratio(1, 3), 0.333333333333)\ncheck(\"0.1 + 0.2\", add(0.1, 0.2), 0.3)\ncheck(\"lists\", [add(1, 1), 3.0], [2, 3])\ncheck(\"dict\", {\"a\": add(1, 2)}, {\"a\": 3})\ncheck(\"is_even(4)\", is_even(4), True)\ncheck(\"text\", \"say \\\"hi\\\"\\n\", \"say \\\"hi\\\"\\n\")\ncheck(\"infinities\", float(\"-inf\"), float(\"inf\"))\ncheck(\"reader max\", max(2, 3), 3)\ncheck(\"box\", Box(1), Box(1))\n_dwf_check_done()\n"
+   },
+   {
+    "name": "solution.py",
+    "content": "def max(a, b):\n    return a if a > b else b\n\n\ndef add(a, b):\n    return a + b\n\n\ndef ratio(a, b):\n    return a / b\n\n\ndef is_even(n):\n    return 1 if n % 2 == 0 else 0\n\n\nclass Box:\n    def __init__(self, size):\n        self.size = size\n\n    def __repr__(self):\n        return f\"Box({self.size})\"\n\n\nprint(\"solution loaded\")\n\nif __name__ == \"__main__\":\n    print(\"demo: not run by a check\")\n"
+   },
+   {
+    "name": "dwf_check.py",
+    "content": "# dwf_check.py — the check helper of an exercise (src/lib/codeRunner/checkHelpers.js)\nimport json\nimport math\n\nMARKER = '@@check@@'\nTOLERANCE = 1e-9\nSHOWN_MAX = 300\n\n\ndef _close(got, expected):\n    if got == expected:\n        return True\n    try:\n        got, expected = float(got), float(expected)\n    except OverflowError:\n        return False\n    if math.isnan(got) and math.isnan(expected):\n        return True\n    if math.isinf(got) or math.isinf(expected):\n        return False\n    scale = max(1.0, abs(got), abs(expected))\n    return abs(got - expected) <= TOLERANCE * scale\n\n\ndef _is_number(value):\n    return isinstance(value, (int, float)) and not isinstance(value, bool)\n\n\ndef _same_items(got, expected):\n    if len(got) != len(expected):\n        return False\n    return all(_same(one, other) for one, other in zip(got, expected))\n\n\ndef _same(got, expected):\n    if isinstance(got, bool) or isinstance(expected, bool):\n        return type(got) is type(expected) and got == expected\n    if _is_number(got) and _is_number(expected):\n        if isinstance(got, float) or isinstance(expected, float):\n            return _close(got, expected)\n        return got == expected\n    if isinstance(got, (list, tuple)) and type(got) is type(expected):\n        return _same_items(got, expected)\n    if isinstance(got, dict) and isinstance(expected, dict):\n        if got.keys() != expected.keys():\n            return False\n        return all(_same(got[key], expected[key]) for key in got)\n    try:\n        return bool(got == expected)\n    except Exception:\n        return False\n\n\ndef _show(value):\n    try:\n        text = repr(value)\n    except Exception:\n        text = '<unprintable>'\n    if len(text) > SHOWN_MAX:\n        text = text[:SHOWN_MAX] + '…'\n    return text\n\n\ndef _show_kind(value, other):\n    kind = type(value)\n    label = kind.__qualname__\n    if type(other) is kind:\n        label += f' object at {id(value):#x}'\n    return label + ': ' + _show(value)\n\n\ndef check(name, got, expected):\n    passed = _same(got, expected)\n    got_text, expected_text = _show(got), _show(expected)\n    if not passed and got_text == expected_text:\n        got_text, expected_text = _show_kind(got, expected), _show_kind(expected, got)\n    record = {'name': str(name), 'pass': passed, 'got': got_text, 'expected': expected_text}\n    print(MARKER + ' ' + json.dumps(record), flush=True)\n    return passed\n\n\ndef check_done():\n    print(MARKER + ' {\"done\":true}', flush=True)\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "solution loaded\n@@check@@ {\"name\": \"add(2, 3)\", \"pass\": true, \"got\": \"5\", \"expected\": \"5\"}\n@@check@@ {\"name\": \"add(2, 2)\", \"pass\": false, \"got\": \"4\", \"expected\": \"5\"}\n@@check@@ {\"name\": \"ratio(1, 3)\", \"pass\": true, \"got\": \"0.3333333333333333\", \"expected\": \"0.333333333333\"}\n@@check@@ {\"name\": \"0.1 + 0.2\", \"pass\": true, \"got\": \"0.30000000000000004\", \"expected\": \"0.3\"}\n@@check@@ {\"name\": \"lists\", \"pass\": true, \"got\": \"[2, 3.0]\", \"expected\": \"[2, 3]\"}\n@@check@@ {\"name\": \"dict\", \"pass\": true, \"got\": \"{'a': 3}\", \"expected\": \"{'a': 3}\"}\n@@check@@ {\"name\": \"is_even(4)\", \"pass\": false, \"got\": \"1\", \"expected\": \"True\"}\n@@check@@ {\"name\": \"text\", \"pass\": true, \"got\": \"'say \\\"hi\\\"\\\\n'\", \"expected\": \"'say \\\"hi\\\"\\\\n'\"}\n@@check@@ {\"name\": \"infinities\", \"pass\": false, \"got\": \"-inf\", \"expected\": \"inf\"}\n@@check@@ {\"name\": \"reader max\", \"pass\": true, \"got\": \"3\", \"expected\": \"3\"}\n@@check@@ {\"name\": \"box\", \"pass\": false, \"got\": \"Box object at 0xae789ff2000: Box(1)\", \"expected\": \"Box object at 0xae789fbdca0: Box(1)\"}\n@@check@@ {\"done\":true}\n",
+   "stderr": "",
+   "code": 0,
+   "output": "solution loaded\n@@check@@ {\"name\": \"add(2, 3)\", \"pass\": true, \"got\": \"5\", \"expected\": \"5\"}\n@@check@@ {\"name\": \"add(2, 2)\", \"pass\": false, \"got\": \"4\", \"expected\": \"5\"}\n@@check@@ {\"name\": \"ratio(1, 3)\", \"pass\": true, \"got\": \"0.3333333333333333\", \"expected\": \"0.333333333333\"}\n@@check@@ {\"name\": \"0.1 + 0.2\", \"pass\": true, \"got\": \"0.30000000000000004\", \"expected\": \"0.3\"}\n@@check@@ {\"name\": \"lists\", \"pass\": true, \"got\": \"[2, 3.0]\", \"expected\": \"[2, 3]\"}\n@@check@@ {\"name\": \"dict\", \"pass\": true, \"got\": \"{'a': 3}\", \"expected\": \"{'a': 3}\"}\n@@check@@ {\"name\": \"is_even(4)\", \"pass\": false, \"got\": \"1\", \"expected\": \"True\"}\n@@check@@ {\"name\": \"text\", \"pass\": true, \"got\": \"'say \\\"hi\\\"\\\\n'\", \"expected\": \"'say \\\"hi\\\"\\\\n'\"}\n@@check@@ {\"name\": \"infinities\", \"pass\": false, \"got\": \"-inf\", \"expected\": \"inf\"}\n@@check@@ {\"name\": \"reader max\", \"pass\": true, \"got\": \"3\", \"expected\": \"3\"}\n@@check@@ {\"name\": \"box\", \"pass\": false, \"got\": \"Box object at 0xae789ff2000: Box(1)\", \"expected\": \"Box object at 0xae789fbdca0: Box(1)\"}\n@@check@@ {\"done\":true}\n",
+   "memory": 6744000,
+   "message": null,
+   "status": null,
+   "cpu_time": 57,
+   "wall_time": 74
+  },
+  "language": "python",
+  "version": "3.12.0"
+ }
+}

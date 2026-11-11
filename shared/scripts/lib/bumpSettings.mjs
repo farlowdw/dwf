@@ -45,8 +45,11 @@ export const COMPARE_FILE = 'compare.mjs';
 /** Set this variable to run another compare. Fixtures use it, so most tests need no browser. */
 export const COMPARE_SCRIPT_ENV = 'DOCUSAURUS_SHARED_COMPARE';
 
-/** A hung suite reads red at this mark. */
-export const VERIFY_TIMEOUT_SECONDS = 180;
+/**
+ * A hung suite reads red at this mark. A site's whole shared:verify runs every suite of the site in a row (one
+ * site has ten), at 2 to 6 minutes on a quiet Mac and more under load: 180 s went red by the clock.
+ */
+export const VERIFY_TIMEOUT_SECONDS = 900;
 
 /** Far above a slow day, so that a stuck install or build ends instead of waiting for a person. */
 export const INSTALL_TIMEOUT_SECONDS = 900;

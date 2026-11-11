@@ -1,0 +1,44 @@
+/* styles.module.css — the look of <CodeRef> (index.jsx): words in the prose that point into a
+   code editor. They read as a link — the site's link blue — with a DOTTED underline, so they
+   are told apart from a plain link (no underline in Infima's default) and from a <DropDownIC> (a grey
+   dashed underline with an arrow). A pointer resting on them makes the underline solid; the
+   keyboard's focus draws the same ring as <DropDownIC>'s trigger.
+
+   The underline is a text-decoration, not a border, so it follows the words over a line break
+   and runs under inline code inside them. Every colour is Infima's link colour, which follows
+   the light / dark switch by itself (shared/css/custom.scss and _custom-dark.scss set it), so
+   there is no dark rule here.
+
+   HOW TO CHANGE IT  The knobs are the custom properties on .reference: the colour
+   (--coderef-color), the underline's style at rest (--coderef-underline-style: dotted, dashed,
+   solid …), its thickness and its distance below the text (--coderef-underline-thickness,
+   --coderef-underline-offset). The hover and focus looks are the two rules after it. */
+
+.reference {
+	--coderef-color: var(--ifm-link-color);
+	--coderef-underline-style: dotted;
+	--coderef-underline-thickness: 1.5px;
+	--coderef-underline-offset: 0.2em;
+
+	color: var(--coderef-color);
+	text-decoration-line: underline;
+	text-decoration-style: var(--coderef-underline-style);
+	text-decoration-thickness: var(--coderef-underline-thickness);
+	text-underline-offset: var(--coderef-underline-offset);
+	cursor: pointer;
+	border-radius: 2px;
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* a pointer resting on it: a solid underline (hover only where there is a pointer — on a touch
+   screen it would stick after a tap) */
+@media (hover: hover) {
+	.reference:hover {
+		text-decoration-style: solid;
+	}
+}
+
+.reference:focus-visible {
+	outline: 2px solid var(--coderef-color);
+	outline-offset: 2px;
+}

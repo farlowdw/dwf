@@ -1,0 +1,29 @@
+{
+ "request": {
+  "language": "python",
+  "version": "3.12.0",
+  "files": [
+   {
+    "name": "main.py",
+    "content": "x = 1\nprint(y)\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "Traceback (most recent call last):\n  File \"/box/submission/main.py\", line 2, in <module>\n    print(y)\n          ^\nNameError: name 'y' is not defined\n",
+   "code": 1,
+   "output": "Traceback (most recent call last):\n  File \"/box/submission/main.py\", line 2, in <module>\n    print(y)\n          ^\nNameError: name 'y' is not defined\n",
+   "memory": 3628000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 31,
+   "wall_time": 37
+  },
+  "language": "python",
+  "version": "3.12.0"
+ }
+}

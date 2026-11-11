@@ -61,7 +61,7 @@ const OPEN_STEPS = Object.freeze([
   { kind: 'rebase', marker: 'rebase-merge', folder: true, fix: 'git add the resolved files, then git rebase --continue; or git rebase --abort' },
   { kind: 'rebase', marker: 'rebase-apply', folder: true, fix: 'git add the resolved files, then git rebase --continue; or git rebase --abort' },
   { kind: 'cherry-pick', marker: 'CHERRY_PICK_HEAD', fix: 'git add the resolved files, then git cherry-pick --continue; or git cherry-pick --abort' },
-  { kind: 'revert', marker: 'REVERT_HEAD', fix: 'git add the resolved files, then git revert --continue; or git revert --abort' },
+  { kind: 'revert', marker: 'REVERT_HEAD', fix: 'git add the resolved files, then git revert --continue; or git revert --abort; or git revert --quit, which keeps the commits it made and ends it' },
   { kind: 'merge', marker: 'MERGE_HEAD', fix: 'git add the resolved files, then git commit --no-edit; or git merge --abort' },
 ]);
 

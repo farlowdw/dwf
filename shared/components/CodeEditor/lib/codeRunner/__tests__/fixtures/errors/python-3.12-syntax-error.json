@@ -1,0 +1,29 @@
+{
+ "request": {
+  "language": "python",
+  "version": "3.12.0",
+  "files": [
+   {
+    "name": "main.py",
+    "content": "print(\"start\")\ndef f(:\n    pass\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "  File \"/box/submission/main.py\", line 2\n    def f(:\n          ^\nSyntaxError: invalid syntax\n",
+   "code": 1,
+   "output": "  File \"/box/submission/main.py\", line 2\n    def f(:\n          ^\nSyntaxError: invalid syntax\n",
+   "memory": 3520000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 29,
+   "wall_time": 33
+  },
+  "language": "python",
+  "version": "3.12.0"
+ }
+}

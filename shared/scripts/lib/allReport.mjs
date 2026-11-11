@@ -27,7 +27,7 @@
  */
 
 import { ACTIONS, actionLine, rerunLine } from './allArgs.mjs';
-import { stillPending } from './allRed.mjs';
+import { stillPending, unprovenLines } from './allRed.mjs';
 import { headOf } from './allSite.mjs';
 import { sitesReadingFail } from './allStatus.mjs';
 import { CHANGED_FILES } from './bumpSettings.mjs';
@@ -77,17 +77,28 @@ function hasMoved({ heads, env }, { name, root }) {
   return heads.has(name) && heads.get(name) !== headOf(root, env);
 }
 
+/** True when a site holds commits its own upstream lacks: a push's change and its rejoin, say. False with no upstream. */
+function aheadOfUpstream({ root }, env) {
+  const count = gitValue(['rev-list', '--count', '@{upstream}..HEAD'], { cwd: root, env, read: true });
+  return count !== null && Number(count) > 0;
+}
+
 /**
  * The publish lines of this run, as { site, head, line }: the finished sites, and the site that moved the pin from
- * outside the run.
+ * outside the run. The site a pull or bump starts from gets a push line too when it holds commits its upstream
+ * lacks and the run did not move it: the change it pushed to the hub, with the rejoin's squash and merge.
  */
 function ownEntries(run) {
-  const { finished, tested, home, sites, env } = run;
+  const { finished, tested, home, sites, env, args } = run;
   const covered = sites.includes(home) ? finished : [...new Set([home, ...finished])];
-  return covered.filter((site) => hasMoved(run, site)).map((site) => {
+  const moved = covered.filter((site) => hasMoved(run, site));
+  const entries = moved.map((site) => {
     const line = tested.has(site.name) ? deployLine(site.root) : PUSH_LINE;
     return { site: site.name, head: headOf(site.root, env), line };
   });
+  const rollsOut = args?.action === ACTIONS.PULL || args?.action === ACTIONS.BUMP;
+  const homeWaits = rollsOut && home !== undefined && !moved.includes(home) && aheadOfUpstream(home, env);
+  return homeWaits ? [{ site: home.name, head: headOf(home.root, env), line: PUSH_LINE }, ...entries] : entries;
 }
 
 /** Every publish line to print and keep: this run's, then those an earlier red run printed that still stand. */
@@ -125,10 +136,11 @@ function statusLines(run) {
   return [`shared:status reads FAIL on ${named.join(', ')}. ${wayBack(run, failing)}`];
 }
 
-/** The end of a green run. */
+/** The end of a green run. A site left with a red it took again by hand is not green: it gets its proof's line. */
 export function endLines(run) {
-  const names = run.sites.map(({ name }) => name).join(', ');
-  return [`Green: ${names}. Nothing was pushed or deployed.`, ...statusLines(run), ...closingLines(run)];
+  const unproven = run.unproven ?? new Set();
+  const names = run.sites.filter(({ name }) => !unproven.has(name)).map(({ name }) => name).join(', ');
+  return [`Green: ${names || 'none'}. Nothing was pushed or deployed.`, ...unprovenLines(run), ...statusLines(run), ...closingLines(run)];
 }
 
 /** The lines that say where a stopped site stands. */

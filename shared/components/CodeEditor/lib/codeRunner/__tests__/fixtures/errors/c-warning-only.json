@@ -1,0 +1,41 @@
+{
+ "request": {
+  "language": "c",
+  "version": "10.2.0",
+  "files": [
+   {
+    "name": "main",
+    "content": "int main(void) {\n    puts(\"hi\");\n    return 0;\n}\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "compile": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "main.c: In function 'main':\nmain.c:2:5: warning: implicit declaration of function 'puts' [-Wimplicit-function-declaration]\n    2 |     puts(\"hi\");\n      |     ^~~~\n",
+   "code": 0,
+   "output": "main.c: In function 'main':\nmain.c:2:5: warning: implicit declaration of function 'puts' [-Wimplicit-function-declaration]\n    2 |     puts(\"hi\");\n      |     ^~~~\n",
+   "memory": 9228000,
+   "message": null,
+   "status": null,
+   "cpu_time": 177,
+   "wall_time": 196
+  },
+  "run": {
+   "signal": null,
+   "stdout": "hi\n",
+   "stderr": "",
+   "code": 0,
+   "output": "hi\n",
+   "memory": 716000,
+   "message": null,
+   "status": null,
+   "cpu_time": 6,
+   "wall_time": 10
+  },
+  "language": "c",
+  "version": "10.2.0"
+ }
+}

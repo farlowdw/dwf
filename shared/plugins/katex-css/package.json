@@ -1,0 +1,7 @@
+{
+	"//": "A local Docusaurus plugin that serves KaTeX's stylesheet and fonts from /vendor/katex-<version>/ (index.js). To change it: index.js; this file only names the folder's entry.",
+	"name": "katex-css",
+	"version": "0.0.0",
+	"private": true,
+	"main": "index.js"
+}

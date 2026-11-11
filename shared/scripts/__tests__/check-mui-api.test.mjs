@@ -436,6 +436,7 @@ test('a list it cannot use refuses the whole run, with a plain line', (t) => {
 test('the hub holds no site, so run there it refuses', () => {
   const { status, stderr } = run(SHARED_ROOT);
   assert.equal(status, EXIT_REFUSED, stderr);
+  assert.match(stderr, /refused: this is the shared tree, not a site/);
 });
 
 // The shared tree itself, mounted the way a site mounts it

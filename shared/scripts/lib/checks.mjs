@@ -63,6 +63,9 @@ const LEVEL_WIDTH = 5;
 const LABEL_WIDTH = 13;
 const DETAIL_INDENT = ' '.repeat(LEVEL_WIDTH + LABEL_WIDTH);
 
+/** The site's config, as a status line names it. */
+const CONFIG_NAME = 'docusaurus.config.js';
+
 /** A hub line's fix when the split line has a better one. */
 const SEE_SPLIT = 'see the split line';
 
@@ -97,7 +100,7 @@ export function makeContext({ root, env = process.env, offline = false }) {
   const newest = once(() => askNewest({ root, env }));
   const before = once(() => pinBefore(root, pin().version, env));
   const red = once(() => redOf(root, { env, state }));
-  return { root, env, offline, open, tracked, texts, table, pieces, state, wordList, pin, manifest, versionOf, newest, before, red };
+  return { root, env, offline, open, tracked, texts, table, site, pieces, state, wordList, pin, manifest, versionOf, newest, before, red };
 }
 
 /** The fix of a line that has to wait while a merge, revert, cherry-pick or rebase is open. */
@@ -197,7 +200,7 @@ function aheadLine(state, outgoing) {
   const publicNote = 'A public site publishes these commits with its next git push.';
   const text = `ahead of the hub by ${counted(state.outgoing.length, 'commit')}`;
   if (state.leaks.length > 0) return warn('hub', text, SEE_SPLIT, outgoing);
-  if (!state.revert) return warn('hub', text, 'npm run shared:push', [...outgoing, publicNote]);
+  if (!state.revert) return warn('hub', text, PUSH_FIX, [...outgoing, publicNote]);
   const { fix, note } = revertedPull(state);
   return warn('hub', `${text}, one of them a revert of a pull`, fix, [...outgoing, note]);
 }
@@ -240,10 +243,18 @@ function stateLine(state, list, where = {}) {
 /** What to check when a fetch of the hub failed. git's own lines under it say which. */
 export const FETCH_FIX = 'check the network, the hub URL and SSH access';
 
-/** The hub line's fix: the open step first, then the red line when a pull would bring back what went red here. */
-function hubFix({ root, env, open, red }, current, fix) {
-  const own = fix === PULL_FIX && pullBringsItBack(red?.() ?? null, current) ? SEE_RED : fix;
-  return unlessOpen({ open, root, env }, own);
+/** The push the ahead line offers. A push refuses while conflict markers sit under shared/. */
+const PUSH_FIX = 'npm run shared:push';
+const MARKERS_FIRST = `see the markers line first: a push refuses while they are there, so remove them and commit, then ${PUSH_FIX}`;
+
+/**
+ * The hub line's fix: the open step first, then the red line when a pull would bring back what went red here, and
+ * the markers line when the push it would offer refuses for them.
+ */
+function hubFix({ root, env, open, red, texts }, current, fix) {
+  const pushHeld = fix === PUSH_FIX && texts !== undefined && findConflictMarkers(textFilesOf(texts())).length > 0;
+  const back = fix === PULL_FIX && pullBringsItBack(red?.() ?? null, current);
+  return unlessOpen({ open, root, env }, pushHeld ? MARKERS_FIRST : back ? SEE_RED : fix);
 }
 
 /** Fetch the hub, then say where this site stands. */
@@ -575,13 +586,24 @@ export function privacySubjectsCheck({ state, wordList }) {
   return results.length > 0 ? results : ok('subjects', `${counted(count, 'commit')} to or from the hub, clean`);
 }
 
-/** Every stub the site needs exists, and each one points at shared/. */
+/** The config lines the pieces in use need and the site's config lacks, one detail line each. */
+function missingConfigDetails(pieces) {
+  return pieces.flatMap(({ row, missingConfig = [] }) =>
+    missingConfig.map(({ text, what }) => `${row.name} needs ${what}: no ${text} found`));
+}
+
+/**
+ * Every stub the site needs exists, and each one points at shared/. A piece in use that needs a line in the
+ * site's config (its row's needsConfig) has it too: without the line the build passes and the piece breaks
+ * in the browser, so that fails here, under `config`.
+ */
 export function stubsCheck({ table, pieces }) {
   if (table() === null) return warn('stubs', 'no requirements.cjs to read');
   if (table().loadError) return warn('stubs', 'requirements.cjs does not load: see the packages line');
   const withStub = pieces().filter(({ row }) => row.stub);
   const missing = withStub.filter(({ missingStub }) => missingStub);
   const copies = withStub.filter(({ stub }) => stub.exists && stub.target === null);
+  const unwired = missingConfigDetails(pieces());
   const lines = [];
   if (missing.length > 0) {
     const details = missing.map(({ row }) => `${row.stub} (${row.name} is in use)`);
@@ -590,6 +612,9 @@ export function stubsCheck({ table, pieces }) {
   if (copies.length > 0) {
     const details = copies.map(({ row }) => row.stub);
     lines.push(warn('stubs', `${counted(copies.length, 'local copy')} where a stub belongs`, 'point them at shared/', details));
+  }
+  if (unwired.length > 0) {
+    lines.push(fail('config', `${counted(unwired.length, 'config line')} missing`, `add each to ${CONFIG_NAME}, see the README`, unwired));
   }
   if (lines.length > 0) return lines;
   const present = withStub.filter(({ stub }) => stub.exists).length;
@@ -601,6 +626,39 @@ export function muiCheck({ texts }) {
   const hits = findRefusedTerms(textFilesOf(texts())).map(({ path: file, line, term }) => `${file}:${line} ${term}`);
   if (hits.length === 0) return ok('mui-x', `no MUI X licence wiring under ${PREFIX}/`);
   return fail('mui-x', `${counted(hits.length, 'refused MUI X line')} under ${PREFIX}/`, 'move them into the site', capped(hits));
+}
+
+/** The plain sass plugin, and the option that keeps a U+FEFF out of what it writes under @docusaurus/faster. */
+const SASS_PLUGIN = 'docusaurus-plugin-sass';
+const SASS_CHARSET_OFF = /charset\s*:\s*false/;
+const FASTER_PACKAGE = '@docusaurus/faster';
+/** A config that turns faster on: its own flag, or future.v4 set whole, which Docusaurus 3.10 loads it under. */
+const FASTER_IN_CONFIG = /experimental_faster|\bv4\s*:\s*true/;
+const FASTER_FIX = `give the plugin its option, ['${SASS_PLUGIN}', { sassOptions: { charset: false } }], as ${PREFIX}/README.md says under "Dark mode, ${FASTER_PACKAGE}"`;
+
+/** True when the site builds with @docusaurus/faster: the package in package.json, or the config's flag. */
+function usesFaster(manifest, config) {
+  const lists = [manifest?.dependencies, manifest?.devDependencies].filter(Boolean);
+  return lists.some((list) => list[FASTER_PACKAGE] !== undefined) || FASTER_IN_CONFIG.test(config);
+}
+
+/**
+ * @docusaurus/faster with the plain sass plugin writes a U+FEFF before the dark token rule, and the browser drops the
+ * whole rule: dark code blocks go light grey. The build, the suites and the rest of status stay green, so it fails
+ * here. A site with neither gets no line.
+ */
+export function fasterCheck({ site, manifest }) {
+  let config = '';
+  let packages = null;
+  try {
+    config = site().configText();
+    packages = manifest();
+  } catch {
+    return [];
+  }
+  if (!config.includes(SASS_PLUGIN) || !usesFaster(packages, config)) return [];
+  if (SASS_CHARSET_OFF.test(config)) return ok('faster', `${FASTER_PACKAGE} with the sass plugin's charset off`);
+  return fail('faster', `${FASTER_PACKAGE} with the sass plugin and no charset: false: the dark rules are dropped`, FASTER_FIX);
 }
 
 /** Pull and push run in the main checkout. */
@@ -648,6 +706,7 @@ export const CHECKS = Object.freeze([
   privacySubjectsCheck,
   stubsCheck,
   muiCheck,
+  fasterCheck,
   checkoutCheck,
   listenersCheck,
 ]);

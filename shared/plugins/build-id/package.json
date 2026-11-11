@@ -1,0 +1,7 @@
+{
+	"//": "A local Docusaurus plugin that gives each production build an id (index.js). To change it: index.js; this file only names the folder's entry.",
+	"name": "build-id",
+	"version": "0.0.0",
+	"private": true,
+	"main": "index.js"
+}

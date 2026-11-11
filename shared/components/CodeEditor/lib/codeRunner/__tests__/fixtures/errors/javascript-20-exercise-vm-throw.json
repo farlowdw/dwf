@@ -1,0 +1,33 @@
+{
+ "request": {
+  "language": "javascript",
+  "version": "20.11.1",
+  "files": [
+   {
+    "name": "main.js",
+    "content": "const fs = require('fs');\nconst vm = require('vm');\nvm.runInThisContext(fs.readFileSync('solution.js', 'utf8'), { filename: 'solution.js' });\nconsole.log(first([]));\n"
+   },
+   {
+    "name": "solution.js",
+    "content": "function first(items) {\n  if (items.length === 0) throw new RangeError(\"empty\");\n  return items[0];\n}\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "solution.js:2\n  if (items.length === 0) throw new RangeError(\"empty\");\n                          ^\n\nRangeError: empty\n    at first (solution.js:2:33)\n    at Object.<anonymous> (/box/submission/main.js:4:13)\n    at Module._compile (node:internal/modules/cjs/loader:1376:14)\n    at Module._extensions..js (node:internal/modules/cjs/loader:1435:10)\n    at Module.load (node:internal/modules/cjs/loader:1207:32)\n    at Module._load (node:internal/modules/cjs/loader:1023:12)\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:135:12)\n    at node:internal/main/run_main_module:28:49\n\nNode.js v20.11.1\n",
+   "code": 1,
+   "output": "solution.js:2\n  if (items.length === 0) throw new RangeError(\"empty\");\n                          ^\n\nRangeError: empty\n    at first (solution.js:2:33)\n    at Object.<anonymous> (/box/submission/main.js:4:13)\n    at Module._compile (node:internal/modules/cjs/loader:1376:14)\n    at Module._extensions..js (node:internal/modules/cjs/loader:1435:10)\n    at Module.load (node:internal/modules/cjs/loader:1207:32)\n    at Module._load (node:internal/modules/cjs/loader:1023:12)\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:135:12)\n    at node:internal/main/run_main_module:28:49\n\nNode.js v20.11.1\n",
+   "memory": 7668000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 57,
+   "wall_time": 64
+  },
+  "language": "javascript",
+  "version": "20.11.1"
+ }
+}

@@ -1,0 +1,154 @@
+/* ErrorList.module.css — the look of the "Line 4 · …" rows under the output's status line
+   (ErrorList.jsx): a list without bullets, one row per error location, each with a coloured
+   bar on its left edge, an icon, "Line 4" in the row's colour, the message in the code font,
+   and a small Go to line button on the right. On a narrow screen the message wraps and, when
+   the row is too narrow for both, the button moves under it (still on the right).
+
+   COLOURS  The editor's code-line tokens (--ce-line-error-* and --ce-line-warning-*, defined on
+   the frame in styles.module.css > THE CODE-LINE TOKENS: the site's --code-line-* with
+   built-in fallbacks, in the theme's mode), the same colours as a code block's highlighted
+   error / warning lines, so nothing here needs a dark twin; the
+   editor's own --ce-* properties (styles.module.css > .frame, they cascade into the output
+   area) for the button and the muted line; the editor's red / Infima's warning colours as
+   fallbacks where a token is missing. Each row sets --row-ink (icon and "Line 4") and --row-bar.
+
+   SPACING AROUND THE LIST  The list keeps its own gaps, wherever it is drawn (OutputPanel.jsx,
+   ExercisePanel.jsx): 0.5rem above it, which collapses with the status line's own bottom margin
+   (so nothing changes under a status line) and is the gap under a notice (a run or a Check that
+   TypeScript's syntax errors stopped: the notice has no margin); 0.5rem below it before the
+   output block or the check's details; none below it when it is the last thing in its parent
+   (.list:last-child), where the output area's own padding is the gap.
+
+   HOW TO CHANGE IT  A colour: .rowError / .rowWarning (or the tokens themselves, site-wide).
+   Spacing: .list (gap, margin, and the --el-* sizes the rows and the "more" line share) and
+   .list:last-child, .row (padding). The button: .goTo (its height on a touch
+   screen: the (pointer: coarse) rule, 24 px for WCAG 2.5.8). The message's font: .message. */
+
+.list {
+	--el-bar: 3px; /* the coloured bar on a row's left edge */
+	--el-indent: 0.5rem; /* between the bar and the icon */
+	--el-icon: 1rem; /* the icon's size */
+	--el-gap: 0.5rem; /* between the icon, the text and the button */
+	display: grid;
+	gap: 0.25rem;
+	margin: 0.5rem 0;
+	padding: 0;
+	list-style: none;
+	font-size: 0.875rem;
+	line-height: 1.5;
+}
+
+/* last in the output area or the exercise panel: the area's own padding is the gap below */
+.list:last-child {
+	margin-bottom: 0;
+}
+
+.row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 0.125rem var(--el-gap);
+	padding: 0.125rem 0 0.125rem var(--el-indent);
+	border-left: var(--el-bar) solid var(--row-bar);
+}
+
+.rowError {
+	--row-ink: var(--ce-line-error-ink);
+	--row-bar: var(--ce-line-error-bar);
+}
+
+.rowWarning {
+	--row-ink: var(--ce-line-warning-ink);
+	--row-bar: var(--ce-line-warning-bar);
+}
+
+/* the icon's box: its size and colour reach the MUI icon inside through `inherit` (set on the
+   box, not on the icon, so MUI's own class never competes with it); it sits in the middle of
+   the text's first line (a line is 1.5 × 0.875rem) */
+.icon {
+	display: inline-flex;
+	flex: none;
+	margin-top: calc((0.875rem * 1.5 - var(--el-icon)) / 2);
+	color: var(--row-ink);
+	font-size: var(--el-icon);
+}
+
+.text {
+	flex: 1 1 12rem;
+	min-width: 0;
+}
+
+.line {
+	color: var(--row-ink);
+	font-weight: var(--ifm-font-weight-semibold);
+	white-space: nowrap;
+}
+
+/* the compiler's or the runtime's own words: in the code font, broken anywhere so a long name never widens the page */
+.message {
+	font-family: var(--ifm-font-family-monospace);
+	font-size: 0.8125rem;
+	overflow-wrap: anywhere;
+}
+
+/* as tall as a line of text, so the rows keep their rhythm (taller on a touch screen, below) */
+.goTo {
+	flex: none;
+	margin-left: auto;
+	padding: 0 0.5rem;
+	border: 1px solid var(--ce-border);
+	border-radius: var(--ifm-global-radius);
+	background: var(--ce-control-bg);
+	color: var(--ifm-font-color-base);
+	font: inherit;
+	font-size: 0.8125rem;
+	line-height: 1.5;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+/* a blue border and the resize strip's hover shade; the text keeps its colour (the site's blue
+   as text on the dark control colour would be 2.9:1, too faint) */
+.goTo:hover {
+	border-color: var(--ifm-color-primary);
+	background: var(--ce-handle-hover);
+}
+
+.goTo:focus-visible {
+	outline: 2px solid var(--ifm-color-primary);
+	outline-offset: 2px;
+}
+
+/* a finger needs a taller target (WCAG 2.5.8: 24 px) */
+@media (pointer: coarse) {
+	.goTo {
+		min-height: 24px;
+	}
+}
+
+/* "2 more in the output below": lined up with the rows' text (bar + indent + icon + gap) */
+.more {
+	padding-left: calc(var(--el-bar) + var(--el-indent) + var(--el-icon) + var(--el-gap));
+	color: var(--ce-muted);
+	font-size: 0.8125rem;
+}
+
+/* Infima's `.markdown li + li` (a docs page) gives every row but the first a top margin: the
+   list's gap does the spacing, so it is undone (two classes outrank that rule's one) */
+.list > .row,
+.list > .more {
+	margin: 0;
+}
+
+/* read by screen readers only ("Error:" / "Warning:" before each row) */
+.visuallyHidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+	border: 0;
+}

@@ -787,6 +787,15 @@ test('-m when the hub moved, or a mixed commit waits, refuses before it commits'
     assert.equal(echoed.stdout, "Price the $5 plan's page", `${shell[0]} reads the printed subject as given`);
   }
   assert.deepEqual(snapshot(fixture, site), before);
+  for (const subject of ['For the Zebrafish page', `Add ${PLANTED_KEY}`]) {
+    const listed = pushIn(fixture, site, tests, ['-m', subject]);
+    assertExit(listed, EXIT.REFUSED);
+    assert.match(listed.stderr, /the subject you gave (matches line \d+ of the word list|looks like )/, 'the subject is refused first, the hub moved or not');
+    assert.doesNotMatch(listed.output, /zebrafish/i, 'a listed word is never printed back');
+    assert.ok(!listed.output.includes(PLANTED_KEY), 'nor a key');
+    assert.doesNotMatch(listed.output, /the hub moved/);
+  }
+  assert.deepEqual(snapshot(fixture, site), before);
   fixture.subtreePull(mixed);
   fixture.commitToSite(mixed, { 'shared/x.txt': 'x\n', ...SITE_FILE }, 'A mixed commit');
   writeFiles(mixed, EDIT);
@@ -794,6 +803,49 @@ test('-m when the hub moved, or a mixed commit waits, refuses before it commits'
   assertExit(waiting, EXIT.REFUSED);
   assert.match(waiting.stderr, /1 commit mixes shared\//);
   assert.equal(tests.runs(), 0);
+});
+
+/** A push's limit short enough for a test, through the variable push.mjs reads. */
+const SHORT_PUSH_LIMIT = { DOCUSAURUS_SHARED_PUSH_LIMIT: '1500' };
+
+/** True while a process runs. */
+function isAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+test('a push that hangs at the hub is stopped at its limit with what it started, and nothing is published', (t) => {
+  const { fixture, tests, site } = oneSite(t);
+  const pidFile = path.join(fixture.base, 'hook.pid');
+  hubHook(fixture, 'pre-receive', `echo $$ > '${pidFile}'
+exec sleep 30`);
+  fixture.commitToSite(site, EDIT, 'Edit the readme');
+  const started = Date.now();
+  const stopped = pushIn(fixture, site, tests, [], { env: SHORT_PUSH_LIMIT });
+  assertExit(stopped, EXIT.GIT);
+  assert.ok(Date.now() - started < 20_000, 'it ended near its limit');
+  assert.match(stopped.stderr, /The push gave no answer within 1\.5 s and was stopped, and the hub does not hold it\. No rejoin ran/);
+  assert.deepEqual(hubSubjects(fixture), SEED_SUBJECTS);
+  const hook = Number(fs.readFileSync(pidFile, 'utf8'));
+  assert.equal(isAlive(hook), false, 'the hub\'s side of the push was stopped too');
+});
+
+test('a push stopped at its limit after the hub took it reads as published, and rejoins', (t) => {
+  const { fixture, tests, site } = oneSite(t);
+  const pidFile = path.join(fixture.base, 'hook.pid');
+  hubHook(fixture, 'post-receive', `echo $$ > '${pidFile}'
+exec sleep 30`);
+  fixture.commitToSite(site, EDIT, 'Edit the readme');
+  const arrived = pushIn(fixture, site, tests, [], { env: SHORT_PUSH_LIMIT });
+  assertExit(arrived, EXIT.OK);
+  assert.match(arrived.stdout, /The push ran past 1\.5 s and was stopped, and the hub holds it: it is published\./);
+  assert.deepEqual(hubSubjects(fixture), ['Edit the readme', ...SEED_SUBJECTS]);
+  assert.equal(stateOf(fixture, site), STATES.IN_SYNC);
+  assert.equal(isAlive(Number(fs.readFileSync(pidFile, 'utf8'))), false);
 });
 
 test('-m declined at the question: the commit stays, and a later push publishes it', (t) => {

@@ -11,9 +11,16 @@
  *   - The git lines use scripts/lib/settings.mjs, the config block's names are what wiring/index.cjs
  *     exports and its paths are relative strings, every path in What is here exists, and there are
  *     five rules. The clear rule, there, in Silent failures and in the two wiring headers, says that a plain
- *     restart shows a macros change on docs pages alone.
+ *     restart shows a macros change on docs pages alone; there, in Silent failures and in wiring/index.cjs,
+ *     that blog posts keep the old lists too and magic comments change everywhere, never that a restart and
+ *     a cached build keep the old macros and lists (they take part of it). A change under plugins/ names a
+ *     restart, in the README and in the plugin's own header. The hot-update line says what a JS or MDX edit
+ *     loses (text typed without saveDraft) and that a fixed syntax error in an editor file needs a reload.
+ *     The compare's example of what it cannot see is a property it does not read (a text shadow).
  *   - In a site, a line the site holds equals the printed one. A site may lack a line, because a site
  *     takes the commands in steps. A site's own lines are the site's business.
+ *   - A config line that names a plugin of the site's own (requirements.cjs > needsConfig, PDFViewer's
+ *     my-loaders) is printed under Mount it on a site with the plugin's two files and its package.json line.
  *   - Every exit code the stops table names is the one the scripts use.
  *   - The undo lines are the ones status prints, a raw reset or subtree line follows the index refresh,
  *     a pull's revert keeps -m 1, and no draft note is left.
@@ -36,6 +43,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { MARKERS_RESTORE, hubCheck, markersCheck } from '../scripts/lib/checks.mjs';
+import { COMPUTED_PROPERTIES } from '../scripts/lib/compareSettings.mjs';
 import { EXIT } from '../scripts/lib/exitCodes.mjs';
 import { BRANCH, PREFIX, REMOTE, REMOTE_URL } from '../scripts/lib/settings.mjs';
 import { STATES } from '../scripts/lib/state.mjs';
@@ -119,6 +127,8 @@ const TABLE_PATH = /^\| `([^`]+)` \|/gm;
 const NOT_BUILT_LINE = /^Not built yet: (.+)\.$/m;
 const CODE_SPAN = /`([^`]+)`/g;
 const NUMBERED_LINE = /^\d+\. /gm;
+/** A needsConfig text that is a plugin's package name, not a wiring helper's call: the site itself holds that plugin. */
+const OWN_PLUGIN_LINE = /^[\w-]+$/;
 const COMMAND_NAME = /^[\w:-]+/;
 const OPTION = /(?<![\w-])--?[a-z][a-z-]*/g;
 const WIRING_NAMES = /const \{([^}]*)\} = require\('\.\/shared\/wiring\/index\.cjs'\)/;
@@ -342,6 +352,49 @@ test('the clear rule says a plain restart shows a macros change on docs pages an
   }
 });
 
+test('the clear rule says blog posts keep the old lists too and magic comments change on every page, never that a restart keeps it all', () => {
+  const places = {
+    [MOUNT_HEADING]: section(MOUNT_HEADING),
+    [SILENT_HEADING]: section(SILENT_HEADING),
+    'wiring/index.cjs': readShared('wiring/index.cjs'),
+  };
+  for (const [place, text] of Object.entries(places)) {
+    const words = text.replace(/\s*\n\s*\*?\s*/g, ' ');
+    assert.ok(/magic comments/i.test(words) && /blog posts/.test(words), `${place}: names magic comments and blog posts`);
+    assert.ok(!/a cached build keep the old macros and lists/.test(words), `${place}: a plain restart and a cached build take part of such a change`);
+  }
+});
+
+/** The bullet of the mount section that holds `words`, with its line breaks read as spaces ('' when none does). */
+function mountBullet(words) {
+  const bullets = section(MOUNT_HEADING).split('\n- ').map((bullet) => bullet.replace(/\s*\n\s*/g, ' '));
+  return bullets.find((bullet) => bullet.includes(words)) ?? '';
+}
+
+test('a change under plugins/ names a restart of the dev server, in the README and in the plugin\'s own header', () => {
+  const bullet = mountBullet('`plugins/`');
+  const sentence = bullet.split(/(?<=\.) /).find((part) => part.includes('`plugins/`')) ?? '';
+  assert.match(sentence, /restart/, 'the sentence that names plugins/ names the restart');
+  const header = readShared('plugins/monaco-editor/index.js').split('*/')[0];
+  assert.match(header.replace(/\s*\n\s*\*?\s*/g, ' '), /restart `npm start`/, "the plugin's header says to restart");
+});
+
+test('the hot-update line says a JS or MDX edit loses text typed without saveDraft, and that a fixed syntax error needs a reload', () => {
+  const bullet = mountBullet('CSS modules hot-update');
+  assert.ok(bullet, 'the mount section says what hot-updates');
+  assert.match(bullet, /`saveDraft`/, 'it names saveDraft');
+  assert.match(bullet, /typed into a code editor without `saveDraft` is lost/, 'and that typed text is lost without it');
+  assert.match(bullet, /fix a syntax error[^.]*Retry does not bring them back: reload the page/, 'a fixed syntax error in an editor file: reload the page');
+});
+
+test("the compare's example of what it cannot see is a property it does not read", () => {
+  const words = section(COMPARE_HEADING).replace(/\s*\n\s*/g, ' ');
+  assert.ok(COMPUTED_PROPERTIES.includes('boxShadow'), 'a box shadow is read, so "a shadow" alone would be wrong');
+  assert.ok(!COMPUTED_PROPERTIES.includes('textShadow'));
+  assert.match(words, /such as a text shadow/);
+  assert.doesNotMatch(words, /such as a shadow/);
+});
+
 test('the config block gives Docusaurus relative strings, and says why', () => {
   const block = section(MOUNT_HEADING).match(JS_BLOCK)[1];
   assert.ok(!block.includes(ABSOLUTE_PATH_CALL), `the config block shows ${ABSOLUTE_PATH_CALL}, which a site would copy`);
@@ -432,6 +485,19 @@ test('a pull is reverted with -m 1, and -m 2 stays warned about', () => {
 
 test('the README says to keep shared/ in every commit', () => {
   assert.ok(section(UNDO_HEADING).includes(KEEP_SHARED));
+});
+
+test("a config line that names a plugin of the site's own is printed with that plugin's files, and its row says where", () => {
+  const { ENTRIES } = require('../requirements.cjs');
+  const own = ENTRIES.flatMap((row) => row.needsConfig ?? []).filter(({ text }) => OWN_PLUGIN_LINE.test(text));
+  assert.ok(own.length > 0, 'no row asks for such a line any more: this test can go');
+  const mount = section(MOUNT_HEADING);
+  for (const { text, what } of own) {
+    for (const words of [`'${text}'`, `plugins/${text}/index.js`, `plugins/${text}/package.json`, `"${text}": "file:plugins/${text}"`]) {
+      assert.ok(mount.includes(words), `${README_FILE} > ${MOUNT_HEADING} lacks ${words}`);
+    }
+    assert.ok(what.includes(`${README_FILE} > ${MOUNT_HEADING}`), `${text}: its row does not say where the plugin is printed`);
+  }
 });
 
 const host = hostSite();

@@ -1,0 +1,29 @@
+{
+ "request": {
+  "language": "go",
+  "version": "1.16.2",
+  "files": [
+   {
+    "name": "main",
+    "content": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\ts := \"\u00e9\u00e9\"; fmt.Println(s, x)\n}\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "# command-line-arguments\n./main.go:6:30: undefined: x\n",
+   "code": 2,
+   "output": "# command-line-arguments\n./main.go:6:30: undefined: x\n",
+   "memory": 12232000,
+   "message": "Exited with error status 2",
+   "status": "RE",
+   "cpu_time": 158,
+   "wall_time": 169
+  },
+  "language": "go",
+  "version": "1.16.2"
+ }
+}

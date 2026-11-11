@@ -1,0 +1,29 @@
+{
+ "request": {
+  "language": "javascript",
+  "version": "20.11.1",
+  "files": [
+   {
+    "name": "main.js",
+    "content": "const text = \"{bad\";\nconst data = JSON.parse(text);\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "undefined:1\n{bad\n ^\n\nSyntaxError: Expected property name or '}' in JSON at position 1\n    at JSON.parse (<anonymous>)\n    at Object.<anonymous> (/box/submission/main.js:2:19)\n    at Module._compile (node:internal/modules/cjs/loader:1376:14)\n    at Module._extensions..js (node:internal/modules/cjs/loader:1435:10)\n    at Module.load (node:internal/modules/cjs/loader:1207:32)\n    at Module._load (node:internal/modules/cjs/loader:1023:12)\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:135:12)\n    at node:internal/main/run_main_module:28:49\n\nNode.js v20.11.1\n",
+   "code": 1,
+   "output": "undefined:1\n{bad\n ^\n\nSyntaxError: Expected property name or '}' in JSON at position 1\n    at JSON.parse (<anonymous>)\n    at Object.<anonymous> (/box/submission/main.js:2:19)\n    at Module._compile (node:internal/modules/cjs/loader:1376:14)\n    at Module._extensions..js (node:internal/modules/cjs/loader:1435:10)\n    at Module.load (node:internal/modules/cjs/loader:1207:32)\n    at Module._load (node:internal/modules/cjs/loader:1023:12)\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:135:12)\n    at node:internal/main/run_main_module:28:49\n\nNode.js v20.11.1\n",
+   "memory": 6860000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 54,
+   "wall_time": 58
+  },
+  "language": "javascript",
+  "version": "20.11.1"
+ }
+}

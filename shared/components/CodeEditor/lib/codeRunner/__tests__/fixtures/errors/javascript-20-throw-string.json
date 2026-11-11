@@ -1,0 +1,29 @@
+{
+ "request": {
+  "language": "javascript",
+  "version": "20.11.1",
+  "files": [
+   {
+    "name": "main.js",
+    "content": "function f() {\n  throw \"oops\";\n}\nf();\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "\n/box/submission/main.js:2\n  throw \"oops\";\n  ^\noops\n(Use `node --trace-uncaught ...` to show where the exception was thrown)\n\nNode.js v20.11.1\n",
+   "code": 1,
+   "output": "\n/box/submission/main.js:2\n  throw \"oops\";\n  ^\noops\n(Use `node --trace-uncaught ...` to show where the exception was thrown)\n\nNode.js v20.11.1\n",
+   "memory": 6080000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 48,
+   "wall_time": 52
+  },
+  "language": "javascript",
+  "version": "20.11.1"
+ }
+}

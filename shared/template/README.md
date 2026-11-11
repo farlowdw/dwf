@@ -27,7 +27,6 @@ npm run build            # the same build a deploy publishes
 | `src/pages/` | The home page and any other page |
 | `src/css/site.scss` | This site's own styles, which load after the shared ones |
 | `src/components/` | One-line stubs that point at `shared/`, and BibRef, whose stub hands in `BibRef/bibliography.js`, this site's sources |
-| `plugins/katex-css/` | Serves KaTeX's stylesheet and fonts from the site |
 | `static/` | Files served as they are from the site's root |
 | `shared/` | The folder this site shares with others. Roll a change out with `npm run shared:push` |
 | `SITE-RULES.md` | The rules of this repository |

@@ -1,0 +1,33 @@
+{
+ "request": {
+  "language": "bash",
+  "version": "5.2.0",
+  "files": [
+   {
+    "name": "main.sh",
+    "content": "source ./solution.sh\nadd 2 3\n"
+   },
+   {
+    "name": "solution.sh",
+    "content": "add() {\n  not_a_command_here\n  echo $(($1 + $2))\n}\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "5\n",
+   "stderr": "./solution.sh: line 2: not_a_command_here: command not found\n",
+   "code": 0,
+   "output": "./solution.sh: line 2: not_a_command_here: command not found\n5\n",
+   "memory": 1212000,
+   "message": null,
+   "status": null,
+   "cpu_time": 7,
+   "wall_time": 11
+  },
+  "language": "bash",
+  "version": "5.2.0"
+ }
+}
