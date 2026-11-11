@@ -95,6 +95,30 @@ when the two lists differ.
    build, as the command in `netlify.toml` does.
 3. `npm run shared:status`: 0 failed.
 
+## The code editor
+
+`<CodeEditor>` on a doc page is the shared editor, `shared/components/CodeEditor`: Monaco and a Run
+button. `src/components/CodeEditor/index.jsx` and `src/components/CodeEditor/CodeRef/index.jsx` are
+one-line stubs, so a note keeps its import path. `codeRunnerPlugin()` in `docusaurus.config.js` serves
+Monaco from this site, at `/vendor/monaco-editor-<version>/`, and tells the editor where its functions
+are. No page loads it from a CDN.
+
+Run sends the code to two Netlify functions, `netlify/functions/execute.mjs` and `runtimes.mjs`. Each
+is a one-line shim of `shared/functions/code-runner`, so the URLs stay `/.netlify/functions/execute`
+and `/.netlify/functions/runtimes`. They pass the code on to a Piston server named by two variables on
+the Netlify project, `PISTON_BASE_URL` and `PISTON_PROXY_SECRET`, scope Functions. Without them each
+function answers 500, and Run says so in plain words. This site is public, so the functions' own
+guards decide who may run: only this site's pages, and 20 runs per 60 s for each client. That is the
+default, because `CODE_RUNNER_RATE_LIMIT` is left unset. Nothing else goes in `netlify/functions/`:
+any other file there deploys as a public endpoint, and `npm run test:shared` fails on it.
+
+| Command | What |
+|---|---|
+| `netlify dev` | The site with its two functions: the dev server on 3020, served with the functions on http://localhost:8892. `npm start` serves no function, so Run fails there. The ports are in `netlify.toml`, under `[dev]`. Run needs the folder linked once with `netlify link`, so the CLI brings the two variables. |
+
+`shared/components/CodeEditor/README.md` lists the props, and `shared/functions/code-runner/README.md`
+says what the functions need and how a public site runs them.
+
 ## Deploying
 
 Through Netlify, built on this machine. Link the folder to the Netlify project once with

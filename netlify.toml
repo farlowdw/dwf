@@ -1,5 +1,6 @@
 # netlify.toml: how Netlify builds and serves this site. [build] holds the build command and the
-# folders, [build.environment] the Node version, and each [[headers]] block one path's headers.
+# folders, [build.environment] the Node version, [functions] the code editor's two functions, [dev]
+# what `netlify dev` runs, and each [[headers]] block one path's headers.
 # To change it: edit the block concerned, then run `netlify build` to check it. This file is
 # public, so no secret goes here: anything private is a variable on the Netlify project.
 # The build command starts with shared/scripts/check-mui-api.mjs, which stops on an old MUI name in under a
@@ -9,7 +10,6 @@
 
 [build]
   command = "node shared/scripts/check-mui-api.mjs && npm run build && node shared/scripts/check-public.mjs"
-  functions = "netlify/functions"
   publish = "build"
 
   ## Uncomment to use this redirect for Single Page Applications like create-react-app.
@@ -19,17 +19,35 @@
   #  to = "/index.html"
   #  status = 200
 
-  ## (optional) Settings for Netlify Dev
-  ## https://github.com/netlify/cli/blob/main/docs/netlify-dev.md#project-detection
-  #[dev]
-  #  command = "yarn start" # Command to start your dev server
-  #  port = 3000 # Port that the dev server will be listening on
-  #  publish = "dist" # Folder with the static content for _redirect file
-
   ## more info on configuring this file: https://docs.netlify.com/configure-builds/file-based-configuration/
 
 [build.environment]
   NODE_VERSION = "22"
+
+# The code editor's two functions, the proxies its Run button calls: netlify/functions/execute.mjs
+# (POST /.netlify/functions/execute, runs a program) and runtimes.mjs (GET
+# /.netlify/functions/runtimes, what the server has installed). Each is a one-line shim of
+# shared/functions/code-runner, so the URLs stay Netlify's defaults, and esbuild bundles each with
+# what it imports. They need PISTON_BASE_URL and PISTON_PROXY_SECRET on the Netlify project, scope
+# Functions; without them each answers 500 and Run says so in plain words. This site is public, so
+# the functions' own guards decide who may run: only this site's pages, and 20 runs per 60 s per
+# client, the default, because CODE_RUNNER_RATE_LIMIT is left unset. Nothing else goes in that
+# folder: any other file there deploys as a public endpoint, and `npm run test:shared` fails on it.
+# The rest: shared/functions/code-runner/README.md.
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# `netlify dev`: the Docusaurus dev server on 3020, served with the two functions on 8892, so open
+# http://localhost:8892. `npm start` serves no function, so Run fails there. Both ports are this
+# site's own, so it runs beside other sites' dev servers. Run needs the folder linked to the Netlify
+# project (`netlify link`, once): the CLI then brings the two variables above. To change a port: the
+# `--port` in `command` and `targetPort` must agree, and `port` is the one to open.
+[dev]
+  command = "npm run start -- --port 3020 --no-open"
+  targetPort = 3020
+  port = 8892
+  autoLaunch = false
 
 [build.processing.html]
   pretty_urls = false
@@ -59,3 +77,13 @@
     no-cache,
     no-store,
     must-revalidate'''
+
+# Monaco, the code editor's own files, is served from this site at /vendor/monaco-editor-<version>/
+# (shared/plugins/monaco-editor). The version is in the folder's name, so an upgrade is a new folder,
+# and each file can be cached for a year and never asked for again. Never put an unversioned file
+# under /vendor. To stop it: remove this block.
+[[headers]]
+  for = "/vendor/*"
+  [headers.values]
+    # Lower case, as in the two blocks above: Netlify warns when one header name comes in two cases.
+    cache-control = "public, max-age=31536000, immutable"
