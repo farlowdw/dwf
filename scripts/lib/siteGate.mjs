@@ -18,7 +18,8 @@
  *
  * HOW TO CHANGE IT
  *   Numbers, names and commands: bumpSettings.mjs. How a build is made: bumpBuild.mjs. A new step is a short
- *   function here, built on timedStep. Where a red build goes: RED_FOLDER.
+ *   function here, built on timedStep. Where a red build goes: RED_FOLDER. The compare step's limit, grace and
+ *   second try: compareLimitSeconds, COMPARE_GRACE_MS and anotherTry.
  */
 
 import fs from 'node:fs';
@@ -32,16 +33,29 @@ import {
   LOG_TAIL_LINES, LOGS_FOLDER, VERIFY_SCRIPT, VERIFY_TIMEOUT_SECONDS,
 } from './bumpSettings.mjs';
 import { loadPuppeteer, requireChrome } from './compareBrowser.mjs';
+import { COMPARE_SIDES, THEMES, VIEWPORTS } from './compareSettings.mjs';
 import { REPORT_FILE, summaryLines } from './compareReport.mjs';
 import { loadServeHandler } from './compareServers.mjs';
 import { EXIT, STOP_SIGNALS, ScriptError } from './exitCodes.mjs';
 import { gitOrThrow } from './git.mjs';
 import { refusal } from './preflight.mjs';
 import { MS_PER_SECOND, NESTED_RUN_VARIABLE, npmCommand } from './settings.mjs';
-import { pagesOf } from '../compare.mjs';
+import { lockWaitOf, pagesOf } from '../compare.mjs';
 
 const STEP_WIDTH = 9;
 const HEAD = 'HEAD';
+
+/** The compare step's time for each load it plans, on top of its lock wait. */
+const COMPARE_SECONDS_PER_LOAD = 60;
+
+/** Tries of the compare before a refusal or a run of timeouts reads red. */
+const COMPARE_TRIES = 2;
+
+/** A compare stops its browser and servers on SIGTERM, which may take 10 s: it gets longer before SIGKILL. */
+export const COMPARE_GRACE_MS = 15_000;
+
+/** A view's failure that is only a load running out of time. */
+const OUT_OF_TIME_LOAD = /no result after \d+ ms|Navigation timeout of \d+ ms exceeded/;
 
 /** The folder below a job's keep folder where a build that went red waits. */
 export const RED_FOLDER = 'red';
@@ -222,17 +236,47 @@ export function compareBuilds(job) {
   return newSide(job, () => compareOnce(job));
 }
 
-/** The compare, once. */
+/**
+ * How long the compare step may run: its lock wait, then COMPARE_SECONDS_PER_LOAD for each load it plans (two sides
+ * of each page in each window and theme), far above the 5 to 20 s a load takes. A compare whose run never ends is
+ * stopped there and reads red, as any other step's.
+ */
+export function compareLimitSeconds(job) {
+  const loads = pagesOf(job.root, job.pages).length * VIEWPORTS.length * THEMES.length * COMPARE_SIDES;
+  return lockWaitOf(job.lockWait) + loads * COMPARE_SECONDS_PER_LOAD;
+}
+
+/**
+ * Why a red compare is worth one more try, or null: it refused before it served anything (the sweep lock still held
+ * after its wait, or a port taken in the instant before it listened), or every view it failed only ran out of time,
+ * which a busy machine does. A page that answered 404 or broke is red at once.
+ */
+export function anotherTry(result, report) {
+  if (result.timedOut || result.error !== null) return null;
+  if (result.code === EXIT.REFUSED && !report?.origins) return 'it refused before it compared';
+  if (result.code !== EXIT.CHECKS || !Array.isArray(report?.views)) return null;
+  const failures = report.views.flatMap((view) => view.failures ?? []);
+  if (failures.length > 0 && failures.every((failure) => OUT_OF_TIME_LOAD.test(failure))) return 'every view it failed ran out of time';
+  return null;
+}
+
+/** The compare, tried again once when anotherTry says so. */
 async function compareOnce(job) {
   const { root, env, stepEnv, before, keep, scriptsFolder, print } = job;
   const out = path.join(keep, COMPARE_FOLDER);
   const script = env[COMPARE_SCRIPT_ENV] || path.join(scriptsFolder, COMPARE_FILE);
   const args = [script, '--before', before, '--after', BUILD_FOLDER, '--out', out, ...compareArgs(job)];
-  const options = { command: process.execPath, args, cwd: root, env: stepEnv };
-  const result = await timedStep(job, 'compare', (logFile) => runLogged({ ...options, logFile }));
-  compareSummary(out, result.logFile).forEach((line) => print(stepLine('compare', line)));
-  if (result.code === EXIT.OK || result.code === EXIT.TO_READ) return result.code;
-  throw red(job, 'the compare', failureOf(result), result.logFile);
+  const options = { command: process.execPath, args, cwd: root, env: stepEnv, timeoutSeconds: compareLimitSeconds(job), graceMs: COMPARE_GRACE_MS };
+  for (let attempt = 1; ; attempt += 1) {
+    const logName = attempt === 1 ? 'compare' : `compare-${attempt}`;
+    const result = await timedStep(job, logName, (logFile) => runLogged({ ...options, logFile }));
+    compareSummary(out, result.logFile).forEach((line) => print(stepLine('compare', line)));
+    if (result.code === EXIT.OK || result.code === EXIT.TO_READ) return result.code;
+    const why = attempt < COMPARE_TRIES ? anotherTry(result, readCompareReport(out)) : null;
+    if (why === null) throw red(job, 'the compare', failureOf(result), result.logFile);
+    print(stepLine('compare', `${why}: once more`));
+    fs.rmSync(out, { recursive: true, force: true });
+  }
 }
 
 /** A compare that cannot run would be found out only after the change, so ask first. */

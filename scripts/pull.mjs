@@ -42,6 +42,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { carriedReason, closeLine } from './lib/carried.mjs';
+import { publicCheck } from './lib/deployLine.mjs';
 import { findRoot, refreshIndex } from './lib/checkout.mjs';
 import { HUB_SUBJECT_FIX, LEVELS, formatResult, makeContext, requirementsCheck, revertedPull, runChecks } from './lib/checks.mjs';
 import { EXIT, ScriptError, runScript } from './lib/exitCodes.mjs';
@@ -52,6 +53,7 @@ import { findConflictMarkers } from './lib/markers.mjs';
 import { canSplit, mixedRefusal } from './lib/mixedCommit.mjs';
 import { refuseNpmKeptOptions } from './lib/npmArgs.mjs';
 import { counted, shellWord, short } from './lib/phrases.mjs';
+import { STANDINGS, redOf, verifyAllLine } from './lib/redRecord.mjs';
 import { NO_WORD_LIST_FLAG, freshState, passGates, refuseDirty, refuseHeldRed, refusal, stateRefusal } from './lib/preflight.mjs';
 import { describeHit, scanCommits, scanNames, scanTexts, textFilesOf } from './lib/privacy.mjs';
 import { recordMessage } from './lib/published.mjs';
@@ -207,12 +209,19 @@ function clearBuildCache(root, before, env) {
   console.log(CLEARED_LINE);
 }
 
+/** The last step: the push, behind the site's public check where its build command runs one (`npm run build` alone does not). */
+function pushStep(root) {
+  const check = publicCheck(root);
+  return `build it and look, then ${check === null ? '' : `${check} && `}git push`;
+}
+
 /** What to run after a clean pull. `landed` is the state it left. */
-function nextSteps(root, landed) {
+function nextSteps(root, landed, takenRed = false) {
   const steps = ['npm run test:shared'];
-  if (hasSharedPage(root)) steps.push('npm run shared:verify (this site has its own page about shared/)');
+  if (takenRed) steps.push('npm run shared:verify (this pull took back a hub commit that went red here)');
+  else if (hasSharedPage(root)) steps.push('npm run shared:verify (this site has its own page about shared/)');
   if (landed.state === STATES.AHEAD) steps.push(...aheadSteps(landed));
-  steps.push('build it and look, then git push');
+  steps.push(pushStep(root));
   return ['Next:', ...steps.map((step) => `  ${step}`)];
 }
 
@@ -223,7 +232,11 @@ function finishPull(root, state, env, { before, recorded }) {
   const results = runChecks(makeContext({ root, env, offline: true }), [requirementsCheck]);
   results.flatMap(formatResult).forEach((line) => console.log(line));
   clearBuildCache(root, before, env);
-  nextSteps(root, readState(root, { fetch: false, env })).forEach((line) => console.log(line));
+  const landed = readState(root, { fetch: false, env });
+  const red = redOf(root, { env, state: () => landed });
+  const takenRed = red?.standing === STANDINGS.TAKEN;
+  if (takenRed) console.log(`This pull took back hub ${short(red.record.hub)}, which went red here in an earlier run: prove the site before anything else, then ${verifyAllLine(red.record.site)}.`);
+  nextSteps(root, landed, takenRed).forEach((line) => console.log(line));
   return results.some(({ level }) => level === LEVELS.FAIL) ? EXIT.CHECKS : EXIT.OK;
 }
 

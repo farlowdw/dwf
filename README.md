@@ -31,7 +31,11 @@ prints the exact install line for anything missing.
 | `css/` | The stylesheets a site loads first, code blocks included |
 | `static/` | Fonts and icons, served from the site's root |
 | `theme/Admonition/` | The admonition types beyond Docusaurus's own |
+| `theme/DocRoot/Layout/Sidebar/` | The docs sidebar's column, wrapped so that a collapse or an expand keeps the reader's place. A site takes it with its stub |
 | `components/` | Components a site reaches through a stub |
+| `plugins/` | Docusaurus plugins a site names through the wiring: Monaco, KaTeX's stylesheet and fonts, and the PDF viewer's worker, each served from the site, and the id of each build |
+| `lib/` | Plain browser code a site's client module imports, with no stub: `pageReload`, which reloads an open tab after a deploy. Its README says how a site starts it and how a library moves in |
+| `functions/code-runner/` | The code editor's two Netlify functions, reached through a one-line shim. Its README covers the variables and a public site |
 | `wiring/` | The lists a site's `docusaurus.config.js` would repeat |
 | `requirements.cjs` | What each piece needs from a site, and its tests |
 | `template/` | A new site's starter files, and the Docusaurus version pin every site reads |
@@ -60,6 +64,11 @@ server runs from this checkout. The exit codes are in `scripts/lib/exitCodes.mjs
 
 In the hub itself, run the tests with `node --test "__tests__/*.test.mjs"` and
 `node --test "scripts/__tests__/*.test.mjs"`.
+`test:shared` gives node a time limit, so a test that never ends fails by its name and the run ends: 10 minutes a
+test on Node 24, 45 minutes a file on Node 22, which times whole files (`scripts/test.mjs`, `TEST_LIMIT_SECONDS`;
+`DOCUSAURUS_SHARED_TEST_LIMIT=<seconds>` moves it for one run).
+The two lines above have none: `--test-timeout=2700000` after `--test` fails a test (Node 24) or a file (Node 22) at 45
+minutes. Leave out `--test-force-exit`: it skips the tests a file declares after a top-level `await`.
 
 ## Roll out a change
 
@@ -76,7 +85,9 @@ npm run test:shared
 way. A pull lands as two commits, a squash and its merge: build the site, look at it, then `git push`
 it.
 The site you pushed from holds the change and the rejoin's two commits, a squash and its merge: `git push` it too.
+A `shared:all -- pull` or `bump` started from that site prints its `git push` line in the publish block.
 Where a site has its own page about `shared/`, the pull's `Next:` adds `npm run shared:verify`, which checks that page.
+Where a site's build command checks its public files, the pull's `Next:` puts that check in front of the `git push`.
 
 ## Every site at once
 
@@ -105,8 +116,12 @@ from a site in sync with the hub. `--yes` skips the question, and `--no-pin` lea
 | A conflict | 6 | The same, with the merge open |
 | `a list to read` | 8 | The same, with the site's commits kept. Read the list, then run the printed line |
 
-Every undo is one line to paste, and a reset goes with `--keep`. A run started again skips what is done. To hold
-a site back a week, run with `--skip` now and `--only` then. Nothing pushes a site, deploys or starts a server.
+Every undo is one line to paste, and a reset goes with `--keep`. A run started again skips what is done; one that
+names its folder with `--keep <folder>` needs a new folder each time, since a folder a run used refuses the next.
+To hold a site back a week, run with `--skip` now and `--only` then. Nothing pushes a site, deploys or starts a
+server. Without `--keep`, the old builds, logs and screenshots go below the system's temp folder, in
+`docusaurus-shared-all`, `docusaurus-shared-bump` and `docusaurus-shared-compare`: delete those folders whenever no
+run is going and no red waits to be read.
 
 A red also leaves a note inside that site's `.git` folder, where no commit carries it: the step, the sha, the hub
 commit, the undo and the publish lines the run printed. Until its undo runs, `shared:status` there fails on its `red`
@@ -115,8 +130,12 @@ so it never reads green. Once it is undone, the `red` line warns, and the hub li
 `Next:` give the way on instead of a pull that brings the change back: for a red pull, a fix forward from a site in
 sync with the hub; for a red bump, the pin put back, or the site's own fix and then `bump`. A red pull whose cause is
 the site's own code, such as its own copy of a component the hub now holds, takes that pull by hand there after the
-undo, `npm run shared:pull`, with its fix: a pull of its own settles the note. The next green proof there
-clears the note, and so does a run that finds the site past it, with a line that says so. A red at the build, the
+undo, `npm run shared:pull`, with its fix. The note stays, as a warning, until a proof there: run
+`npm run shared:verify`, then `npm run shared:all -- run shared:verify --only <site>`, whose green turn clears it. A
+`shared:all` turn that finds the site in sync does not prove it, so the run names it, not under `Green:`. The next
+green proof there clears the note, and so does a run that finds the site past a later hub commit, with a line that
+says so. A run killed outright in a site's turn leaves the note it had, so the site never reads green because a run
+died there. A red at the build, the
 suites or the compare moves `build/` into the run's folder, printed as `The build that went red:`, so a deploy typed
 by hand finds nothing to send: build again before any deploy. A run that leaves the red site out prints the red run's
 publish lines again, until each of those sites is pushed.
@@ -202,10 +221,10 @@ Docusaurus 4 is not out. These notes come from rehearsals on copies of real site
 | Install, by hand | A failed install leaves the old packages, and the next build reads exit 0 | `shared:bump` stops at a failed install. A bump by hand must too |
 | MDX | With `mdx1Compat` off, an HTML comment such as `<!--truncate-->`, a commented-out import and a `{#id}` heading id stop compiling | `node shared/scripts/mdx-check.mjs --strict` lists every page. Write `{/* truncate */}` and `{/* #id */}` |
 | Admonitions | With `mdx1Compat` off, `:::note Some title` compiles and prints as plain text, with no warning | The same check lists them. Write `:::note[Some title]` |
-| Sidebars | `useScrollController` left `@docusaurus/theme-common/internal`, with no public replacement | Rework a swizzled sidebar |
+| Sidebars | `useScrollController` left `@docusaurus/theme-common/internal`, with no public replacement | Rework `theme/DocRoot/Layout/Sidebar`: its `docusaurusContract` test reads the installed theme and goes red first |
 | Dark mode, cascade layers | Unlayered `:root` tokens beat Infima's layered dark values, so stock admonition text turned dark on dark. `shared/` keeps its contrast tokens out of bare `:root` | Run `shared:compare`, and read the admonitions in dark |
 | Admonition icons | Emotion's unlayered `width: 1em` now beats the theme's layered icon size, and custom kinds shrink from 25.6 to 16 px. Colours do not move | Read them in the compare |
-| Dark mode, `@docusaurus/faster` | One stray U+FEFF before `html[data-theme=dark]` killed the whole dark rule | `['docusaurus-plugin-sass', { sassOptions: { charset: false } }]` |
+| Dark mode, `@docusaurus/faster` | One stray U+FEFF before `html[data-theme=dark]` killed the whole dark rule, with every build and suite green. `shared:status` fails on its `faster` line until the option is there | `['docusaurus-plugin-sass', { sassOptions: { charset: false } }]` |
 | Broken anchors | `onBrokenAnchors` is `throw`, so a broken anchor fails the build | Fix the anchors first |
 | A dev-server proxy | `http-proxy-middleware` moved from 2.0.10 to 4.2.1. A site's proxy tests failed and hung | Fix a proxy plugin before you run a dev server on it |
 | Stock admonition types | The preview's `Types` dropped caution, secondary, important and success | `theme/Admonition/Types.js` defines the four itself |
@@ -241,7 +260,7 @@ at the end, or to `-- --out <folder>`. A page nobody listed is not compared, so 
 A view whose elements differ prints `structure changed, read by eye`: pairing them by position would blame
 thousands of elements for one removed block, so open its two screenshots. A view whose elements read the same
 and whose shots do not prints `pixels differ, open the two shots`: the change is one the 37 properties do not
-hold, such as a shadow or new words that leave every box the same size. Widths and heights that differ by less
+hold, such as a text shadow or new words that leave every box the same size. Widths and heights that differ by less
 than a pixel are rounding, and are ignored.
 
 It reads each element's tag, classes and computed styles, the console, and the top 2,400 px of each view as a
@@ -292,8 +311,10 @@ it. A word with an allow line has a known home, so it sits in the built files to
 longer word, with a letter or digit on both sides, is chance: minified code is full of long names.
 
 An entry with parts, such as `my-name` or `MyName`, is found in each common spelling of its parts: `myname`,
-`my name`, `my_name` and `my-name`. It is also found where a line break, with the next line's indentation and
-comment leader, splits it, and in Markdown and HTML where a tag or `*`, `_` or a backtick splits it. Text that
+`my name`, `my_name`, `my-name`, `my.name` (an email's) and `my/name`, and wherever the space between them is two
+spaces, a tab, a no-break space or `&nbsp;`. It is also found where a line break, with the next line's indentation
+and comment leader, splits it, and in Markdown and HTML where a tag or `*`, `_` or a backtick splits it, a React
+`<!-- -->` between two text nodes included. Built files are read the same ways as tracked ones. Text that
 is compressed or encoded, such as a PDF's inflated streams or a base64 `data:` address, is not decoded.
 
 It exits 0 when clean, 1 on a hit, and 2 when a check could not run, which is never a pass: no word list, no
@@ -365,6 +386,18 @@ export { default } from '@site/shared/components/LC';
 
 A piece with no default export takes `namedOnly: true` in its row, and its stub is `export * from`. `shared:join`
 reads that row, because `export { default }` of such a piece fails the build.
+
+A piece that works only with a line in the site's config, such as a plugin that serves its files, names that line
+in its row's `needsConfig`, as CodeEditor's row does. A site that uses the piece and has lost the line then fails
+`shared:status` and `test:shared`, where its build would pass. A piece that only another component imports, and
+no page, takes a `srcPattern` in its row's `evidence`, read over all of `src/`, so that its deleted stub is still
+an error.
+
+A plugin goes under `plugins/` and a library under `lib/`, each with a row of its kind. A plugin that serves one
+component goes in that component's row instead, its suite in `suites` and its config line in `needsConfig`, as
+Monaco's is in CodeEditor's row and the PDF worker's in PDFViewer's. A site's old copy, under its own `plugins/` or
+`src/lib/`, goes in the commit that points the site at the shared one: `test:shared` names every file left there
+that `shared/` now holds.
 
 A site that still holds its own copy of the component goes red at `shared:verify` once it pulls the component, with
 `a local copy of <name>, not a stub`. So roll such a component out site by site, never with `shared:all -- pull`:
@@ -513,6 +546,7 @@ These build and pass their tests, so nothing stops. Each has a line that sees it
 |---|---|
 | `markers` | Conflict markers committed under `shared/` |
 | `stubs` | A piece in use with no stub. With no admonition stub, a custom `:::keyword` draws an info box and the build still passes |
+| `config` | A piece in use without a line its row's `needsConfig` asks of `docusaurus.config.js`, a commented-out line included. With no `codeRunnerPlugin()` the site builds and the code editor never loads its Monaco; with maths and no `katexCssPlugin()`, it builds and no page links KaTeX's stylesheet from the site |
 | `ignored` | A file under `shared/` that git ignores, so no other site gets it. A global ignore can drop `config`, `dist`, `sessions` and `*.gz` without a word |
 | `node_modules` | A `shared/node_modules`. `shared/` installs nothing |
 | `packages` | A package a shared piece needs that this site lacks, with the install line. A lock in range with the package not on disk, as in a fresh clone or a new worktree, warns with `npm ci` |
@@ -532,13 +566,16 @@ The rest need a step of their own:
 | A change to an attribute alone, or words that leave every box the same size | Nothing in `shared:compare`: diff the two `build/` folders |
 | An install forced past a conflict drops a package | Nothing: never force one |
 | A KaTeX option list without the macros, so a page builds and shows red text | `katexOptions()`, never a shortened copy |
-| A change under `wiring/` or to DropDownIC's `mdx.cjs`: a restarted dev server and a cached build keep the old macros and lists. After a plain restart, docs pages do show a `katex-macros.cjs` change while pages of the pages plugin keep the old macros, so one docs page proves nothing | The site's `clear` script before the build or the restart. `shared:pull` clears the cache itself when it brings such a change |
+| A change under `wiring/` or to DropDownIC's `mdx.cjs`, after a plain restart or a cached build: docs pages take a change to the macros and the admonition keywords, while blog posts and pages of the pages plugin keep the old macros and the old keywords until the clear; magic comments, read in the browser, change on every page. So neither one docs page nor one code block's new mark proves the change was taken | The site's `clear` script before the build or the restart. `shared:pull` clears the cache itself when it brings such a change |
 | An old MUI prop or class name on its list, which the component just ignores or no element carries | `scripts/check-mui-api.mjs`, for the names in `scripts/lib/oldMuiApis.json`. A removed name the list lacks passes |
 | A test glob that matches nothing, or a test file left with no test: `node --test` exits 0 | `test:shared`, which calls a suite with no test files, a planned file with no test and a file named like a test that never runs a problem |
 | A DropDownIC stub with a docs, blog or pages block that lacks its MDX plugins: the page throws React error #418 | `test:shared`, whose wiring rule asks every block for `remarkDropDownIc` and `rehypeDropDownIc`, and a docs, blog or pages plugin of the site's own too while a Markdown file of its folder holds a dropdown |
 | A config that drops `shared/css/custom.scss` from `customCss`: the site builds without the shared look | `test:shared`, whose `customCss` rule runs once `src/css/site.scss` exists |
+| A site that drops its `src/theme/DocRoot/Layout/Sidebar/index.jsx`: the theme's plain column comes back, and a collapse or an expand moves the page under the reader | Nothing in `shared/`: the stub is the only sign a site uses the wrapper, so `shared:status` reads it as not in use. A site that uses it holds the stub in a test of its own |
 | A machine's path in the main chunk, from `require.resolve` in a config | `scripts/check-public.mjs` |
 | A legacy admonition title once `mdx1Compat` is off | `scripts/mdx-check.mjs --strict` |
+| The code editor's buttons, menus and tooltips in other colours than the site's MUI components: `components/CodeEditor/MuiScope.jsx` holds its own copy of the palette, font, size and radius of `components/MuiTheme`, the MUI theme a site reaches through its stub, so a change to one alone leaves the other behind | `test:shared` on every site, and the hub's own run, through `__tests__/muiTheme.test.mjs`, which compares the four colours, the font, the size and the radius of the two files. Change both in the same shared-only commit |
+| A reload after a deploy that takes typed text with it: the site's client module starts `lib/pageReload` without `hasUnsavedWork`, or hands it another copy of the registry than the one its editor writes to. The default is that nothing is unsaved, so the site builds and every test here passes | Nothing in `shared/`. A test of the site's own that runs its client module, registers unsaved text as its editor does and sees the reload wait: `lib/README.md` |
 
 ## The five rules
 
@@ -568,8 +605,8 @@ Never in `shared/`, apart from `shared/template/`, which may hold a new site's s
 The scans read a word list kept on each machine, outside every repository, at
 `~/.config/docusaurus-shared/private-words.txt`: one entry per line, `#` for a comment, `word<TAB>path` to
 allow a word in one path. Pull and push refuse without it, unless given `--no-word-list`, which scans for
-secret shapes only. An entry with parts is found in each common spelling of them, as `check-public.mjs` finds
-it. A binary file, a picture, a PDF or a font, is read whole for the words and gives no line; the secret
+secret shapes only. An entry with parts is found in each common spelling of them, dot, slash and every kind of
+space included, as `check-public.mjs` finds it. A binary file, a picture, a PDF or a font, is read whole for the words and gives no line; the secret
 shapes skip binaries, whose random bytes look like keys, and the scan's own three files, which spell them.
 
 ## Make a new site
@@ -647,8 +684,11 @@ On a site that passes, a join:
 2. commits the housekeeping: a tracked `.gitignore` that lists `.env`, `deploy` through Netlify, and
    `netlify.toml` and `.nvmrc` from `template/` when they are absent;
 3. refreshes the index and runs `git subtree add --squash`;
-4. commits the npm lines, a default `comparePages`, `src/theme/Admonition/Types.js`, and a stub for each
-   component folder that holds the same code as `shared/`, its opening comment aside.
+4. commits the npm lines, a default `comparePages`, the stub of each theme piece the site lacks
+   (`src/theme/Admonition/Types.js` first of all), and a stub for each
+   component folder that holds the same code as `shared/`, its opening comment aside. A piece inside another's
+   folder (CodeRef, and `unsavedWork.js`, inside CodeEditor's) is compared on its own, and the pieces of one
+   folder move together: while one of them differs, none of them is stubbed.
 
 A `netlify.toml` already on disk and out of git stays out, because it may hold a secret. Read it, then
 `git add -f netlify.toml`. The next join takes its ignore line out.
@@ -668,7 +708,8 @@ each line prints only while it is still open:
 9. run the join again, so that a copy that now matches becomes a stub;
 10. write the stubs of the copies that still differ;
 11. move any admonition type of the site's own into a `Types.js`, or, if every type is shared's, delete the folder
-    and run the join again, which writes the stub;
+    and run the join again, which writes the stub; for any other theme file of the site's own where `shared/` holds
+    the piece, delete it and run the join again, or make it a wrapper round the shared piece;
 12. wire `docusaurus.config.js` from "Mount it on a site";
 13. move the site's own styles to `src/css/site.scss`, load `shared/css/custom.scss` first, and delete the old files
     `shared:verify` names;
@@ -823,7 +864,7 @@ a site to it.
 
 ```js
 const {
-  ADDITIONAL_LANGUAGES, MAGIC_COMMENTS, admonitionsConfig, katexOptions,
+  ADDITIONAL_LANGUAGES, MAGIC_COMMENTS, admonitionsConfig, katexCssPlugin, katexOptions,
   preprocessDropDownIc, rehypeDropDownIc, remarkDropDownIc,
 } = require('./shared/wiring/index.cjs');
 
@@ -835,8 +876,8 @@ rehypePlugins: [rehypeDropDownIc, [rehypeKatex, katexOptions()]],
 ...admonitionsConfig,
 // in presets.classic.theme:
 customCss: ['./shared/css/custom.scss', './src/css/site.scss'],
-// at the top level, beside presets, so the .scss stylesheets compile:
-plugins: ['docusaurus-plugin-sass'],
+// at the top level, beside presets, so the .scss stylesheets compile and KaTeX's stylesheet is served:
+plugins: ['docusaurus-plugin-sass', katexCssPlugin()],
 // in themeConfig.prism:
 magicComments: MAGIC_COMMENTS,
 additionalLanguages: ADDITIONAL_LANGUAGES,
@@ -860,14 +901,52 @@ export { default } from '@site/shared/theme/Admonition/Types';
   with exit 0 and shows red text.
 - `remark-math` and `rehype-katex` stay imported by the site: they are ESM-only. A site without them installs them,
   with `sass` and `docusaurus-plugin-sass`, from the line `shared:status` prints on `packages`.
+- `katexCssPlugin()` serves KaTeX's stylesheet and fonts from the site, at `/vendor/katex-<version>/` with the
+  version the site's lock holds, and links the stylesheet from every page. It takes the place of a KaTeX stylesheet
+  from a CDN and of a `clientModules` import of katex's CSS, which inlines every font into the main stylesheet. A
+  site with maths and without the line fails `config` in `shared:status`.
+- The PDF viewer asks for two lines in `plugins`: `pdfjsWorkerPlugin()`, from the wiring, and `'my-loaders'`, a
+  small webpack plugin of the site's own that `shared/` does not hold. Its `canvas` alias lets webpack bundle
+  pdf.js. A site without it makes the folder `plugins/my-loaders` with the two files below, adds
+  `"my-loaders": "file:plugins/my-loaders"` to the `dependencies` in `package.json`, and installs. The name alone
+  in `plugins` turns `shared:status` green, and the build then fails to find the plugin.
+
+  ```js
+  // plugins/my-loaders/index.js
+  module.exports = function myLoaders() {
+    return {
+      name: 'my-loaders',
+      configureWebpack(config) {
+        config.resolve.alias.canvas = false;
+        config.resolve.alias.encoding = false;
+        return { module: { rules: [{ test: /\.m?js/, resolve: { fullySpecified: false } }] } };
+      },
+    };
+  };
+  ```
+
+  ```json
+  { "name": "my-loaders", "version": "0.0.0", "private": true }
+  ```
+
+  The second file is `plugins/my-loaders/package.json`.
 - A change to the config needs a dev-server restart. A change under `wiring/` or to `mdx.cjs`, yours or a pull's,
   needs the site's `clear` script (`docusaurus clear`) first, then a restart or a new build: Docusaurus reads the
-  config through a loader that webpack's cache does not follow, so a plain restart and a cached build keep the old
-  macros and lists. One part of that differs by plugin: after a plain restart, docs pages take a `katex-macros.cjs`
-  change, because the docs plugin writes its options, the macros among them, to a file every doc depends on, while
-  pages of the pages plugin keep the old macros until the clear. The blog plugin writes no such file, and was not
-  tried. So a docs page that shows a new macro says nothing about the other pages. `shared:pull` clears that cache itself (`.docusaurus` and `node_modules/.cache`, never `build/`)
+  config through a loader that webpack's cache does not follow, so a plain restart and a cached build take such a
+  change only in part. After a plain restart, docs pages take a change to the MDX options (a `katex-macros.cjs`
+  macro, an admonition keyword), because the docs plugin writes its options to a file every doc depends on, while
+  blog posts and pages of the pages plugin keep the old macros and the old keywords until the clear: the blog and
+  pages plugins write no such file. Magic comments go the other way: they are `themeConfig`, read in the browser,
+  so a plain restart shows a change to them on every page. So neither one docs page nor one code block's new mark
+  proves the change was taken. `shared:pull` clears that cache itself (`.docusaurus` and `node_modules/.cache`, never `build/`)
   when it brings such a change, a conflict in such a file names the clear for after its commit, and `shared:bump`
   and `shared:all` build cold.
-  Components, `.scss` and CSS modules hot-update.
+- A change under `plugins/` (the code editor's Monaco plugin, the PDF viewer's worker) needs a restart of the dev
+  server, not a clear: a running server keeps the old plugin, and saving `docusaurus.config.js` reloads the site but
+  not the plugin. A new build takes it.
+- Components, `.scss` and CSS modules hot-update. A `.js`, `.jsx`, `.md` or `.mdx` edit that the open page imports
+  draws the whole page again from scratch (Docusaurus has no React Fast Refresh), so text typed into a code editor
+  without `saveDraft` is lost; a `saveDraft` editor gets its text back, and a CSS or `.scss` edit keeps everything.
+  After you fix a syntax error in a code editor file, the page's editors may say "The editor could not load", and
+  Retry does not bring them back: reload the page.
 - Keep `SKIP_HTML_MINIFICATION=true` in the site's build environment.

@@ -18,7 +18,15 @@ import { isRunning, waitFor } from './bumpFixture.mjs';
 import { hangCode, stopProcess } from './fixture.mjs';
 
 const GRACE_MS = 100;
-const SHORT_TIMEOUT_SECONDS = 0.2;
+
+/**
+ * Long enough for a fresh node to start, start its child and write pid.txt on a busy machine (about 50 ms quiet),
+ * short enough for a test. At 0.2 s a 4x slowdown stopped the step before it wrote the file.
+ */
+const SHORT_TIMEOUT_SECONDS = 2;
+
+/** How long a stopped step may take to end, its limit included. */
+const STOPPED_WITHIN_MS = 20_000;
 
 /** A folder for one test, removed when it ends. */
 function folderFor(t) {
@@ -47,7 +55,12 @@ function hangingCode({ ignoreTerm }) {
   `;
 }
 
-const readPid = (folder) => Number(fs.readFileSync(path.join(folder, 'pid.txt'), 'utf8'));
+/** The child's pid the step wrote. A step stopped before it wrote one is a failure that says so. */
+function readPid(folder) {
+  const file = path.join(folder, 'pid.txt');
+  assert.ok(fs.existsSync(file), 'the step was stopped before it started its child: no pid.txt');
+  return Number(fs.readFileSync(file, 'utf8'));
+}
 
 test('a step that ends gives its exit code, and its output is in the log', async (t) => {
   const folder = folderFor(t);
@@ -97,7 +110,7 @@ test('a hung step ends at the timeout, and so does the child it started', async 
   const result = await run;
   assert.equal(result.timedOut, true);
   assert.notEqual(result.code, 0);
-  assert.ok(Date.now() - began < 5000, 'it ended near the timeout');
+  assert.ok(Date.now() - began < STOPPED_WITHIN_MS, 'it ended near the timeout');
   assert.ok(await waitFor(() => !isRunning(readPid(folder))), 'the child is gone');
 });
 

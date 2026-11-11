@@ -5,10 +5,19 @@
  *
  * A piece has one of five kinds, and the kind says how a site reaches it (USE_BY_KIND below):
  *   component, theme   a stub file. A site uses it when the stub exists or when its evidence says so,
- *                      so a deleted stub reads as an error, not as "not used".
+ *                      so a deleted stub reads as an error, not as "not used". Evidence is a config line,
+ *                      a docs pattern, a pattern over the site's own code under src/ (srcPattern), or a
+ *                      client module's import (clientImport). It is read only while the stub is missing,
+ *                      the cheapest kind first: a site with its stubs in place reads no docs for them.
  *   plugin             a line in docusaurus.config.js
  *   library            an import in a client module, under src/clientModules
  *   script             a line in the site's package.json
+ *
+ * A row of any kind may also name lines the site's config must hold while the site uses the piece
+ * (needsConfig). They are looked for in the config with its comments left out (lib/sourceText.mjs), so a
+ * line that is commented out is missing. A piece comes back with the ones the config lacks (missingConfig).
+ * Only a piece the site reaches in shared/ is asked: a stub that points there, or a plugin, library or script
+ * in use. A local copy where a stub belongs is the site's own code, and a missing stub is its own error.
  *
  * A package counts as present when the site's lock holds a version in range, whether or not its
  * package.json lists it. Without a lock it counts when package.json declares it. A name in a row's
@@ -24,7 +33,8 @@
  * HOW TO CHANGE IT
  *   A new piece or package is a row in shared/requirements.cjs, not a change here. A new kind is an
  *   entry in USE_BY_KIND and its required field in REQUIRED_FIELD. A list every reader needs goes in
- *   TABLE_LISTS.
+ *   TABLE_LISTS. Another kind of evidence: a key hasEvidence reads, and its place in requirements.cjs's
+ *   header. Where a source pattern looks: SOURCE_FOLDER.
  */
 
 import fs from 'node:fs';
@@ -38,6 +48,7 @@ import { isPinned } from './pin.mjs';
 import { readTexts } from './privacy.mjs';
 import { firstVersion, satisfies } from './range.mjs';
 import { PREFIX } from './settings.mjs';
+import { stripComments } from './sourceText.mjs';
 import { readStub } from './stubs.mjs';
 
 const require = createRequire(import.meta.url);
@@ -49,6 +60,9 @@ const CLIENT_MODULES = 'src/clientModules';
 /** Where a docs pattern looks, and which files count. */
 const DOCS_FOLDERS = ['docs', 'blog', 'src/pages'];
 const DOCS_FILE = /\.(?:md|mdx|js|jsx|ts|tsx)$/;
+
+/** Where a source pattern looks: the site's own code, pages and components alike. The same files count. */
+const SOURCE_FOLDER = 'src';
 
 /** What moves every @docusaurus package together. */
 export const BUMP_LINE = 'npm run shared:bump';
@@ -129,6 +143,19 @@ export function requireTable(root, { exitCode, missingFix }) {
 /** The way back from a table that does not load. shared:status prints the same. */
 export const LOAD_UNDO = 'if a pull just brought it: git update-index -q --refresh && git reset --keep HEAD~1; otherwise mend the file';
 
+/** True for one line of a row's needsConfig that the readers can use: { text, what }, both with words. */
+function isConfigLine(line) {
+  const hasWords = (value) => typeof value === 'string' && value.trim() !== '';
+  return line !== null && typeof line === 'object' && hasWords(line.text) && hasWords(line.what);
+}
+
+/** What is wrong with a row's needsConfig, as a list of sentences. A row without one has nothing wrong. */
+function configProblems(row) {
+  if (row.needsConfig === undefined) return [];
+  const sound = Array.isArray(row.needsConfig) && row.needsConfig.every(isConfigLine);
+  return sound ? [] : [`${row.name}: needsConfig is a list of { text, what }`];
+}
+
 /** What is wrong with one row, as a list of sentences. */
 function rowProblems(row, ranges) {
   const field = REQUIRED_FIELD[row.kind];
@@ -136,7 +163,7 @@ function rowProblems(row, ranges) {
   const problems = row[field] ? [] : [`${row.name}: a ${row.kind} needs ${field}`];
   const names = [...(row.packages ?? []), ...(row.testPackages ?? []), ...(row.cachePackages ?? [])];
   const unknown = names.filter((name) => !ranges[name]);
-  return [...problems, ...unknown.map((name) => `${row.name}: ${name} has no range`)];
+  return [...problems, ...configProblems(row), ...unknown.map((name) => `${row.name}: ${name} has no range`)];
 }
 
 /** What is wrong with the table. Empty when every row is sound. */
@@ -156,6 +183,12 @@ function readDocTexts(root, env) {
   return readTexts(root, files.filter((file) => DOCS_FILE.test(file)), { binaries: false });
 }
 
+/** The site's own code as texts: every script and page under src/. */
+function readSourceTexts(root, env) {
+  const files = trackedFiles(root, SOURCE_FOLDER, env);
+  return readTexts(root, files.filter((file) => DOCS_FILE.test(file)), { binaries: false });
+}
+
 /** The site's client modules as texts. */
 function readClientModules(root, env) {
   return readTexts(root, trackedFiles(root, CLIENT_MODULES, env), { binaries: false });
@@ -170,30 +203,42 @@ function readScripts(root) {
   }
 }
 
-/** A site with its slow reads kept for the whole run: docs are read once, and only if needed. */
+/**
+ * A site with its slow reads kept for the whole run: docs and code are read once, and only if needed.
+ * `configCode` is the config with its comments left out, for a line that must really be there.
+ */
 export function openSite(root, env = process.env) {
+  const configText = once(() => readConfigText(root));
   return {
     root,
-    configText: once(() => readConfigText(root)),
+    configText,
+    configCode: once(() => stripComments(configText())),
     scripts: once(() => readScripts(root)),
     docTexts: once(() => readDocTexts(root, env)),
+    sourceTexts: once(() => readSourceTexts(root, env)),
     clientModules: once(() => readClientModules(root, env)),
   };
 }
 
-/** True when the evidence shows the site uses a piece. */
-function hasEvidence(site, evidence = {}) {
-  if (evidence.configText && site.configText().includes(evidence.configText)) return true;
-  if (!evidence.docsPattern) return false;
-  const pattern = new RegExp(evidence.docsPattern, 'm');
-  return site.docTexts().some(({ text }) => pattern.test(text));
+/** True when one of the texts holds a match of the pattern, a RegExp's source, read with the m flag. */
+function someMatch(texts, source) {
+  const pattern = new RegExp(source, 'm');
+  return texts.some(({ text }) => pattern.test(text));
 }
 
-/** A piece reached through a stub. */
+/** True when the evidence shows the site uses a piece. The cheap reads come first, the whole of src/ last. */
+function hasEvidence(site, evidence = {}) {
+  if (evidence.configText && site.configText().includes(evidence.configText)) return true;
+  if (evidence.clientImport && site.clientModules().some(({ text }) => text.includes(evidence.clientImport))) return true;
+  if (evidence.docsPattern && someMatch(site.docTexts(), evidence.docsPattern)) return true;
+  return Boolean(evidence.srcPattern) && someMatch(site.sourceTexts(), evidence.srcPattern);
+}
+
+/** A piece reached through a stub. With the stub in place the site uses it, and no evidence is read. */
 function stubUse(site, row) {
   const stub = readStub(site.root, row.stub);
-  const evidence = hasEvidence(site, row.evidence);
-  return { used: stub.exists || evidence, missingStub: !stub.exists && evidence, stub };
+  const evidence = !stub.exists && hasEvidence(site, row.evidence);
+  return { used: stub.exists || evidence, missingStub: evidence, stub };
 }
 
 /** A piece reached through a line in the site's config. */
@@ -225,9 +270,23 @@ function isSound(row) {
   return Boolean(row[REQUIRED_FIELD[row.kind]]);
 }
 
-/** Every sound row with how this site uses it: [{ row, used, missingStub, stub }]. */
+/** True when the site reaches the shared piece itself: its stub points into shared/, or a row without a stub is in use. */
+function reachesShared({ used, stub }) {
+  return used && (stub === null || stub.target !== null);
+}
+
+/** The lines of a row's needsConfig the site's config lacks. A piece the site does not reach in shared/ needs none. */
+function missingConfig(site, row, use) {
+  if (!reachesShared(use) || !Array.isArray(row.needsConfig)) return [];
+  return row.needsConfig.filter((line) => isConfigLine(line) && !site.configCode().includes(line.text));
+}
+
+/** Every sound row with how this site uses it: [{ row, used, missingStub, stub, missingConfig }]. */
 export function readPieces(site, table) {
-  return table.ENTRIES.filter(isSound).map((row) => ({ row, ...USE_BY_KIND[row.kind](site, row) }));
+  return table.ENTRIES.filter(isSound).map((row) => {
+    const use = USE_BY_KIND[row.kind](site, row);
+    return { row, ...use, missingConfig: missingConfig(site, row, use) };
+  });
 }
 
 /** package-lock.json as a function from a name to its top-level version, or null without a lock. */

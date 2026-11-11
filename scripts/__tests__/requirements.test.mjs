@@ -45,6 +45,117 @@ test('tableProblems names an unknown kind, a missing field and a package with no
   assert.equal(tableProblems(table).length, 5);
 });
 
+test('tableProblems names a needsConfig that is no list of { text, what }', () => {
+  const row = (name, needsConfig) => ({ name, kind: 'plugin', configText: 'x', needsConfig });
+  const table = {
+    RANGES: {},
+    ENTRIES: [
+      row('Sound', [{ text: 'plugin(', what: 'the plugin' }]),
+      row('Empty', []),
+      row('Words', 'plugin('),
+      row('NoWhat', [{ text: 'plugin(' }]),
+      row('NoText', [{ text: '', what: 'the plugin' }]),
+    ],
+  };
+  assert.deepEqual(tableProblems(table), ['Words', 'NoWhat', 'NoText'].map((name) => `${name}: needsConfig is a list of { text, what }`));
+});
+
+/** A table whose stubbed piece and whose plugin each need a line in the config, and an unused piece that needs one too. */
+const NEEDS_TABLE = {
+  RANGES: {},
+  ENTRIES: [
+    {
+      name: 'Widget', kind: 'component', stub: 'src/components/Widget/index.jsx',
+      needsConfig: [{ text: 'widgetPlugin(', what: 'the widget plugin' }, { text: "'widget-loader'", what: 'the loader' }],
+    },
+    { name: 'Styles', kind: 'plugin', configText: 'shared/css/custom.scss', needsConfig: [{ text: 'sheetPlugin(', what: 'the sheet plugin' }] },
+    { name: 'Editor', kind: 'component', stub: 'src/components/Editor/index.jsx', needsConfig: [{ text: 'editorPlugin(', what: 'the editor plugin' }] },
+  ],
+};
+
+/** The texts each piece of NEEDS_TABLE lacks in the site's config, by the piece's name. */
+function lackedBy(site, env) {
+  const pieces = readPieces(openSite(site, env), NEEDS_TABLE);
+  return Object.fromEntries(pieces.map(({ row, missingConfig }) => [row.name, missingConfig.map(({ text }) => text)]));
+}
+
+test('a piece in use lacks each config line its row needs until the config holds it, and an unused piece lacks none', (t) => {
+  const fixture = fixtureFor(t);
+  const site = fixture.addSite('one');
+  const config = fs.readFileSync(path.join(site, 'docusaurus.config.js'), 'utf8');
+  assert.deepEqual(lackedBy(site, fixture.env), { Widget: ['widgetPlugin(', "'widget-loader'"], Styles: ['sheetPlugin('], Editor: [] });
+  writeFiles(site, { 'docusaurus.config.js': `${config}module.exports.plugins = ['widget-loader', widgetPlugin(), sheetPlugin({ a: 1 })];\n` });
+  assert.deepEqual(lackedBy(site, fixture.env), { Widget: [], Styles: [], Editor: [] });
+});
+
+test('a config line that is commented out, or only named in a comment, is missing', (t) => {
+  const fixture = fixtureFor(t);
+  const site = fixture.addSite('one');
+  const config = fs.readFileSync(path.join(site, 'docusaurus.config.js'), 'utf8');
+  const commented = [
+    '/* The plugins: widgetPlugin() serves the widget. */',
+    "const globs = ['docs/**/*.md', 'src/**/*.js'];",
+    'module.exports.plugins = [',
+    "  // 'widget-loader',",
+    '  //   widgetPlugin({ a: 1 }),',
+    '  sheetPlugin(),',
+    '];',
+    '',
+  ].join('\n');
+  writeFiles(site, { 'docusaurus.config.js': `${config}${commented}` });
+  assert.deepEqual(lackedBy(site, fixture.env), { Widget: ['widgetPlugin(', "'widget-loader'"], Styles: [], Editor: [] });
+});
+
+test('a local copy where a stub belongs, and a missing stub of a piece in use, are asked for no config line', (t) => {
+  const fixture = fixtureFor(t);
+  const site = fixture.addSite('one');
+  const stub = 'src/components/Widget/index.jsx';
+  const table = { RANGES: {}, ENTRIES: [{
+    name: 'Widget', kind: 'component', stub, evidence: { docsPattern: "['\"]@site/src/components/Widget['\"/]" },
+    needsConfig: [{ text: 'widgetPlugin(', what: 'the widget plugin' }],
+  }] };
+  const widget = () => readPieces(openSite(site, fixture.env), table)[0];
+  assert.equal(widget().missingConfig.length, 1, 'the stub points at shared/, so the line is asked for');
+  writeFiles(site, { [stub]: 'export default function Widget() {\n  return null;\n}\n' });
+  assert.deepEqual([widget().used, widget().stub.target, widget().missingConfig], [true, null, []]);
+  fs.rmSync(path.join(site, stub));
+  assert.deepEqual([widget().missingStub, widget().missingConfig], [true, []]);
+});
+
+/** A table whose piece no page imports: another component does. */
+const SOURCE_TABLE = {
+  RANGES: {},
+  ENTRIES: [{
+    name: 'Viewer', kind: 'component', stub: 'src/components/Viewer/index.jsx',
+    evidence: { docsPattern: "['\"]@site/src/components/Viewer['\"/]", srcPattern: "['\"]@site/src/components/Viewer['\"/]" },
+  }],
+};
+
+test('a pattern over src/ is evidence for a piece that only another component imports', (t) => {
+  const fixture = fixtureFor(t);
+  const site = fixture.addSite('one');
+  const viewer = () => readPieces(openSite(site, fixture.env), SOURCE_TABLE)[0];
+  assert.deepEqual([viewer().used, viewer().missingStub], [false, false]);
+  fixture.commitToSite(site, { 'src/components/Reader/index.jsx': "import Viewer from '@site/src/components/Viewer';\n" }, 'Read with the viewer');
+  assert.deepEqual([viewer().used, viewer().missingStub], [true, true], 'a deleted stub is an error, not "not used"');
+  const docsOnly = { ...SOURCE_TABLE, ENTRIES: [{ ...SOURCE_TABLE.ENTRIES[0], evidence: { docsPattern: SOURCE_TABLE.ENTRIES[0].evidence.docsPattern } }] };
+  assert.equal(readPieces(openSite(site, fixture.env), docsOnly)[0].used, false, 'docs, blog and src/pages alone do not see it');
+  writeFiles(site, { 'src/components/Viewer/index.jsx': "export { default } from '@site/shared/components/Viewer';\n" });
+  assert.deepEqual([viewer().used, viewer().missingStub], [true, false]);
+});
+
+test('with its stub in place a piece reads no evidence: no docs, no code', (t) => {
+  const fixture = fixtureFor(t);
+  const site = fixture.addSite('one');
+  const never = (what) => () => assert.fail(`${what} were read`);
+  const opened = { ...openSite(site, fixture.env), docTexts: never('the docs'), sourceTexts: never('the sources'), clientModules: never('the client modules') };
+  const table = { RANGES: {}, ENTRIES: [{
+    name: 'Widget', kind: 'component', stub: 'src/components/Widget/index.jsx',
+    evidence: { docsPattern: 'Widget', srcPattern: 'Widget', clientImport: 'Widget' },
+  }] };
+  assert.deepEqual(readPieces(opened, table).map(({ used, missingStub }) => [used, missingStub]), [[true, false]]);
+});
+
 test('a script is used through its line in package.json, and the cache is not looked for in the lock', (t) => {
   const fixture = fixtureFor(t);
   const site = fixture.addSite('one');

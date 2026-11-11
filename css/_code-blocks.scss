@@ -36,11 +36,11 @@
 
    THE CODE EDITOR  <CodeEditor> reads these tokens with built-in fallbacks equal to these
    values (<CodeEditor>'s styles.module.css > THE CODE-LINE TOKENS, in its theme's mode, which
-   can differ from the site's); the editor's wiring test keeps the fallbacks equal to the
-   values here.
+   can differ from the site's); shared/__tests__/codeEditorTokens.test.mjs keeps the fallbacks
+   equal to the values here.
 
    HOW TO CHANGE IT  A colour: the --code-line-* properties (light in :root, dark under
-   html[data-theme='dark']; then the editor's fallback, which the wiring test demands). A new kind: an entry in $code-line-kinds, its properties (-bg and
+   html[data-theme='dark']; then the editor's fallback, which that test demands). A new kind: an entry in $code-line-kinds, its properties (-bg and
    -ink, and -bar when the entry says bar: true), and
    a magic comment with its class in shared/wiring/index.cjs > MAGIC_COMMENTS. The bar's width: $code-line-bar-width.
    A place whose blocks need another shade: set --ifm-pre-background there. */

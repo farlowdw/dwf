@@ -1,0 +1,33 @@
+{
+ "request": {
+  "language": "go",
+  "version": "1.16.2",
+  "files": [
+   {
+    "name": "main",
+    "content": "package main\n\nimport \"fmt\"\n\nfunc main() { fmt.Println(add(2, 3)) }\n"
+   },
+   {
+    "name": "solution.go",
+    "content": "package main\n\nfunc add(a, b int) int {\n\treturn a + c\n}\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "# command-line-arguments\n./solution.go:4:13: undefined: c\n",
+   "code": 2,
+   "output": "# command-line-arguments\n./solution.go:4:13: undefined: c\n",
+   "memory": 12356000,
+   "message": "Exited with error status 2",
+   "status": "RE",
+   "cpu_time": 163,
+   "wall_time": 195
+  },
+  "language": "go",
+  "version": "1.16.2"
+ }
+}

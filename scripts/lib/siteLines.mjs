@@ -30,6 +30,9 @@ export const SHARED_LINE_PREFIX = 'shared:';
 /** The subject of the one commit `shared:leave` makes. It reaches public history on a public site. */
 export const LEAVE_SUBJECT = 'Leave the shared hub, keeping shared/ as plain files';
 
+/** How that commit's body opens. A join finds the commit by this line too, so a reworded subject still counts. */
+export const LEAVE_BODY_START = 'The shared npm lines go and the shared remote with them.';
+
 /** The names SITE_LINES holds without the prefix. */
 const OTHER_NAMES = new Set([...Object.keys(SITE_LINES), VERIFY_LINE_NAME].filter((name) => !name.startsWith(SHARED_LINE_PREFIX)));
 
@@ -66,10 +69,11 @@ export function readScripts(root) {
   return scriptsOf(readText(path.join(root, MANIFEST_FILE)));
 }
 
-/** The newest commit of `shared:leave` in HEAD's history, or null. */
+/** The newest commit of `shared:leave` in HEAD's history, by its subject or by its body's first line, or null. */
 export function lastLeave(root, env = process.env) {
-  const pattern = `^${LEAVE_SUBJECT.replace(REGEX_SPECIAL, '\\$&')}$`;
-  const sha = gitValue(['log', '-1', '--format=%H', '--grep', pattern, 'HEAD'], { cwd: root, env, read: true });
+  const subject = `^${LEAVE_SUBJECT.replace(REGEX_SPECIAL, '\\$&')}$`;
+  const body = `^${LEAVE_BODY_START.replace(REGEX_SPECIAL, '\\$&')}`;
+  const sha = gitValue(['log', '-1', '--format=%H', '--grep', subject, '--grep', body, 'HEAD'], { cwd: root, env, read: true });
   return sha || null;
 }
 

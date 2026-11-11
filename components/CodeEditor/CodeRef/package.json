@@ -1,0 +1,4 @@
+{
+	"//": "Marks the .js files of this folder (reference.js, goToEditor.js, and the tests, which use the parent folder's __tests__/jsxHooks.js) as ES modules, so that `node --test` runs them without guessing. Webpack reads them as ES modules either way; index.jsx is not affected. Keep every import in this folder fully specified ('./reference.js', not './reference').",
+	"type": "module"
+}

@@ -3,8 +3,11 @@
  * A line per view as it finishes, then the verdict. A list prints each group once, however many views
  * it showed up on, because the groups are what a person reads.
  *
- * report.json is written after every view with `state` running, then done or stopped, so a detached
- * run can be followed by reading it. `writeReport` replaces it in one step, so a reader never sees half.
+ * report.json is written after every view with `state` running, then done, stopped or failed (with `failure`, the
+ * reason), so a detached run can be followed by reading it. It holds the run's `pid` and the `origins` it serves.
+ * A run killed outright leaves it at running, and one that refused before its folder existed leaves none, so a
+ * reader also watches the process (its exit, or `pid`) and never waits on the file alone.
+ * `writeReport` replaces it in one step, so a reader never sees half.
  *
  * HOW TO CHANGE IT
  *   The wording is here. How much a list prints: compareSettings.mjs > PRINTED_*. What the file holds

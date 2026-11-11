@@ -1,0 +1,6 @@
+{
+	"//": "Marks the .js files of this folder as ES modules, so that `node --test` runs them without guessing (webpack reads ES modules either way). `main` names index.js for a tool that resolves the folder (the editor's files.test.js walks it; the editor itself imports './lib/codeRunner/index.js' by file); `sideEffects: false` is true (importing a module here runs nothing), so webpack may drop what a page does not use.",
+	"type": "module",
+	"main": "index.js",
+	"sideEffects": false
+}

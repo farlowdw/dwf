@@ -1,0 +1,6 @@
+{
+	"//": "Marks the .js files of this folder as ES modules, so that `node --test` runs them without guessing (webpack reads ES modules either way). `main` names index.js for a tool that resolves the folder (the editor's files.test.js walks it; the editor itself imports './lib/registry/index.js' by file); `sideEffects: false` is true (importing the module only creates its empty lists: nothing runs until a function is called), so webpack may drop it from a page that never uses it.",
+	"type": "module",
+	"main": "index.js",
+	"sideEffects": false
+}

@@ -1,0 +1,29 @@
+{
+ "request": {
+  "language": "python",
+  "version": "3.9.4",
+  "files": [
+   {
+    "name": "main.py",
+    "content": "def get(items, i):\n    return items[i]\n\nvalues = [1, 2, 3]\nprint(get(values, 5))\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "Traceback (most recent call last):\n  File \"/box/submission/main.py\", line 5, in <module>\n    print(get(values, 5))\n  File \"/box/submission/main.py\", line 2, in get\n    return items[i]\nIndexError: list index out of range\n",
+   "code": 1,
+   "output": "Traceback (most recent call last):\n  File \"/box/submission/main.py\", line 5, in <module>\n    print(get(values, 5))\n  File \"/box/submission/main.py\", line 2, in get\n    return items[i]\nIndexError: list index out of range\n",
+   "memory": 7764000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 60,
+   "wall_time": 111
+  },
+  "language": "python",
+  "version": "3.9.4"
+ }
+}

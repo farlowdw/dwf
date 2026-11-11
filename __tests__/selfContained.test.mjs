@@ -11,6 +11,8 @@
  *   - every script and stylesheet opens with a header comment;
  *   - every header says how to change its file, template/ included;
  *   - package.json lists no packages and no lock sits beside it: shared/ installs nothing.
+ *   - every folder under plugins/ has a package.json of its own that names it and installs nothing: without
+ *     one a build lists the plugin under the name of the nearest package.json above, this folder's.
  * A script is any file webpack compiles, TypeScript included. An import is an import or export, a
  * require, a createRequire(...)(name) or its .resolve, a name that holds a createRequire(...) called the
  * same two ways, and a require.context. template/ is skipped
@@ -353,6 +355,21 @@ test('shared/ installs nothing: package.json lists no packages, and no lock sits
   const installed = INSTALL_FIELDS.filter((field) => manifest[field] !== undefined);
   assert.deepEqual(installed, []);
   assert.equal(fs.existsSync(path.join(SHARED_ROOT, 'package-lock.json')), false);
+});
+
+test("every plugin folder has a package.json of its own, so a build lists the plugin under its own name and not under this folder's", () => {
+  const ownName = JSON.parse(fs.readFileSync(path.join(SHARED_ROOT, 'package.json'), 'utf8')).name;
+  const plugins = fs.readdirSync(path.join(SHARED_ROOT, 'plugins'), { withFileTypes: true }).filter((entry) => entry.isDirectory());
+  assert.ok(plugins.length > 0, 'no plugin folder was read');
+  for (const { name } of plugins) {
+    const file = path.join(SHARED_ROOT, 'plugins', name, 'package.json');
+    assert.ok(fs.existsSync(file), `plugins/${name} has no package.json: Docusaurus names it by the nearest one above`);
+    const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
+    assert.ok(typeof manifest.name === 'string' && manifest.name !== '' && manifest.name !== ownName, `plugins/${name}: its name`);
+    assert.equal(manifest.private, true, `plugins/${name}`);
+    assert.equal(manifest.main, 'index.js', `plugins/${name}`);
+    assert.deepEqual(INSTALL_FIELDS.filter((field) => manifest[field] !== undefined), [], `plugins/${name} installs nothing`);
+  }
 });
 
 test('requirements.cjs has no row for an MUI X package', () => {

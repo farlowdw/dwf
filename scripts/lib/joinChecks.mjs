@@ -156,18 +156,22 @@ function remoteLine({ remote, hub }) {
   return fail('remote', `${REMOTE} is ${remote.address}, not ${hub}`, `git remote set-url ${REMOTE} ${hub}`);
 }
 
-/** The admonition stub: the silent failure, when it is missing. */
-function admonitionLine({ copies: { theme } }) {
+/**
+ * The stub of each theme piece, one line a row: the admonition types, whose missing stub is the silent
+ * failure, and any other row of kind theme. The stub's path says which piece a line is about.
+ */
+function themeLine({ copies: { theme } }) {
   return theme.map(({ row, exists, target }) => {
-    if (target !== null) return ok('admonition', `${row.stub} points at ${PREFIX}/`);
-    if (!exists) return info('admonition', `no ${row.stub}: the join writes the stub`);
-    return warn('admonition', `${row.stub} is a local copy`, `by hand, see ${JOIN_SECTION}`);
+    if (target !== null) return ok('theme', `${row.stub} points at ${PREFIX}/`);
+    if (!exists) return info('theme', `no ${row.stub}: the join writes the stub`);
+    return warn('theme', `${row.stub} is a local copy`, `by hand, see ${JOIN_SECTION}`);
   });
 }
 
-/** One copy that differs, as a detail line. */
-function differLine({ row, files }) {
-  return `${row.name}: ${files.join(', ')}`;
+/** One copy that differs, as a detail line, with the rows of its folder tree it keeps as they are. */
+function differLine({ row, files, keeps = [] }) {
+  const kept = keeps.length > 0 ? `; ${keeps.join(', ')} ${keeps.length === 1 ? 'stays' : 'stay'} with it` : '';
+  return `${row.name}: ${files.join(', ')}${kept}`;
 }
 
 /** Copies of shared components. */
@@ -226,7 +230,7 @@ const REPOSITORY_LINES = Object.freeze([branchLine, changesLine]);
 /** The lines every readable site gets, in printing order. */
 const LINES = Object.freeze([
   docusaurusLine, ignoreLine, envLine, deployScriptLine, netlifyLine, nvmrcLine, muiLine, muiXLine, patchLine, dotenvLine,
-  mountLine, remoteLine, admonitionLine, stubsLine, scriptsLine, pagesLine, onPushLine, publicLine,
+  mountLine, remoteLine, themeLine, stubsLine, scriptsLine, pagesLine, onPushLine, publicLine,
 ]);
 
 /** Every line for these facts. A folder that is no readable site stops at its first line. */

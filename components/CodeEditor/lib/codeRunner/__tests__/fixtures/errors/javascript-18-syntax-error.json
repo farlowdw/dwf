@@ -1,0 +1,29 @@
+{
+ "request": {
+  "language": "javascript",
+  "version": "18.15.0",
+  "files": [
+   {
+    "name": "main.js",
+    "content": "console.log(\"start\");\nconst a = ;\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "/box/submission/main.js:2\nconst a = ;\n          ^\n\nSyntaxError: Unexpected token ';'\n    at internalCompileFunction (node:internal/vm:73:18)\n    at wrapSafe (node:internal/modules/cjs/loader:1176:20)\n    at Module._compile (node:internal/modules/cjs/loader:1218:27)\n    at Module._extensions..js (node:internal/modules/cjs/loader:1308:10)\n    at Module.load (node:internal/modules/cjs/loader:1117:32)\n    at Module._load (node:internal/modules/cjs/loader:958:12)\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:81:12)\n    at node:internal/main/run_main_module:23:47\n\nNode.js v18.15.0\n",
+   "code": 1,
+   "output": "/box/submission/main.js:2\nconst a = ;\n          ^\n\nSyntaxError: Unexpected token ';'\n    at internalCompileFunction (node:internal/vm:73:18)\n    at wrapSafe (node:internal/modules/cjs/loader:1176:20)\n    at Module._compile (node:internal/modules/cjs/loader:1218:27)\n    at Module._extensions..js (node:internal/modules/cjs/loader:1308:10)\n    at Module.load (node:internal/modules/cjs/loader:1117:32)\n    at Module._load (node:internal/modules/cjs/loader:958:12)\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:81:12)\n    at node:internal/main/run_main_module:23:47\n\nNode.js v18.15.0\n",
+   "memory": 46052000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 150,
+   "wall_time": 325
+  },
+  "language": "javascript",
+  "version": "18.15.0"
+ }
+}

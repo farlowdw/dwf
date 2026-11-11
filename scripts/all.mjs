@@ -86,6 +86,7 @@ function newRun({ root, args, env, print }) {
     plans: new Map(),
     tested: new Set(),
     finished: [],
+    unproven: new Set(),
     pending: [],
   };
 }

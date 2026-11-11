@@ -1,0 +1,36 @@
+/* PrintCopy.module.css — the printout's copy of the code (PrintCopy.jsx): nothing on screen;
+   under @media print the whole text, wrapped, where the editor's text was. The font, size, line
+   height and tab width come inline (PrintCopy.jsx > printCopyStyle); the left edge is Monaco's
+   text column (--ce-code-text-left, set on the frame by styles.module.css) and the ink paper
+   black (--ce-print-fg, set on the frame under @media print there; never the theme's
+   --ce-editor-fg, which the frame carries inline: a dark theme's light text would be
+   near-invisible on white), as the placeholders' print copies have them (styles.module.css >
+   .waitingCode, .printOnly), so a page prints alike whether an editor had loaded or not.
+   Infima styles every <pre> (padding, radius, margin, overflow): undone in print. Its paper is
+   its own, white, and printed even with backgrounds off (print-color-adjust: exact): with a
+   transparent one the frame's background showed through when backgrounds print, and a dark
+   theme's #1e1e1e under the black ink read 1.26:1.
+
+   HOW TO CHANGE IT  The print look: the @media print rule. Hiding it on screen is the first rule
+   and must stay `display: none` (a visibility or size trick would still let find-in-page and a
+   copy of the page meet the text). */
+
+.printCopy {
+	display: none;
+}
+
+@media print {
+	.printCopy {
+		display: block;
+		margin: 0;
+		padding: 0 0 0 var(--ce-code-text-left);
+		overflow: visible;
+		border-radius: 0;
+		background: #ffffff;
+		color: var(--ce-print-fg, #000000);
+		print-color-adjust: exact;
+		-webkit-print-color-adjust: exact;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+	}
+}

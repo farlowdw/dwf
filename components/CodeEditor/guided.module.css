@@ -1,0 +1,207 @@
+/* guided.module.css — the look of the editor's marked lines (decorations.js): the author's
+   marks (the `highlight` prop and the magic comments — highlight, error, success, warning, add,
+   remove), the current step's lines (drawn like a highlight, under any mark of the author's),
+   and the brief flash of the lines a <CodeRef> points at. Loaded once by the editor
+   (CodeEditorClient.jsx: import './guided.module.css';), like the docs sidebar's stylesheet.
+
+   GLOBAL NAMES  Monaco writes a decoration's class names into its own DOM as they are given, so
+   every name here is GLOBAL (:global(…)), never a CSS-module name; all start with dwf-ce-
+   (decorations.js > CLASS_PREFIX). Monaco draws each marked line in three places, each with
+   `dwf-ce-kind-<kind>` beside it (the current step: `dwf-ce-current-step`, and no number):
+     .dwf-ce-line     the band behind the code (in Monaco's .view-overlays)
+     .dwf-ce-margin   the band under the gutter (.margin-view-overlays): the band runs under the
+                      line number as in the site's numbered code blocks; it also draws the
+                      coloured left edge (highlight in blue, error, success, warning) and the
+                      + / − (add, remove), in the glyph margin, the empty column left of the
+                      numbers
+     .dwf-ce-number   the line number, in the kind's colour (highlight keeps the theme's own)
+   In both overlays every line is one div holding that line's decoration divs, which the
+   :has() rules under THE CURRENT STEP read.
+
+   COLOURS  The editor's code-line tokens (--ce-line-<kind>-bg, -bar, -ink, defined on the frame
+   in styles.module.css > THE CODE-LINE TOKENS: the site's --code-line-* with built-in
+   fallbacks, in the theme's mode), so error, success, warning, add and remove look as they
+   do in a code block, in both modes, and the same on a site without those tokens. The exception is highlight (and so the current step): its
+   band is the token's in a light theme only; its blue left edge (both modes) and its stronger
+   band in a dark theme are set HERE, in its two rules under KINDS — the code blocks' faint band
+   was hard to see on VS Code's #1e1e1e. "Dark" is the EDITOR's theme (the frame's
+   data-ce-mode, styles.module.css > THE EDITOR'S MODE), not the site's: Dracula on the light
+   site draws the dark band. Each kind's class
+   sets its properties (--dwf-ce-bg, --dwf-ce-bar, and --dwf-ce-ink but for highlight) and
+   three rules draw them — the way the code-block stylesheet does it. The bands are
+   translucent, so they show on VS Code's dark and light backgrounds alike, and over the
+   selection.
+   A THEME'S OWN BANDS  A theme whose text has little headroom (Solarized, Dracula, One Dark,
+   Monokai: their text or comments would drop under 4.5:1 / 3:1 on these bands) gives its own,
+   as --ce-band-<kind> on the editor's frame (editorThemes.js > LAYER_PROPERTIES); each band
+   reads that first and falls back to the values here, which VS Code's themes always use, so
+   their look is unchanged.
+
+   THE CURRENT STEP  An author's kind always wins its line: Monaco draws the author's band over
+   the step's (decorations.js's header says how), the number keeps the kind's colour (the step
+   gives the number no class), the step's left edge is dropped where the kind has an edge of
+   its own (error, success, warning), and on an author's highlight the step draws nothing (the
+   same look, never twice as dark). So a step over a marked line shows by its band underneath
+   (and by its edge on add / remove lines).
+
+   THE FLASH  A yellow band (VS Code's own "here it is" colour) that holds for a moment, then
+   fades out over FLASH_DURATION; decorations.js removes it after FLASH_MS, the same length (a
+   test compares them). A reader who asks for reduced motion gets the band without the fade,
+   for the same time. The keyframes' name is a CSS-module name (made unique by the build, the
+   rules below are rewritten to match). `dwf-ce-flash-again` has no rule: decorations.js only
+   alternates it so Monaco draws the lines anew (and the animation starts again).
+
+   HOW TO CHANGE IT  A kind's colours: the tokens in shared/css/_code-blocks.scss, or on a site without them the fallbacks in styles.module.css (the code blocks
+   change with them) — or, for the editor alone, its rule under KINDS below; for one theme, its
+   `layer` in editorThemes.js (the contrast test checks it). Highlight's (and
+   the step's) edge and dark band: its two rules under KINDS (the token changes only its light
+   band). A new kind: a rule under KINDS (decorations.js > LINE_KINDS is magicComments.js's
+   list; a test fails until the rule exists) and, if it has a left edge, its name in the
+   step's edge rule and in the number rule's list. The left edge's width: the box-shadow's 3px
+   (the code blocks' $code-line-bar-width). The flash: --dwf-ce-flash-bg (light, then dark),
+   the animation's length (and decorations.js > FLASH_MS with it), the keyframes' hold (35%).
+   A dark theme's rules: [data-ce-mode='dark'] in front (the frame's attribute; Monaco draws
+   inside the frame). */
+
+/* ---- KINDS: each sets the three colours its line is drawn with ---- */
+
+/* no --dwf-ce-ink: its line number keeps the theme's colour (the number rule skips this kind).
+   On VS Code's dark background (#1e1e1e) the code blocks' faint grey-blue band was hard to see
+   (checked in the browser, 2026-10-25), so in the editor a highlighted line — and the current
+   step's lines — also get a stronger band in a dark theme and a blue bar at the left edge in
+   both modes. */
+:global(.dwf-ce-kind-highlight),
+:global(.dwf-ce-current-step) {
+	--dwf-ce-bg: var(--ce-band-highlight, var(--ce-line-highlighted-bg));
+	--dwf-ce-bar: rgba(0, 122, 204, 0.55);
+}
+
+:global([data-ce-mode='dark'] .dwf-ce-kind-highlight),
+:global([data-ce-mode='dark'] .dwf-ce-current-step) {
+	--dwf-ce-bg: var(--ce-band-highlight, rgba(100, 150, 210, 0.2));
+	--dwf-ce-bar: rgba(80, 160, 255, 0.75);
+}
+
+:global(.dwf-ce-kind-error) {
+	--dwf-ce-bg: var(--ce-band-error, var(--ce-line-error-bg));
+	--dwf-ce-bar: var(--ce-line-error-bar);
+	--dwf-ce-ink: var(--ce-line-error-ink);
+}
+
+:global(.dwf-ce-kind-success) {
+	--dwf-ce-bg: var(--ce-band-success, var(--ce-line-success-bg));
+	--dwf-ce-bar: var(--ce-line-success-bar);
+	--dwf-ce-ink: var(--ce-line-success-ink);
+}
+
+:global(.dwf-ce-kind-warning) {
+	--dwf-ce-bg: var(--ce-band-warning, var(--ce-line-warning-bg));
+	--dwf-ce-bar: var(--ce-line-warning-bar);
+	--dwf-ce-ink: var(--ce-line-warning-ink);
+}
+
+:global(.dwf-ce-kind-add) {
+	--dwf-ce-bg: var(--ce-band-added, var(--ce-line-added-bg));
+	--dwf-ce-bar: transparent;
+	--dwf-ce-ink: var(--ce-line-added-ink);
+}
+
+:global(.dwf-ce-kind-remove) {
+	--dwf-ce-bg: var(--ce-band-removed, var(--ce-line-removed-bg));
+	--dwf-ce-bar: transparent;
+	--dwf-ce-ink: var(--ce-line-removed-ink);
+}
+
+/* ---- the three places a marked line is drawn ---- */
+
+/* the band behind the code (a whole-line decoration spans the editor's width) */
+:global(.monaco-editor .view-overlays .dwf-ce-line) {
+	background-color: var(--dwf-ce-bg);
+}
+
+/* the band under the gutter, with the coloured left edge (transparent for the kinds without one) */
+:global(.monaco-editor .margin-view-overlays .dwf-ce-margin) {
+	background-color: var(--dwf-ce-bg);
+	box-shadow: inset 3px 0 0 0 var(--dwf-ce-bar);
+}
+
+/* the line number in the kind's colour — beats Monaco's theme rules (.monaco-editor
+   .line-numbers, and .active-line-number on the cursor's line). The kinds are named, so no
+   other class on the number can cancel it; highlight keeps the theme's colour. */
+:global(.monaco-editor .margin-view-overlays .line-numbers.dwf-ce-number:is(.dwf-ce-kind-error, .dwf-ce-kind-success, .dwf-ce-kind-warning, .dwf-ce-kind-add, .dwf-ce-kind-remove)) {
+	color: var(--dwf-ce-ink);
+}
+
+/* add / remove: the + / − in the glyph margin (the column left of the numbers, a line tall) */
+:global(.monaco-editor .margin-view-overlays .dwf-ce-margin.dwf-ce-kind-add)::before,
+:global(.monaco-editor .margin-view-overlays .dwf-ce-margin.dwf-ce-kind-remove)::before {
+	position: absolute;
+	top: 0;
+	left: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.5em;
+	height: 100%;
+	color: var(--dwf-ce-ink);
+	font-weight: 700;
+}
+
+:global(.monaco-editor .margin-view-overlays .dwf-ce-margin.dwf-ce-kind-add)::before {
+	content: '+';
+}
+
+:global(.monaco-editor .margin-view-overlays .dwf-ce-margin.dwf-ce-kind-remove)::before {
+	content: '\2212';
+}
+
+/* ---- THE CURRENT STEP under an author's mark (see the header) ---- */
+
+/* a kind with a left edge of its own keeps it: the step's edge goes */
+:global(.monaco-editor .margin-view-overlays > div:has(> .dwf-ce-margin:is(.dwf-ce-kind-error, .dwf-ce-kind-success, .dwf-ce-kind-warning)) > .dwf-ce-current-step) {
+	box-shadow: none;
+}
+
+/* an author's highlight looks the same: the step draws nothing more on that line */
+:global(.monaco-editor .margin-view-overlays > div:has(> .dwf-ce-kind-highlight) > .dwf-ce-current-step),
+:global(.monaco-editor .view-overlays > div:has(> .dwf-ce-kind-highlight) > .dwf-ce-current-step) {
+	background-color: transparent;
+	box-shadow: none;
+}
+
+/* ---- the flash of the lines a <CodeRef> points at ---- */
+
+:global(.dwf-ce-flash),
+:global(.dwf-ce-flash-margin) {
+	--dwf-ce-flash-bg: rgba(255, 213, 0, 0.45);
+}
+
+:global([data-ce-mode='dark'] .dwf-ce-flash),
+:global([data-ce-mode='dark'] .dwf-ce-flash-margin) {
+	--dwf-ce-flash-bg: rgba(255, 213, 0, 0.28);
+}
+
+/* FLASH_DURATION: 1500ms, decorations.js > FLASH_MS */
+:global(.monaco-editor .view-overlays .dwf-ce-flash),
+:global(.monaco-editor .margin-view-overlays .dwf-ce-flash-margin) {
+	animation: flash 1500ms ease-out forwards;
+}
+
+@keyframes flash {
+	0%,
+	35% {
+		background-color: var(--dwf-ce-flash-bg);
+	}
+
+	100% {
+		background-color: transparent;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	:global(.monaco-editor .view-overlays .dwf-ce-flash),
+	:global(.monaco-editor .margin-view-overlays .dwf-ce-flash-margin) {
+		animation: none;
+		background-color: var(--dwf-ce-flash-bg);
+	}
+}

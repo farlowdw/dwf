@@ -260,12 +260,24 @@ async function compareAll({ browser, origins, options, report, print, stopped })
   }
 }
 
-/** The empty report. */
+/**
+ * The empty report. `pid` is this run's process, so a reader can tell a live run from one that was killed; `origins`
+ * are where the two sides are served, set once both servers listen, so a reader never has to guess a port.
+ */
 function newReport(root, options) {
   return {
-    state: 'running', site: path.basename(root), browser: null, verdict: null, out: options.out,
-    before: options.sides.before, after: options.sides.after, pages: options.pages, views: [],
+    state: 'running', pid: process.pid, site: path.basename(root), browser: null, verdict: null, out: options.out,
+    before: options.sides.before, after: options.sides.after, origins: null, pages: options.pages, views: [],
   };
+}
+
+/** Marks the report failed, with the reason. A folder that cannot be written keeps the first error the one shown. */
+function writeFailure(out, report, error) {
+  try {
+    writeReport(out, { ...report, state: 'failed', failure: error.message });
+  } catch {
+    // the out folder was never made: the error itself is the report
+  }
 }
 
 /** Takes the lock, compares, stops everything and returns the exit code. */
@@ -285,6 +297,7 @@ export async function runCompare({ root, options, env = process.env, print = con
     await waitForLock({ lockPath, waitSeconds: options.lockWait, note: `shared:compare ${report.site}`, print });
     cleanup.add(async () => releaseLock({ lockPath }));
     const origins = await startSides(root, options.sides, options.ports, cleanup);
+    report.origins = origins;
     const browser = await startBrowser(puppeteer, executablePath);
     cleanup.add(() => stopBrowser(browser));
     report.browser = await browser.version();
@@ -298,6 +311,9 @@ export async function runCompare({ root, options, env = process.env, print = con
     writeReport(options.out, report);
     summaryLines({ views: report.views, verdict: report.verdict, browser: report.browser, out: options.out }).forEach((line) => print(line));
     return EXIT_BY_VERDICT[report.verdict];
+  } catch (error) {
+    if (!wasStopped) writeFailure(options.out, report, error);
+    throw error;
   } finally {
     await cleanup.run();
     stopListening();

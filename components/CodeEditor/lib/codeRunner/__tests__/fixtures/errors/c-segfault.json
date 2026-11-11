@@ -1,0 +1,41 @@
+{
+ "request": {
+  "language": "c",
+  "version": "10.2.0",
+  "files": [
+   {
+    "name": "main",
+    "content": "int main(void) {\n    int *p = 0;\n    *p = 1;\n    return 0;\n}\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "compile": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "",
+   "code": 0,
+   "output": "",
+   "memory": 7620000,
+   "message": null,
+   "status": null,
+   "cpu_time": 162,
+   "wall_time": 167
+  },
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "/piston/packages/gcc/10.2.0/run: line 6:     3 Segmentation fault      (core dumped) ./a.out \"$@\"\n",
+   "code": 139,
+   "output": "/piston/packages/gcc/10.2.0/run: line 6:     3 Segmentation fault      (core dumped) ./a.out \"$@\"\n",
+   "memory": 704000,
+   "message": "Exited with error status 139",
+   "status": "RE",
+   "cpu_time": 5,
+   "wall_time": 466
+  },
+  "language": "c",
+  "version": "10.2.0"
+ }
+}

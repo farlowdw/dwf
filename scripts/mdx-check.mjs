@@ -9,7 +9,8 @@
  *   node shared/scripts/mdx-check.mjs --root ../old-site  another site, with this site's packages
  *
  * --strict reads a page the way `future.v4` does, which is what the next major does by default. Two things
- * then fail to compile: an HTML comment such as <!--truncate-->, and a heading id written {#id}. A third
+ * then fail to compile: an HTML comment such as <!--truncate--> (the hit names the fix: {/* truncate *\/}), and a
+ * heading id written {#id}. A third
  * compiles and prints wrong, so only this script sees it: `:::note Some title` stays plain text on the
  * page. Write `:::note[Some title]`.
  *
@@ -84,6 +85,11 @@ export const DETAILS_FIX = '$1$2\n\n$1$3\n';
 const LEGACY_TITLE = /^:::[a-z]+[ \t]+\S/;
 const LEGACY_RULE = 'admonition-title';
 const LEGACY_REASON = 'prints as plain text with mdx1Compat off. Write :::keyword[Title]';
+
+/** The rule MDX 3 fails an HTML comment such as <!-- truncate --> on, at its `!`, and the way to write one. */
+const COMMENT_RULE = 'unexpected-character';
+const COMMENT_OPEN = '<!--';
+const COMMENT_FIX = 'An HTML comment with mdx1Compat off: write {/* truncate */} for <!-- truncate -->, and {/* ... */} for any other';
 
 const LOADER_PACKAGE = '@docusaurus/mdx-loader';
 const PREPROCESSOR_FILE = 'lib/preprocessor.js';
@@ -208,15 +214,18 @@ async function checkPage(root, page, { compile, preprocess, plugins }, strict) {
     mdx1Compat: { headingIds: compat, admonitions: compat, comments: compat },
     preprocessor: wiring.preprocessDropDownIc,
   };
+  const source = fs.readFileSync(path.join(root, page), 'utf8');
   try {
-    const fileContent = blankFrontMatter(fs.readFileSync(path.join(root, page), 'utf8'));
+    const fileContent = blankFrontMatter(source);
     const filePath = path.join(root, page);
     const text = preprocess({ fileContent, filePath, markdownConfig, admonitions: wiring.admonitionsConfig.admonitions });
     const remarkPlugins = strict ? [...plugins, legacyTitles(legacy)] : plugins;
     await compile(text, { format: 'mdx', remarkPlugins });
     return legacy;
   } catch (error) {
-    return [failureOf(error)];
+    const failure = failureOf(error);
+    const atComment = failure.rule === COMMENT_RULE && (source.split('\n')[failure.line - 1] ?? '').includes(COMMENT_OPEN);
+    return [strict && atComment ? { ...failure, reason: `${failure.reason}. ${COMMENT_FIX}` } : failure];
   }
 }
 

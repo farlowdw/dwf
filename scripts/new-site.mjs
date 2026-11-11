@@ -36,7 +36,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { runLogged } from './lib/bumpRun.mjs';
-import { INSTALL_ARGS, INSTALL_TIMEOUT_SECONDS } from './lib/bumpSettings.mjs';
+import { INSTALL_ARGS, INSTALL_TIMEOUT_SECONDS, VERIFY_TIMEOUT_SECONDS } from './lib/bumpSettings.mjs';
 import { FETCH_FIX } from './lib/checks.mjs';
 import { EXIT, ScriptError, runScript } from './lib/exitCodes.mjs';
 import { git, gitOrThrow, gitValue } from './lib/git.mjs';
@@ -65,9 +65,11 @@ const OPTIONS = Object.freeze({
   repo: { type: 'string' },
   public: { type: 'boolean' },
   exclude: { type: 'string', multiple: true },
+  'verify-timeout': { type: 'string' },
   help: { type: 'boolean' },
 });
 const FLAGS = Object.keys(OPTIONS).map((name) => `--${name}`);
+const WHOLE_SECONDS = /^\d+$/;
 const REQUIRED_OPTIONS = Object.freeze(['title', 'url', 'repo']);
 const USAGE = [
   'Usage: npm run shared:new -- <folder> --title <words> --url <address> --repo <owner/name> [options]',
@@ -77,6 +79,7 @@ const USAGE = [
   '  --repo <owner/name>  its GitHub repository',
   '  --public             a public site: its build ends with the public check, and it has no wall',
   '  --exclude <path>     also write this path to .git/info/exclude. Repeat it for more',
+  `  --verify-timeout <s> how long the site's suites may run. Default: ${VERIFY_TIMEOUT_SECONDS}`,
   '  --help               this list',
 ].join('\n');
 
@@ -162,7 +165,15 @@ export function readRequest(argv) {
   const { exclude = [] } = values;
   const folder = folderNamed(positionals);
   const required = requiredValues(values);
-  return { ...folder, ...required, project: projectOf(required.url, folder.name), publicSite: Boolean(values.public), exclude };
+  const verifyTimeout = verifyTimeoutOf(values['verify-timeout']);
+  return { ...folder, ...required, project: projectOf(required.url, folder.name), publicSite: Boolean(values.public), exclude, verifyTimeout };
+}
+
+/** --verify-timeout as seconds, or the default. */
+function verifyTimeoutOf(text) {
+  if (text === undefined) return VERIFY_TIMEOUT_SECONDS;
+  if (!WHOLE_SECONDS.test(text) || Number(text) === 0) throw usageError(`--verify-timeout wants seconds, and reads ${text}.`);
+  return Number(text);
 }
 
 /** What a folder holds, or null when it is not a folder. A folder not there yet holds nothing. */
@@ -301,7 +312,8 @@ async function proveAndLock({ request, env, print }) {
   const { root } = request;
   const keep = logsFolder();
   const scriptsFolder = path.join(root, PREFIX, 'scripts');
-  await proveSite(request, gateJob({ root, env, print, keep, scriptsFolder, undoLines: () => [leftLine(request)] }));
+  const { verifyTimeout } = request;
+  await proveSite(request, gateJob({ root, env, print, keep, scriptsFolder, verifyTimeout, undoLines: () => [leftLine(request)] }));
   const sha = commitFiles(root, [LOCK_FILE], LOCK_SUBJECT, env);
   print(stepLine('lock', `committed, in ${short(sha)}`));
   fs.rmSync(keep, { recursive: true, force: true });

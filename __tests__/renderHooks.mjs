@@ -1,6 +1,7 @@
 /**
- * __tests__/renderHooks.mjs: Node module hooks that let the render tests of Asterisk, BibRef and LC import a
- * component's index.jsx the way the site's webpack does, so react-dom/server can render it with nothing built:
+ * __tests__/renderHooks.mjs: Node module hooks that let a component's render test (Asterisk's, BibRef's, LC's,
+ * MuiTheme's and the code grid's) import its index.jsx the way the site's webpack does, so react-dom/server can
+ * render it with nothing built:
  *   - a .jsx file under components/ is compiled by Babel's React preset (the automatic runtime, as Docusaurus
  *     does; the preset comes with Docusaurus), and a .js file there loads as a module, as webpack reads it;
  *   - an import without an extension from a file under components/ finds its .js or .jsx file, as webpack does;

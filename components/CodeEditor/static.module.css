@@ -1,0 +1,300 @@
+/* static.module.css — the look of the editor's STATIC VIEW (StaticCode.jsx: the code as
+   highlighted text on a phone or tablet, StaticBox.jsx: the box around it and its "Tap to edit"
+   bar), plus the two rules every touch-first editor needs once Monaco has mounted after the tap,
+   and what the static view prints like. Local classes throughout, but for the three global
+   names it borrows (COLOURS below) and the two Monaco / MUI selectors under TOUCH.
+
+   LAYOUT  One .line per logical line of the code, a flex row: the line number (.number, as wide
+   as Monaco's text column, --ce-code-text-left, so the text sits where the placeholder drew it),
+   then the code (.code, which WRAPS a long line — white-space: pre-wrap — as Monaco's
+   wordWrap: 'on' will after the tap; the page is the only scroller). A closed fold's first line
+   ends with the "⋯ 5 lines" button (.foldMarker); an open fold's first line has a chevron in
+   the gutter (.foldChevron). The container's font, size, line height, padding and tab width come
+   inline (StaticCode.jsx > staticCodeStyle, Monaco's own values); its text and background are
+   the editor theme's (prismTheme.js, inline too); the line numbers take the theme's number
+   colour (--ce-static-number, inline). A line inside a closed fold carries the `hidden`
+   attribute (it is also skipped by find-in-page and by a copy); .line[hidden] is needed because
+   .line's display: flex would otherwise beat the attribute's display: none.
+
+   COLOURS  A marked line (.marked) carries decorations.js's GLOBAL kind class as well
+   (dwf-ce-kind-<kind>), the current step's underlay (.step) carries dwf-ce-current-step, and the
+   flash's underlay (.flashBand) dwf-ce-flash: guided.module.css's KINDS and flash rules then set
+   --dwf-ce-bg / --dwf-ce-bar / --dwf-ce-ink / --dwf-ce-flash-bg on them exactly as on Monaco's
+   bands — a theme's own --ce-band-*, the editor's --ce-line-* tokens (styles.module.css, with
+   their built-in fallbacks for a site without the tokens), highlight's stronger band and the
+   flash's lighter band in a DARK theme ([data-ce-mode='dark'], the editor's mode, never the
+   site's). So the colours live in ONE place, guided.module.css; this file only draws them: the
+   band and the left edge (box-shadow, as the code blocks draw theirs), the number's ink, the
+   + / − of add / remove in the gutter (the column left of the number, like Monaco's glyph margin).
+   AN AUTHOR'S KIND WINS ITS LINE (as decorations.js draws it): the kind's band and edge are the
+   line's own background, the step's band is an underlay (.step, z-index -1 inside the line's
+   own stacking context: over the line's background, under the text) whose edge goes where the
+   kind has an edge of its own (error, success, warning) and which draws nothing on an author's
+   highlight (the same look, never twice as dark). The flash is a second underlay (.flashBand),
+   remade on every flash (StaticCode.jsx keys it by the store's token) so its animation starts
+   again; its length is decorations.js > FLASH_MS (a test compares them), and a reader who asks
+   for reduced motion gets the band without the fade.
+
+   TOUCH ([data-ce-touch], the frame's attribute on a touch-first device: CodeEditorClient.jsx;
+   this file has no media query of its own, a test checks) — two rules for the Monaco that mounts
+   after the tap: iOS Safari zooms the page when a focused text field is under 16 px, and Monaco
+   writes its hidden textarea's font size INLINE (__tests__/monacoTouchContract.test.js keeps
+   that fact checked), so the rule is !important (Monaco's visible text keeps its size); the
+   Input (stdin) field's textarea gets the same 16 px, for the same reason, through the two
+   classes MUI 9 puts on a multi-line field (the root's MuiInputBase-multiline, the textarea's
+   MuiInputBase-input; MUI 9 sets no multi-line class on the textarea itself, so the old rule on
+   one matched nothing): three classes outweigh styles.module.css's `.stdinField textarea`, and
+   __tests__/staticStyles.test.js renders the installed MUI's field to keep both true. The rule reaches the
+   focused input on every browser because touchOptions.js pins Monaco to its textarea
+   (`editContext: false`): Monaco 0.55 otherwise renders an EditContext element with no
+   `inputarea` where the browser has the API (Chrome, Edge), and the rule would reach nothing.
+
+   PRINT  The static view prints its own DOM: every hidden line shown (folds opened), the fold
+   buttons and the bar left out, the bands kept (print-color-adjust). It keeps its theme's block
+   on paper, on purpose (2026-10-26): its tokens are coloured INLINE by prism-react-renderer,
+   so black ink would need !important on every token, and a dark theme's bands read only on its
+   own background; the Monaco view's print copy (PrintCopy.jsx) and the placeholders print plain
+   text in paper black instead (styles.module.css > @media print).
+
+   HOW TO CHANGE IT  A kind's colours: guided.module.css (and the tokens behind it). The gutter's
+   width: the frame's --ce-code-text-left (styles.module.css; the fallback here equals it). The
+   chevron's column: CHEVRON_WIDTH below (22px, written out in the three places that share it:
+   the number's right padding, the chevron's left and its width). The flash's length: the animation's 1500ms, with
+   decorations.js > FLASH_MS. The bar's height: .touchBar's min-height (44 px: Apple's smallest
+   comfortable target). The words on the buttons: StaticCode.jsx > WORDS. */
+
+/* ---- the box (StaticBox.jsx): the code, then the bar; no fixed height, the page scrolls ---- */
+
+.staticBox {
+	background: var(--ce-editor-bg);
+}
+
+/* ---- the code (StaticCode.jsx) ---- */
+
+.static {
+	position: relative;
+	margin: 0;
+	user-select: text;
+	-webkit-user-select: text;
+	print-color-adjust: exact;
+	-webkit-print-color-adjust: exact;
+}
+
+.line {
+	position: relative;
+	isolation: isolate; /* its underlays' z-index: -1 stays inside the line (over its background, under its text) */
+	display: flex;
+	align-items: flex-start;
+}
+
+/* a line inside a closed fold (the `hidden` attribute; see LAYOUT) */
+.line[hidden] {
+	display: none;
+}
+
+/* the author's band and left edge: guided.module.css's properties, set by the kind class the line also carries */
+.marked {
+	background-color: var(--dwf-ce-bg);
+	box-shadow: inset 3px 0 0 0 var(--dwf-ce-bar);
+}
+
+/* the current step's underlay: highlight's look (dwf-ce-current-step shares its rule in guided.module.css) */
+.currentStep > .step {
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	background-color: var(--dwf-ce-bg);
+	box-shadow: inset 3px 0 0 0 var(--dwf-ce-bar);
+	pointer-events: none;
+}
+
+/* a kind with a left edge of its own keeps it: the step's edge goes (the same kinds as guided.module.css's step rule) */
+.marked:is(:global(.dwf-ce-kind-error), :global(.dwf-ce-kind-success), :global(.dwf-ce-kind-warning)) > .step {
+	box-shadow: none;
+}
+
+/* an author's highlight looks the same: the step draws nothing more on that line */
+.marked:global(.dwf-ce-kind-highlight) > .step {
+	display: none;
+}
+
+/* ---- the line number and the gutter ---- */
+
+.number {
+	flex: none;
+	box-sizing: border-box;
+	width: var(--ce-code-text-left, 68px);
+	padding-right: 22px; /* CHEVRON_WIDTH: room for an open fold's chevron, like Monaco's folding column */
+	color: var(--dwf-ce-ink, var(--ce-static-number, var(--ce-muted))); /* the kind's ink; highlight has none and keeps the theme's number colour */
+	text-align: right;
+	user-select: none; /* a selection copies code only */
+	-webkit-user-select: none;
+}
+
+/* add / remove: the + / − in the gutter's first column (the one left of the numbers) */
+.marked:is(:global(.dwf-ce-kind-add), :global(.dwf-ce-kind-remove)) > .number::before {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 1.5em;
+	color: var(--dwf-ce-ink);
+	font-weight: 700;
+	text-align: center;
+}
+
+.marked:global(.dwf-ce-kind-add) > .number::before {
+	content: '+';
+}
+
+.marked:global(.dwf-ce-kind-remove) > .number::before {
+	content: '\2212';
+}
+
+/* ---- the code of a line ---- */
+
+.code {
+	flex: 1 1 auto;
+	min-width: 0;
+	padding-right: 0.5em;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	tab-size: inherit;
+}
+
+/* ---- the folds: the "⋯ N lines" button after a closed fold's first line, the chevron on an open one ---- */
+
+.foldMarker {
+	display: inline-block;
+	margin-left: 0.5em;
+	padding: 0 0.4em;
+	border: 1px solid var(--ce-border);
+	border-radius: 3px;
+	background: var(--ce-control-bg);
+	color: var(--ce-muted);
+	font: inherit;
+	font-size: 0.85em;
+	line-height: 1.4;
+	vertical-align: baseline;
+	cursor: pointer;
+	touch-action: manipulation; /* a tap, not a double-tap zoom */
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+.foldMarker:hover,
+.foldMarker:active {
+	background: var(--ce-handle-hover);
+}
+
+.foldChevron {
+	position: absolute;
+	top: 0;
+	left: calc(var(--ce-code-text-left, 68px) - 22px); /* CHEVRON_WIDTH */
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px; /* CHEVRON_WIDTH */
+	height: var(--ce-static-line-height, 1.5em);
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--ce-static-number, var(--ce-muted));
+	cursor: pointer;
+	touch-action: manipulation;
+}
+
+.chevronIcon {
+	width: 14px;
+	height: 14px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.5;
+}
+
+.foldMarker:focus-visible,
+.foldChevron:focus-visible,
+.touchBar:focus-visible {
+	outline: 2px solid var(--ifm-color-primary);
+	outline-offset: -2px;
+}
+
+/* ---- the flash of the lines a <CodeRef> points at (an underlay remade per flash; see COLOURS) ---- */
+
+/* 1500ms = decorations.js > FLASH_MS */
+.flash > .flashBand {
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	animation: flashFade 1500ms ease-out forwards;
+	pointer-events: none;
+}
+
+@keyframes flashFade {
+	0%,
+	35% {
+		background-color: var(--dwf-ce-flash-bg);
+	}
+
+	100% {
+		background-color: transparent;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.flash > .flashBand {
+		animation: none;
+		background-color: var(--dwf-ce-flash-bg);
+	}
+}
+
+/* ---- the "Tap to edit" bar (StaticBox.jsx > TouchBar), where the Monaco view has its resize strip ---- */
+
+.touchBar {
+	display: block;
+	box-sizing: border-box;
+	width: 100%;
+	min-height: 44px;
+	padding: 0 0.75rem;
+	border: 0;
+	border-top: 1px solid var(--ce-border);
+	background: var(--ce-header-bg);
+	color: inherit;
+	font: inherit;
+	font-size: 0.875rem;
+	cursor: pointer;
+	touch-action: manipulation;
+}
+
+.touchBar:active:not(:disabled) {
+	background: var(--ce-handle-hover);
+}
+
+/* greyed out while Monaco cannot load (StaticBox.jsx > editBlockedReason): a tap would only fail again */
+.touchBar:disabled {
+	color: var(--ce-muted);
+	cursor: default;
+}
+
+/* ---- TOUCH: the Monaco that mounts after the tap (see the header) ---- */
+
+[data-ce-touch] :global(.monaco-editor textarea.inputarea) {
+	font-size: 16px !important;
+}
+
+[data-ce-touch] :global(.MuiInputBase-multiline) :global(.MuiInputBase-input) {
+	font-size: 16px;
+}
+
+/* ---- PRINT: the whole code, folds opened, nothing to tap ---- */
+
+@media print {
+	.line[hidden] {
+		display: flex;
+	}
+
+	.foldMarker,
+	.foldChevron,
+	.touchBar {
+		display: none;
+	}
+}

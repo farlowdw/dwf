@@ -1,0 +1,42 @@
+{
+ "input": {
+  "language": "python",
+  "readerCode": "def get(items, i):\n    return items[i]\n",
+  "harness": "check(\"get first\", get([1, 2, 3], 0), 1)\ncheck(\"get tenth\", get([1, 2, 3], 9), None)\ncheck(\"never runs\", 1, 1)\n"
+ },
+ "request": {
+  "language": "python",
+  "version": "3.9.4",
+  "files": [
+   {
+    "name": "main.py",
+    "content": "from solution import *\nfrom dwf_check import check, check_done as _dwf_check_done\ncheck(\"get first\", get([1, 2, 3], 0), 1)\ncheck(\"get tenth\", get([1, 2, 3], 9), None)\ncheck(\"never runs\", 1, 1)\n_dwf_check_done()\n"
+   },
+   {
+    "name": "solution.py",
+    "content": "def get(items, i):\n    return items[i]\n"
+   },
+   {
+    "name": "dwf_check.py",
+    "content": "# dwf_check.py — the check helper of an exercise (src/lib/codeRunner/checkHelpers.js)\nimport json\nimport math\n\nMARKER = '@@check@@'\nTOLERANCE = 1e-9\nSHOWN_MAX = 300\n\n\ndef _close(got, expected):\n    if got == expected:\n        return True\n    try:\n        got, expected = float(got), float(expected)\n    except OverflowError:\n        return False\n    if math.isnan(got) and math.isnan(expected):\n        return True\n    if math.isinf(got) or math.isinf(expected):\n        return False\n    scale = max(1.0, abs(got), abs(expected))\n    return abs(got - expected) <= TOLERANCE * scale\n\n\ndef _is_number(value):\n    return isinstance(value, (int, float)) and not isinstance(value, bool)\n\n\ndef _same_items(got, expected):\n    if len(got) != len(expected):\n        return False\n    return all(_same(one, other) for one, other in zip(got, expected))\n\n\ndef _same(got, expected):\n    if isinstance(got, bool) or isinstance(expected, bool):\n        return type(got) is type(expected) and got == expected\n    if _is_number(got) and _is_number(expected):\n        if isinstance(got, float) or isinstance(expected, float):\n            return _close(got, expected)\n        return got == expected\n    if isinstance(got, (list, tuple)) and type(got) is type(expected):\n        return _same_items(got, expected)\n    if isinstance(got, dict) and isinstance(expected, dict):\n        if got.keys() != expected.keys():\n            return False\n        return all(_same(got[key], expected[key]) for key in got)\n    try:\n        return bool(got == expected)\n    except Exception:\n        return False\n\n\ndef _show(value):\n    try:\n        text = repr(value)\n    except Exception:\n        text = '<unprintable>'\n    if len(text) > SHOWN_MAX:\n        text = text[:SHOWN_MAX] + '…'\n    return text\n\n\ndef _show_kind(value, other):\n    kind = type(value)\n    label = kind.__qualname__\n    if type(other) is kind:\n        label += f' object at {id(value):#x}'\n    return label + ': ' + _show(value)\n\n\ndef check(name, got, expected):\n    passed = _same(got, expected)\n    got_text, expected_text = _show(got), _show(expected)\n    if not passed and got_text == expected_text:\n        got_text, expected_text = _show_kind(got, expected), _show_kind(expected, got)\n    record = {'name': str(name), 'pass': passed, 'got': got_text, 'expected': expected_text}\n    print(MARKER + ' ' + json.dumps(record), flush=True)\n    return passed\n\n\ndef check_done():\n    print(MARKER + ' {\"done\":true}', flush=True)\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "@@check@@ {\"name\": \"get first\", \"pass\": true, \"got\": \"1\", \"expected\": \"1\"}\n",
+   "stderr": "Traceback (most recent call last):\n  File \"/box/submission/main.py\", line 4, in <module>\n    check(\"get tenth\", get([1, 2, 3], 9), None)\n  File \"/box/submission/solution.py\", line 2, in get\n    return items[i]\nIndexError: list index out of range\n",
+   "code": 1,
+   "output": "@@check@@ {\"name\": \"get first\", \"pass\": true, \"got\": \"1\", \"expected\": \"1\"}\nTraceback (most recent call last):\n  File \"/box/submission/main.py\", line 4, in <module>\n    check(\"get tenth\", get([1, 2, 3], 9), None)\n  File \"/box/submission/solution.py\", line 2, in get\n    return items[i]\nIndexError: list index out of range\n",
+   "memory": 5048000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 54,
+   "wall_time": 65
+  },
+  "language": "python",
+  "version": "3.9.4"
+ }
+}

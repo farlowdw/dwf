@@ -1,0 +1,29 @@
+{
+ "request": {
+  "language": "go",
+  "version": "1.16.2",
+  "files": [
+   {
+    "name": "main",
+    "content": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tv := []int{1, 2, 3}\n\ti := 5\n\tfmt.Println(v[i])\n}\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "panic: runtime error: index out of range [5] with length 3\n\ngoroutine 1 [running]:\nmain.main()\n\t/box/submission/main.go:8 +0x1d\nexit status 2\n",
+   "code": 1,
+   "output": "panic: runtime error: index out of range [5] with length 3\n\ngoroutine 1 [running]:\nmain.main()\n\t/box/submission/main.go:8 +0x1d\nexit status 2\n",
+   "memory": 26224000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 319,
+   "wall_time": 333
+  },
+  "language": "go",
+  "version": "1.16.2"
+ }
+}

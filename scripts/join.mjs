@@ -16,8 +16,8 @@
  *   2. commits the housekeeping: a tracked .gitignore that lists .env, a deploy line through Netlify, and
  *      netlify.toml and .nvmrc from the template when they are absent;
  *   3. refreshes git's index, which a copied folder needs, and runs git subtree add --squash;
- *   4. commits the npm lines, a default comparePages, src/theme/Admonition/Types.js, and a stub for each
- *      component copy that holds shared code;
+ *   4. commits the npm lines, a default comparePages, the stub of each theme piece the site lacks
+ *      (src/theme/Admonition/Types.js first of all), and a stub for each component copy that holds shared code;
  *   5. prints the by-hand list. It never touches a site's config, its CSS or its MUI.
  *
  * Each step looks first, so a second run does what is left. That is how the stub pass runs again after the
@@ -56,7 +56,7 @@ import { planNetlify } from './lib/joinHousekeeping.mjs';
 import {
   HOUSEKEEPING_SUBJECT, IGNORE_FILE, SCRIPT, SITE_LINES, SITE_LINES_SUBJECT, VERIFY_LINE, VERIFY_LINE_NAME,
 } from './lib/joinSettings.mjs';
-import { COPY, copyFolder, readCopies, writeStub } from './lib/joinStubs.mjs';
+import { COPY, readCopies, writeStub } from './lib/joinStubs.mjs';
 import { refuseWhenListening } from './lib/listeners.mjs';
 import { refuseNpmKeptOptions } from './lib/npmArgs.mjs';
 import { counted, short } from './lib/phrases.mjs';
@@ -238,11 +238,14 @@ function writeThemeStubs(root, theme) {
   return missing.map(({ row }) => row.stub);
 }
 
-/** Replaces each copy of shared code with a stub. Returns the stubs' paths. */
+/**
+ * Replaces each copy of shared code with a stub: the files it compared go, by path, so a nested row's files stay
+ * with that row. Returns the stubs' paths.
+ */
 function replaceCopies(root, components, env) {
   const copies = components.filter(({ state }) => state === COPY.SAME);
-  for (const { row } of copies) {
-    gitOrThrow(['rm', '-r', '-q', '--ignore-unmatch', '--', copyFolder(row)], { cwd: root, env });
+  for (const { row, compared } of copies) {
+    gitOrThrow(['rm', '-q', '--ignore-unmatch', '--', ...compared], { cwd: root, env });
     writeStub(root, row);
   }
   return copies.map(({ row }) => row.stub);

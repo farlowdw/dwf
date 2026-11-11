@@ -190,6 +190,27 @@ test('an entry with parts is caught in every spelling, joined or wrapped', (t) =
   assert.equal(wordHits('see the otter-\n  raft', list)[0].line, 1, 'a wrapped hit names the line it starts on');
 });
 
+/** More ways of writing an entry with parts: an email's dot, a slash, and every kind of space between the parts. */
+const MORE_SPELLINGS = [
+  ['with a dot, as in an email', 'write to otter.raft@example.com'],
+  ['with a slash', 'see otter/raft here'],
+  ['with two spaces', 'see otter  raft here'],
+  ['with a tab', 'see otter\traft here'],
+  ['with a no-break space', 'see otter\u00a0raft here'],
+  ['with &nbsp;', 'see otter&nbsp;raft here'],
+];
+
+test('an entry with parts is caught with a dot, a slash and any spacing between its parts', (t) => {
+  const list = listFrom(t, 'Otter Raft\nseal-pup\n');
+  for (const [name, text] of MORE_SPELLINGS) {
+    assert.deepEqual(wordHits(text, list, 'shared/a.js').map((hit) => hit.listLine), [1], name);
+  }
+  for (const text of ['see seal.pup here', 'see seal/pup here']) {
+    assert.deepEqual(wordHits(text, list, 'shared/a.js').map((hit) => hit.listLine), [2], `a hyphened entry: ${text}`);
+  }
+  assert.deepEqual(wordHits('see otter\u00a0raft', list)[0].line, 1, 'a line number holds');
+});
+
 test('Markdown and HTML marks inside an entry hide nothing, and only there are they taken out', (t) => {
   const list = listFrom(t, 'otter-raft\nzebrafish\n');
   for (const text of ['an otter-**raft**', 'an *otter*-raft', 'an `otter`-raft', 'an otter-<em>raft</em>', 'a zebra<b>fish</b>']) {

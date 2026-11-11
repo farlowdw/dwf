@@ -1,0 +1,38 @@
+{
+ "input": {
+  "language": "javascript",
+  "readerCode": "const add = (a, b) => a + b;\n\nfunction pair(a, b) {\n  return [a, b];\n}\n\nclass Counter {\n  constructor() { this.count = 0; }\n  increment() { return ++this.count; }\n}\n\nconsole.log(\"solution loaded\");\nmodule.exports = { add, pair, Counter };\n",
+  "harness": "check('add(2, 3)', add(2, 3), 5);\ncheck('add(2, 2)', add(2, 2), 5);\ncheck('0.1 + 0.2', add(0.1, 0.2), 0.3);\ncheck('pair', pair(1, 'a'), [1, 'a']);\ncheck('object', { total: add(1, 2) }, { total: 3 });\nconst counter = new Counter();\ncounter.increment();\ncheck('Counter', counter.increment(), 2);\ncheck('missing', undefined, null);\ncheck('infinities', -Infinity, Infinity);\ncheck('beyond 2^53', 0.1 * 3 * 1e17, 3e16);\n"
+ },
+ "request": {
+  "language": "javascript",
+  "version": "20.11.1",
+  "files": [
+   {
+    "name": "main.js",
+    "content": "\n// --- check helper (src/lib/codeRunner/checkHelpers.js) ---\nconst dwfFs = require('fs');\nconst dwfPath = require('path');\nconst dwfUtil = require('util');\nconst dwfVm = require('vm');\n\nconst DWF_MARKER = '@@check@@';\nconst DWF_TOLERANCE = 1e-9;\nconst DWF_SHOWN_MAX = 300;\n\nfunction dwfCloseNumbers(got, expected) {\n\tif (got === expected) return true;\n\tif (Number.isNaN(got) && Number.isNaN(expected)) return true;\n\tif (!Number.isFinite(got) || !Number.isFinite(expected)) return false;\n\tif (Number.isSafeInteger(got) && Number.isSafeInteger(expected)) return false;\n\tconst scale = Math.max(1, Math.abs(got), Math.abs(expected));\n\treturn Math.abs(got - expected) <= DWF_TOLERANCE * scale;\n}\n\nfunction dwfIsPlainObject(value) {\n\tif (value === null || typeof value !== 'object') return false;\n\tconst prototype = Object.getPrototypeOf(value);\n\treturn prototype === Object.prototype || prototype === null;\n}\n\nfunction dwfSameArrays(got, expected) {\n\tif (got.length !== expected.length) return false;\n\treturn got.every((item, index) => dwfSame(item, expected[index]));\n}\n\nfunction dwfSameObjects(got, expected) {\n\tconst keys = Object.keys(got);\n\tif (keys.length !== Object.keys(expected).length) return false;\n\treturn keys.every((key) => Object.prototype.hasOwnProperty.call(expected, key) && dwfSame(got[key], expected[key]));\n}\n\nfunction dwfSame(got, expected) {\n\tif (typeof got === 'number' && typeof expected === 'number') return dwfCloseNumbers(got, expected);\n\tif (Array.isArray(got) && Array.isArray(expected)) return dwfSameArrays(got, expected);\n\tif (dwfIsPlainObject(got) && dwfIsPlainObject(expected)) return dwfSameObjects(got, expected);\n\treturn dwfUtil.isDeepStrictEqual(got, expected);\n}\n\nfunction dwfShow(value) {\n\tlet text;\n\ttry {\n\t\ttext = dwfUtil.inspect(value, { compact: true, depth: 6, breakLength: Infinity, maxArrayLength: 100, maxStringLength: DWF_SHOWN_MAX });\n\t} catch (error) {\n\t\ttext = '<unprintable>';\n\t}\n\tif (text.length > DWF_SHOWN_MAX) text = text.slice(0, DWF_SHOWN_MAX) + '…';\n\treturn text;\n}\n\nfunction check(name, got, expected) {\n\tconst pass = dwfSame(got, expected);\n\tconst record = { name: String(name), pass, got: dwfShow(got), expected: dwfShow(expected) };\n\tconsole.log(DWF_MARKER + ' ' + JSON.stringify(record));\n\treturn pass;\n}\n\nfunction dwfCheckDone() {\n\tconsole.log(DWF_MARKER + ' {\"done\":true}');\n}\n\nfunction dwfLoadReaderCode(fileName) {\n\tconst file = dwfPath.join(__dirname, fileName);\n\tconst readerModule = { exports: {} };\n\tglobalThis.require = require;\n\tglobalThis.module = readerModule;\n\tglobalThis.exports = readerModule.exports;\n\tdwfVm.runInThisContext(dwfFs.readFileSync(file, 'utf8'), { filename: file });\n}\n// --- end of the check helper ---\ndwfLoadReaderCode('solution.js');\ncheck('add(2, 3)', add(2, 3), 5);\ncheck('add(2, 2)', add(2, 2), 5);\ncheck('0.1 + 0.2', add(0.1, 0.2), 0.3);\ncheck('pair', pair(1, 'a'), [1, 'a']);\ncheck('object', { total: add(1, 2) }, { total: 3 });\nconst counter = new Counter();\ncounter.increment();\ncheck('Counter', counter.increment(), 2);\ncheck('missing', undefined, null);\ncheck('infinities', -Infinity, Infinity);\ncheck('beyond 2^53', 0.1 * 3 * 1e17, 3e16);\ndwfCheckDone();\n"
+   },
+   {
+    "name": "solution.js",
+    "content": "const add = (a, b) => a + b;\n\nfunction pair(a, b) {\n  return [a, b];\n}\n\nclass Counter {\n  constructor() { this.count = 0; }\n  increment() { return ++this.count; }\n}\n\nconsole.log(\"solution loaded\");\nmodule.exports = { add, pair, Counter };\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "solution loaded\n@@check@@ {\"name\":\"add(2, 3)\",\"pass\":true,\"got\":\"5\",\"expected\":\"5\"}\n@@check@@ {\"name\":\"add(2, 2)\",\"pass\":false,\"got\":\"4\",\"expected\":\"5\"}\n@@check@@ {\"name\":\"0.1 + 0.2\",\"pass\":true,\"got\":\"0.30000000000000004\",\"expected\":\"0.3\"}\n@@check@@ {\"name\":\"pair\",\"pass\":true,\"got\":\"[ 1, 'a' ]\",\"expected\":\"[ 1, 'a' ]\"}\n@@check@@ {\"name\":\"object\",\"pass\":true,\"got\":\"{ total: 3 }\",\"expected\":\"{ total: 3 }\"}\n@@check@@ {\"name\":\"Counter\",\"pass\":true,\"got\":\"2\",\"expected\":\"2\"}\n@@check@@ {\"name\":\"missing\",\"pass\":false,\"got\":\"undefined\",\"expected\":\"null\"}\n@@check@@ {\"name\":\"infinities\",\"pass\":false,\"got\":\"-Infinity\",\"expected\":\"Infinity\"}\n@@check@@ {\"name\":\"beyond 2^53\",\"pass\":true,\"got\":\"30000000000000004\",\"expected\":\"30000000000000000\"}\n@@check@@ {\"done\":true}\n",
+   "stderr": "",
+   "code": 0,
+   "output": "solution loaded\n@@check@@ {\"name\":\"add(2, 3)\",\"pass\":true,\"got\":\"5\",\"expected\":\"5\"}\n@@check@@ {\"name\":\"add(2, 2)\",\"pass\":false,\"got\":\"4\",\"expected\":\"5\"}\n@@check@@ {\"name\":\"0.1 + 0.2\",\"pass\":true,\"got\":\"0.30000000000000004\",\"expected\":\"0.3\"}\n@@check@@ {\"name\":\"pair\",\"pass\":true,\"got\":\"[ 1, 'a' ]\",\"expected\":\"[ 1, 'a' ]\"}\n@@check@@ {\"name\":\"object\",\"pass\":true,\"got\":\"{ total: 3 }\",\"expected\":\"{ total: 3 }\"}\n@@check@@ {\"name\":\"Counter\",\"pass\":true,\"got\":\"2\",\"expected\":\"2\"}\n@@check@@ {\"name\":\"missing\",\"pass\":false,\"got\":\"undefined\",\"expected\":\"null\"}\n@@check@@ {\"name\":\"infinities\",\"pass\":false,\"got\":\"-Infinity\",\"expected\":\"Infinity\"}\n@@check@@ {\"name\":\"beyond 2^53\",\"pass\":true,\"got\":\"30000000000000004\",\"expected\":\"30000000000000000\"}\n@@check@@ {\"done\":true}\n",
+   "memory": 8188000,
+   "message": null,
+   "status": null,
+   "cpu_time": 61,
+   "wall_time": 69
+  },
+  "language": "javascript",
+  "version": "20.11.1"
+ }
+}

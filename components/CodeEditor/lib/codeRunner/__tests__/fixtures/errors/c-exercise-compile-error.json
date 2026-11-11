@@ -1,0 +1,45 @@
+{
+ "request": {
+  "language": "c",
+  "version": "10.2.0",
+  "files": [
+   {
+    "name": "main",
+    "content": "#include <stdio.h>\nint add(int, int);\nint main(void) { printf(\"%d\\n\", add(2, 3)); return 0; }\n"
+   },
+   {
+    "name": "solution",
+    "content": "int add(int a, int b) {\n    return a + c;\n}\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "compile": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "solution.c: In function 'add':\nsolution.c:2:16: error: 'c' undeclared (first use in this function)\n    2 |     return a + c;\n      |                ^\nsolution.c:2:16: note: each undeclared identifier is reported only once for each function it appears in\nchmod: cannot access 'a.out': No such file or directory\n",
+   "code": 1,
+   "output": "solution.c: In function 'add':\nsolution.c:2:16: error: 'c' undeclared (first use in this function)\n    2 |     return a + c;\n      |                ^\nsolution.c:2:16: note: each undeclared identifier is reported only once for each function it appears in\nchmod: cannot access 'a.out': No such file or directory\n",
+   "memory": 7620000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 125,
+   "wall_time": 130
+  },
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "solution.c: In function 'add':\nsolution.c:2:16: error: 'c' undeclared (first use in this function)\n    2 |     return a + c;\n      |                ^\nsolution.c:2:16: note: each undeclared identifier is reported only once for each function it appears in\nchmod: cannot access 'a.out': No such file or directory\n",
+   "code": 1,
+   "output": "solution.c: In function 'add':\nsolution.c:2:16: error: 'c' undeclared (first use in this function)\n    2 |     return a + c;\n      |                ^\nsolution.c:2:16: note: each undeclared identifier is reported only once for each function it appears in\nchmod: cannot access 'a.out': No such file or directory\n",
+   "memory": 7620000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 125,
+   "wall_time": 130
+  },
+  "language": "c",
+  "version": "10.2.0"
+ }
+}

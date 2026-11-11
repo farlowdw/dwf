@@ -10,13 +10,14 @@
  */
 
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { EXIT } from '../lib/exitCodes.mjs';
 import { allTestFiles, strayTestFiles, testFilesIn } from '../lib/suites.mjs';
-import { parseArgs } from '../test.mjs';
+import { FILE_LIMIT_SECONDS, TEST_LIMIT_ENV, TEST_LIMIT_SECONDS, nodeLimit, parseArgs } from '../test.mjs';
 import { fixtureFor, writeFiles } from './fixture.mjs';
 
 const HUB_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -87,7 +88,7 @@ test('a site runs what it uses, in all three formats, and each suite it leaves o
   assertLine(report, 'skip  components/Editor/__tests__: Editor: this site has no src/components/Editor/index.jsx');
   assertLine(report, 'skip  plugins/monaco/__tests__: Monaco: docusaurus.config.js does not name shared/plugins/monaco');
   assertLine(report, 'skip  lib/reload/__tests__: Reload: no client module imports shared/lib/reload');
-  assert.match(report.stdout, /^skip {2}scripts\/__tests__: .*has not changed\. To run them: npm run test:shared -- --scripts$/m);
+  assert.match(report.stdout, /^skip {2}scripts\/__tests__: .*shared\/scripts matches hub [0-9a-f]{7}, the commit this site recorded, so the hub's own run of them covers it\. To run them: npm run test:shared -- --scripts$/m);
   assertLine(report, 'test:shared: 2 suites run (4 files), 4 left out, node skipped 0 tests, exit 0');
 });
 
@@ -286,7 +287,7 @@ test('a commit under shared/scripts runs them until it has reached the hub', (t)
   assert.match(run(fixture, site).stdout, /^run {3}scripts\/__tests__: .*differs from the hub commit this site recorded, 1 file$/m);
   fixture.subtreePush(site);
   fixture.rejoin(site);
-  assert.match(run(fixture, site).stdout, /^skip {2}scripts\/__tests__: .*has not changed/m);
+  assert.match(run(fixture, site).stdout, /^skip {2}scripts\/__tests__: .*matches hub [0-9a-f]{7}, the commit this site recorded/m);
 });
 
 test('a commit elsewhere in shared/ leaves them out, and so does a hub commit not pulled yet', (t) => {
@@ -313,6 +314,47 @@ test('a run started inside a test still runs its files and keeps its exit code',
   const report = run(fixture, site);
   assert.equal(report.status, 1, report.output);
   assert.match(report.stdout, /always fails/);
+});
+
+/** A test that waits for a file that never comes, as the one that once held a run for seven hours did. */
+const hanging = (name) => `import fs from 'node:fs';\nimport test from 'node:test';\ntest('${name}', async () => {\n  while (!fs.existsSync('/never/there')) await new Promise((resolve) => { setTimeout(resolve, 50); });\n});\n`;
+
+/** The limit a hanging test is given here, and how long the whole run may take before this test calls it stuck. */
+const SHORT_LIMIT_SECONDS = 3;
+const STUCK_MS = 90_000;
+
+test('node gets a limit per test on Node 24 and later, per file before, and the variable moves it', () => {
+  assert.deepEqual(nodeLimit({}, '24.21.0'), { seconds: TEST_LIMIT_SECONDS, per: 'test' });
+  assert.deepEqual(nodeLimit({}, '22.18.0'), { seconds: FILE_LIMIT_SECONDS, per: 'file' });
+  assert.deepEqual(nodeLimit({ [TEST_LIMIT_ENV]: '30' }, '24.0.0'), { seconds: 30, per: 'test' });
+  assert.deepEqual(nodeLimit({ [TEST_LIMIT_ENV]: 'soon' }, '24.0.0'), { seconds: TEST_LIMIT_SECONDS, per: 'test' });
+  assert.ok(FILE_LIMIT_SECONDS > TEST_LIMIT_SECONDS);
+});
+
+test('a test that never ends fails by its file and name, and the run ends with the other suites run', (t) => {
+  const { fixture, site } = siteWith(t, {
+    '__tests__/always.test.mjs': hanging('waits for a file that never comes'),
+    'components/Widget/__tests__/format.test.mjs': passing('widget mjs runs'),
+  });
+  const env = { ...fixture.env, [TEST_LIMIT_ENV]: String(SHORT_LIMIT_SECONDS) };
+  const script = path.join(HUB_ROOT, 'scripts/test.mjs');
+  const started = Date.now();
+  const report = spawnSync(process.execPath, [script], { cwd: site, env, encoding: 'utf8', timeout: STUCK_MS });
+  const output = `${report.stdout}${report.stderr}`;
+  assert.equal(report.error?.code, undefined, `the run did not end within ${STUCK_MS} ms:\n${output}`);
+  assert.equal(report.status, 1, output);
+  assert.match(report.stdout, /^FAIL {2}ran out of time \(.*\): shared\/__tests__\/always\.test\.mjs: waits for a file that never comes/m);
+  assert.match(report.stdout, /widget mjs runs/);
+  assert.ok(Date.now() - started < STUCK_MS);
+});
+
+test('a test a file declares after a top-level await still runs', (t) => {
+  const late = "import test from 'node:test';\ntest('declared first', () => {});\nawait new Promise((resolve) => { setTimeout(resolve, 800); });\ntest('declared after an await', () => {});\n";
+  const { fixture, site } = siteWith(t, { '__tests__/always.test.mjs': late });
+  const report = run(fixture, site);
+  assert.equal(report.status, EXIT.OK, report.output);
+  assert.match(report.stdout, /declared first/);
+  assert.match(report.stdout, /declared after an await/, 'no flag of node may end a file before it has declared its tests');
 });
 
 test('a usage mistake is exit 2: an unknown option, an option npm kept, a repository with no shared/', (t) => {

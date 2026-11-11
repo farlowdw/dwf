@@ -1,0 +1,79 @@
+/* ThemeMenu.module.css — the Theme menu's layout (ThemeMenu.jsx): each entry's swatch (one small
+   box per variant, light first, "Aa" in the variant's text colour on its background, in a slot
+   two boxes wide so the labels line up) and its label with the note under it. The check
+   mark's column is MUI's own (a ListItemIcon, 36 px in a menu), so the swatches line up
+   whether or not an entry is checked.
+
+   The menu is drawn in a portal outside the editor's frame, so the frame's --ce-* properties
+   do not reach it: MUI's theme colours the menu (the <MuiTheme> around the editor), the
+   swatches carry their own colours inline (ThemeMenu.jsx > SwatchPart), and the swatch's
+   outline is a mid grey that shows on a light and on a dark menu alike. The button itself is
+   the header's (styles.module.css > .tooltipAnchor).
+
+   SPECIFICITY  MUI's own rules load after this file and win at the same weight (the trap
+   styles.module.css's header describes). None of these rules changes a property MUI sets on
+   the same element, so one class each is enough; a future rule that does needs TWO classes.
+
+   THE SAMPLE LETTERS  "Aa" is drawn as generated text (.sampleLetter::before, from the span's
+   data-letter), so it is not in the entry's innerText, which MUI's type-ahead reads: typing "m"
+   then moves to Monokai instead of nowhere (with real text every entry started with "A").
+
+   HOW TO CHANGE IT  The swatch's box size: --tm-swatch-width / --tm-swatch-height; its outline:
+   --tm-swatch-edge; the gap before the label: --tm-swatch-gap; where a lone box stands:
+   .swatchSlot[data-only='dark']. The menu's width: .list's min-width. The wrapping of a long
+   label or note: .text (MUI's MenuItem never wraps). */
+
+.list {
+	--tm-swatch-width: 1.75rem;
+	--tm-swatch-height: 1.5rem;
+	--tm-swatch-gap: 0.75rem;
+	--tm-swatch-edge: rgba(128, 128, 128, 0.6);
+
+	/* wide enough for "Follows the site's light / dark switch" on one line on a laptop; on a
+	   phone MUI's Popover keeps the menu inside the window (its max-width) and the note wraps */
+	min-width: 17rem;
+}
+
+/* the swatch's place: two boxes (and the outline) wide on every entry, so the labels line up; a
+   one-variant family's box stands in its mode's column (ThemeMenu.jsx > ThemeSwatch) */
+.swatchSlot {
+	display: inline-flex;
+	flex: none;
+	justify-content: flex-start;
+	width: calc(2 * var(--tm-swatch-width) + 2px);
+	margin-right: var(--tm-swatch-gap);
+}
+
+.swatchSlot[data-only='dark'] {
+	justify-content: flex-end;
+}
+
+.swatch {
+	display: inline-flex;
+	border: 1px solid var(--tm-swatch-edge);
+	border-radius: 4px;
+	overflow: hidden; /* the rounded corners over the boxes' backgrounds */
+}
+
+.swatchPart {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: var(--tm-swatch-width);
+	height: var(--tm-swatch-height);
+	font-family: var(--ifm-font-family-monospace);
+	font-size: 0.75rem;
+	font-weight: 600;
+	line-height: 1;
+}
+
+/* "A" and "a" (ThemeMenu.jsx > SwatchPart): generated text, kept out of the entry's innerText (see THE SAMPLE LETTERS) */
+.sampleLetter::before {
+	content: attr(data-letter);
+}
+
+/* MUI's MenuItem sets white-space: nowrap on the entry; the label and the note may wrap here */
+.text {
+	min-width: 0;
+	white-space: normal;
+}

@@ -4,17 +4,20 @@
  * them sees, the other sees too.
  *
  * An entry with parts, such as a hyphened name or one written in camel case, is matched in every common
- * spelling of those parts: joined by nothing, a space, an underscore or a hyphen. A text is read three
- * ways: line by line as written; for Markdown and HTML also with tags and the * _ ` marks taken out, so
- * emphasis inside a word hides nothing; and with each line break taken out, along with the next line's
- * indentation and comment leader, so an entry with parts that wraps over a line is still one entry. The
- * joined view reads entries with parts only: a single word that meets the start of the next line by
- * chance is no hit.
+ * spelling of those parts: joined by nothing, a space, an underscore, a hyphen, a dot (an email's) or a slash.
+ * Every text is read with each run of spacing inside a line as one space: two spaces, a tab, a no-break space and
+ * its HTML entities read as one. A text is read three ways: line by line as written; for Markdown and HTML also
+ * with tags and the * _ ` marks taken out, so emphasis inside a word, or React's <!-- --> between two text nodes,
+ * hides nothing; and with each line break taken out, along with the next line's indentation and comment leader, so
+ * an entry with parts that wraps over a line is still one entry. The joined view reads entries with parts only: a
+ * single word that meets the start of the next line by chance is no hit. check-public.mjs reads built files in the
+ * same views.
  *
  * HOW TO CHANGE IT
- *   What splits an entry into parts: PART_BREAK and CASE_BREAK. The spellings tried: JOINERS. Which files
- *   lose their markup: MARKUP_FILE and MARKUP. What a wrapped line starts with: LINE_BREAK. A joined
- *   spelling shorter than MIN_JOINED_CHARACTERS is left out, because a short one lands in ordinary words.
+ *   What splits an entry into parts: PART_BREAK and CASE_BREAK. The spellings tried: JOINERS. What reads as one
+ *   space: SPACING. Which files lose their markup: MARKUP_FILE and MARKUP. What a wrapped line starts with:
+ *   LINE_BREAK. A joined spelling shorter than MIN_JOINED_CHARACTERS is left out, because a short one lands in
+ *   ordinary words.
  */
 
 /** Where an entry splits into parts: a hyphen, a dot, a slash, an underscore or a space. */
@@ -24,7 +27,15 @@ const PART_BREAK = /[-./_\s]+/;
 const CASE_BREAK = /(?<=[a-z0-9])(?=[A-Z])/;
 
 /** How the parts of an entry may be joined. */
-const JOINERS = Object.freeze(['', ' ', '_', '-']);
+const JOINERS = Object.freeze(['', ' ', '_', '-', '.', '/']);
+
+/** Every way a space is written inside a line: a run of spaces and tabs, a no-break space, its entities. */
+const SPACING = /(?:[ \t\u00a0\u2000-\u200a\u202f\u3000]|&nbsp;|&#160;|&#xa0;)+/g;
+
+/** The text in lower case with each run of spacing as one space. Line breaks stay. */
+function normalised(text) {
+  return String(text).toLowerCase().replace(SPACING, ' ');
+}
 
 /** A joined spelling this short matches too much ordinary text, so it is not tried. */
 const MIN_JOINED_CHARACTERS = 6;
@@ -95,7 +106,7 @@ function lineOfOffset(starts, offset) {
  * decides whether markup comes out. Work it out once per file, then ask linesOf for each entry.
  */
 export function textViews(text, filePath = '') {
-  const lowered = String(text).toLowerCase();
+  const lowered = normalised(text);
   const texts = MARKUP_FILE.test(filePath) ? [lowered, withoutMarkup(lowered)] : [lowered];
   return { lines: texts.map((one) => one.split('\n')), joined: texts.map(joinedView) };
 }
@@ -127,6 +138,6 @@ export function linesOf(views, { forms, multiPart }) {
 
 /** True when a short text, such as a path or a subject, holds any form of the entry. */
 export function holdsForm(text, { forms }) {
-  const lowered = String(text).toLowerCase();
+  const lowered = normalised(text);
   return forms.some((form) => lowered.includes(form));
 }

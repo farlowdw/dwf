@@ -1,0 +1,41 @@
+{
+ "request": {
+  "language": "c",
+  "version": "10.2.0",
+  "files": [
+   {
+    "name": "main",
+    "content": "int main(void) {\n    char *s = \"\u00e9\u00e9\"; int x = y;\n    return 0;\n}\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "compile": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "main.c: In function 'main':\nmain.c:2:31: error: 'y' undeclared (first use in this function)\n    2 |     char *s = \"\u00e9\u00e9\"; int x = y;\n      |                             ^\nmain.c:2:31: note: each undeclared identifier is reported only once for each function it appears in\nchmod: cannot access 'a.out': No such file or directory\n",
+   "code": 1,
+   "output": "main.c: In function 'main':\nmain.c:2:31: error: 'y' undeclared (first use in this function)\n    2 |     char *s = \"\u00e9\u00e9\"; int x = y;\n      |                             ^\nmain.c:2:31: note: each undeclared identifier is reported only once for each function it appears in\nchmod: cannot access 'a.out': No such file or directory\n",
+   "memory": 7624000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 91,
+   "wall_time": 95
+  },
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "main.c: In function 'main':\nmain.c:2:31: error: 'y' undeclared (first use in this function)\n    2 |     char *s = \"\u00e9\u00e9\"; int x = y;\n      |                             ^\nmain.c:2:31: note: each undeclared identifier is reported only once for each function it appears in\nchmod: cannot access 'a.out': No such file or directory\n",
+   "code": 1,
+   "output": "main.c: In function 'main':\nmain.c:2:31: error: 'y' undeclared (first use in this function)\n    2 |     char *s = \"\u00e9\u00e9\"; int x = y;\n      |                             ^\nmain.c:2:31: note: each undeclared identifier is reported only once for each function it appears in\nchmod: cannot access 'a.out': No such file or directory\n",
+   "memory": 7624000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 91,
+   "wall_time": 95
+  },
+  "language": "c",
+  "version": "10.2.0"
+ }
+}

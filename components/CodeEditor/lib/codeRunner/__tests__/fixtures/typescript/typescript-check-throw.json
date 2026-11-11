@@ -1,0 +1,47 @@
+{
+ "note": "An exercise check through exercise.js's TypeScript layout: typescript.js > prepareTypeScriptCheck emitted the reader's code (solution.js, readerMap its source map) and the harness (inside main.js); run on Piston. Captured 2026-10-25.",
+ "typescript": "function add(a: number, b: number): number {\n  if (a < 0) throw new RangeError(\"negative\");\n  return a + b;\n}\n",
+ "harness": "type t = [Expect<Equal<ReturnType<typeof add>, number>>];\ncheck(\"adds\", add(2, 3), 5);\ncheck(\"negatives\", add(-2, -3), -5);\n",
+ "typeCheckOk": true,
+ "readerMap": {
+  "version": 3,
+  "file": "main.js",
+  "sourceRoot": "",
+  "sources": [
+   "main.ts"
+  ],
+  "names": [],
+  "mappings": ";;AAAA,SAAS,GAAG,CAAC,CAAS,EAAE,CAAS;IAC/B,IAAI,CAAC,GAAG,CAAC;QAAE,MAAM,IAAI,UAAU,CAAC,UAAU,CAAC,CAAC;IAC5C,OAAO,CAAC,GAAG,CAAC,CAAC;AACf,CAAC"
+ },
+ "request": {
+  "language": "javascript",
+  "version": "20.11.1",
+  "files": [
+   {
+    "name": "main.js",
+    "content": "\n// --- check helper (src/lib/codeRunner/checkHelpers.js) ---\nconst dwfFs = require('fs');\nconst dwfPath = require('path');\nconst dwfUtil = require('util');\nconst dwfVm = require('vm');\n\nconst DWF_MARKER = '@@check@@';\nconst DWF_TOLERANCE = 1e-9;\nconst DWF_SHOWN_MAX = 300;\n\nfunction dwfCloseNumbers(got, expected) {\n\tif (got === expected) return true;\n\tif (Number.isNaN(got) && Number.isNaN(expected)) return true;\n\tif (Number.isInteger(got) && Number.isInteger(expected)) return false;\n\tconst scale = Math.max(1, Math.abs(got), Math.abs(expected));\n\treturn Math.abs(got - expected) <= DWF_TOLERANCE * scale;\n}\n\nfunction dwfIsPlainObject(value) {\n\tif (value === null || typeof value !== 'object') return false;\n\tconst prototype = Object.getPrototypeOf(value);\n\treturn prototype === Object.prototype || prototype === null;\n}\n\nfunction dwfSameArrays(got, expected) {\n\tif (got.length !== expected.length) return false;\n\treturn got.every((item, index) => dwfSame(item, expected[index]));\n}\n\nfunction dwfSameObjects(got, expected) {\n\tconst keys = Object.keys(got);\n\tif (keys.length !== Object.keys(expected).length) return false;\n\treturn keys.every((key) => Object.prototype.hasOwnProperty.call(expected, key) && dwfSame(got[key], expected[key]));\n}\n\nfunction dwfSame(got, expected) {\n\tif (typeof got === 'number' && typeof expected === 'number') return dwfCloseNumbers(got, expected);\n\tif (Array.isArray(got) && Array.isArray(expected)) return dwfSameArrays(got, expected);\n\tif (dwfIsPlainObject(got) && dwfIsPlainObject(expected)) return dwfSameObjects(got, expected);\n\treturn dwfUtil.isDeepStrictEqual(got, expected);\n}\n\nfunction dwfShow(value) {\n\tlet text;\n\ttry {\n\t\ttext = dwfUtil.inspect(value, { compact: true, depth: 6, breakLength: Infinity, maxArrayLength: 100, maxStringLength: DWF_SHOWN_MAX });\n\t} catch (error) {\n\t\ttext = '<unprintable>';\n\t}\n\tif (text.length > DWF_SHOWN_MAX) text = text.slice(0, DWF_SHOWN_MAX) + '…';\n\treturn text;\n}\n\nfunction check(name, got, expected) {\n\tconst pass = dwfSame(got, expected);\n\tconst record = { name: String(name), pass, got: dwfShow(got), expected: dwfShow(expected) };\n\tconsole.log(DWF_MARKER + ' ' + JSON.stringify(record));\n\treturn pass;\n}\n\nfunction dwfCheckDone() {\n\tconsole.log(DWF_MARKER + ' {\"done\":true}');\n}\n\nfunction dwfLoadReaderCode(fileName) {\n\tconst file = dwfPath.join(__dirname, fileName);\n\tconst readerModule = { exports: {} };\n\tglobalThis.require = require;\n\tglobalThis.module = readerModule;\n\tglobalThis.exports = readerModule.exports;\n\tdwfVm.runInThisContext(dwfFs.readFileSync(file, 'utf8'), { filename: file });\n}\n// --- end of the check helper ---\ndwfLoadReaderCode('solution.js');\n\"use strict\";\nObject.defineProperty(exports, \"__esModule\", { value: true });\ncheck(\"adds\", add(2, 3), 5);\ncheck(\"negatives\", add(-2, -3), -5);\ndwfCheckDone();\n"
+   },
+   {
+    "name": "solution.js",
+    "content": "\"use strict\";\nObject.defineProperty(exports, \"__esModule\", { value: true });\nfunction add(a, b) {\n    if (a < 0)\n        throw new RangeError(\"negative\");\n    return a + b;\n}\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "@@check@@ {\"name\":\"adds\",\"pass\":true,\"got\":\"5\",\"expected\":\"5\"}\n",
+   "stderr": "/box/submission/solution.js:5\n        throw new RangeError(\"negative\");\n        ^\n\nRangeError: negative\n    at add (/box/submission/solution.js:5:15)\n    at Object.<anonymous> (/box/submission/main.js:79:20)\n    at Module._compile (node:internal/modules/cjs/loader:1376:14)\n    at Module._extensions..js (node:internal/modules/cjs/loader:1435:10)\n    at Module.load (node:internal/modules/cjs/loader:1207:32)\n    at Module._load (node:internal/modules/cjs/loader:1023:12)\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:135:12)\n    at node:internal/main/run_main_module:28:49\n\nNode.js v20.11.1\n",
+   "code": 1,
+   "output": "@@check@@ {\"name\":\"adds\",\"pass\":true,\"got\":\"5\",\"expected\":\"5\"}\n/box/submission/solution.js:5\n        throw new RangeError(\"negative\");\n        ^\n\nRangeError: negative\n    at add (/box/submission/solution.js:5:15)\n    at Object.<anonymous> (/box/submission/main.js:79:20)\n    at Module._compile (node:internal/modules/cjs/loader:1376:14)\n    at Module._extensions..js (node:internal/modules/cjs/loader:1435:10)\n    at Module.load (node:internal/modules/cjs/loader:1207:32)\n    at Module._load (node:internal/modules/cjs/loader:1023:12)\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:135:12)\n    at node:internal/main/run_main_module:28:49\n\nNode.js v20.11.1\n",
+   "memory": 7228000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 85,
+   "wall_time": 105
+  },
+  "language": "javascript",
+  "version": "20.11.1"
+ }
+}

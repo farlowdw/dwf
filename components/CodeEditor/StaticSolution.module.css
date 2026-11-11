@@ -1,0 +1,41 @@
+/* StaticSolution.module.css — the look of the static view's Solution panel (StaticSolution.jsx):
+   only the box its diff rows sit in. The header, the colour key and the note are
+   SolutionPanel.module.css's (the panel uses those classes as SolutionPanel.jsx does); the rows
+   themselves are ExercisePanel.module.css's (DiffRows.jsx).
+
+   THE BAND BRIDGE  DiffRows paints a changed row's band with
+   var(--ce-band-added, var(--ce-line-added-bg)) and the removed one likewise (the editor's
+   code-line tokens by default). Here the bands are the colour key's own swatches instead —
+   --sp-key-yours / --sp-key-solution, VS Code's diff colours from SolutionPanel.module.css, or
+   the theme's inline (SolutionPanel.jsx > keyStyleOf) — so a reader never sees a key in one red
+   and rows in another. A high-contrast theme's diff has no fill, only outlines (editorThemes.js
+   > diffKeyOf's `outlined`): its rows keep no band and colour the signs instead (.rowsOutlined).
+
+   SIZE  The rows scroll inside the box past --sp-max-height (SolutionPanel.module.css: 50vh), as
+   Monaco's diff view does; long lines scroll sideways (the list is as wide as its longest line).
+
+   HOW TO CHANGE IT  The tallest box: --sp-max-height (SolutionPanel.module.css, shared with the
+   Monaco panel). The bands: the bridge below (keep them the key's colours). */
+
+/* the rows' box, in the editor's own background; a keyboard can focus and scroll it */
+.rows {
+	--ce-band-removed: var(--sp-key-yours);
+	--ce-band-added: var(--sp-key-solution);
+
+	max-height: var(--sp-max-height);
+	overflow: auto;
+	background: var(--ce-editor-bg);
+}
+
+.rows:focus-visible {
+	outline: 2px solid var(--ifm-color-primary);
+	outline-offset: -2px;
+}
+
+/* a high-contrast theme: no bands (its diff draws outlines only); the signs carry the key's colours */
+.rowsOutlined {
+	--ce-band-removed: transparent;
+	--ce-band-added: transparent;
+	--ce-line-removed-ink: var(--sp-key-yours);
+	--ce-line-added-ink: var(--sp-key-solution);
+}

@@ -12,6 +12,9 @@
  * A site that comes back after shared:leave gets no compare row: its shared/ stayed, and the join changes only
  * package.json and the remote.
  *
+ * A theme file of the site's own, where shared/ holds the piece, has two rows: the admonition types', whose folder
+ * holds types to move into a Types.js, and one for every other theme piece, which is deleted or made a wrapper.
+ *
  * HOW TO CHANGE IT
  *   A new step: a row in STEPS, in the order a person should take it. `open` reads the facts of
  *   lib/joinFacts.mjs and `text` gives the sentence. The wiring's lines are in the README: name the section.
@@ -30,7 +33,11 @@ const STYLES_SIGN = `${PREFIX}/css/custom.scss`;
 
 const README = `${PREFIX}/README.md`;
 const JOIN_SECTION = 'Join an existing site';
+const DIFFERENT_SECTION = 'When one site needs something different';
 const JOIN_AGAIN = 'npm run shared:join -- .';
+
+/** The admonition types' stub. A site's own folder there has a step of its own: its types move into a Types.js. */
+const ADMONITION_STUB = 'src/theme/Admonition/Types.js';
 
 /** The copies that still differ from shared/. */
 function differing({ copies }) {
@@ -40,6 +47,16 @@ function differing({ copies }) {
 /** Their names, for a sentence. */
 function differingNames(facts) {
   return differing(facts).map(({ row }) => row.name).join(', ');
+}
+
+/** The theme pieces whose file here is the site's own code, where a stub would point at shared/. */
+function ownTheme({ copies }) {
+  return copies.theme.filter(({ exists, target }) => exists && target === null);
+}
+
+/** Those files, the admonition types aside, for a sentence. */
+function otherOwnTheme(facts) {
+  return ownTheme(facts).map(({ row }) => row.stub).filter((stub) => stub !== ADMONITION_STUB);
 }
 
 /** True when the MUI step is still to come. */
@@ -106,9 +123,15 @@ const STEPS = Object.freeze([
       + `each stub by hand: "${JOIN_SECTION}" in ${README} shows them.`,
   },
   {
-    open: ({ copies }) => copies.theme.some(({ exists, target }) => exists && target === null),
+    open: (facts) => ownTheme(facts).some(({ row }) => row.stub === ADMONITION_STUB),
     text: () => `src/theme/Admonition is the site's own. Move any type of its own into a Types.js as ${README} `
       + `shows. If every type is shared's, delete the folder and run ${JOIN_AGAIN}, which writes the stub.`,
+  },
+  {
+    open: (facts) => otherOwnTheme(facts).length > 0,
+    text: (facts) => `These theme files are the site's own, where ${PREFIX}/ holds the piece: ${otherOwnTheme(facts).join(', ')}. `
+      + `Delete one that holds nothing of the site's own and run ${JOIN_AGAIN}, which writes the stub. Make any other a `
+      + `wrapper round the shared piece: "${DIFFERENT_SECTION}" in ${README} shows one.`,
   },
   {
     open: ({ configText }) => !configText.includes(CONFIG_SIGN),

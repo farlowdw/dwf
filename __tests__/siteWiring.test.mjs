@@ -18,10 +18,18 @@
  *   keywords           every docs, blog and pages block takes the shared keywords; no list of the
  *                      site's own; a keyword the site adds has its component in the Types stub
  *   stubs              a piece in use has its stub, each stub points at its piece, DropDownIC's is
- *                      a plain re-export (its MDX plugin writes <DropDownIC.Title>)
- *   no leftover copies a file shared/ now holds is gone from where the site used to keep it. One in
- *                      static/ that a doc imports by path is named too: it hides shared's copy, since
- *                      'static' comes first in staticDirectories, so the doc imports shared's instead
+ *                      a plain re-export (its MDX plugin writes <DropDownIC.Title>), and so is
+ *                      unsavedWork's (a copy or a wrapper hands a site's reloader an empty
+ *                      registry, so a tab reloads over typed text, with no error). A piece in use
+ *                      also has every line its row's needsConfig asks of the config, read with the
+ *                      comments left out: without codeRunnerPlugin() the site builds and the editor
+ *                      never loads its Monaco
+ *   no leftover copies a file shared/ now holds is gone from where the site used to keep it: a
+ *                      stylesheet, a font, a theme or component file, a library under src/lib, a
+ *                      plugin under plugins/. One in static/ that a doc imports by path is named
+ *                      too: it hides shared's copy, since 'static' comes first in staticDirectories,
+ *                      so the doc imports shared's instead. A site's own README.md at the top of
+ *                      such a folder is no copy: it is about the site's files
  *   bibItems           BibRef's stub passes the site's bibliography, or every citation says
  *                      ITEM NOT FOUND while the build exits 0
  *   Admonition stub    needed whenever the config uses admonitionsConfig, or custom boxes render
@@ -41,10 +49,11 @@
  * never printed.
  *
  * HOW TO CHANGE IT
- *   A new piece is a row in requirements.cjs and is picked up from there. A file moved into shared/
- *   needs nothing here when its old home is in COPY_HOMES; another old name goes in OLD_PATHS. A new
- *   rule: a function returning sentences, a row in RULES with its step, a broken fixture in BREAKS. A
- *   new step: a row in STEPS. valueAt is a small reader of a config value, not a parser.
+ *   A new piece is a row in requirements.cjs and is picked up from there, with the config lines it
+ *   needs. A file moved into shared/ needs nothing here when its old home is in COPY_HOMES; another
+ *   old name goes in OLD_PATHS. A new rule: a function returning sentences, a row in RULES with its
+ *   step, a broken fixture in BREAKS. A new step: a row in STEPS. valueAt is a small reader of a config
+ *   value, not a parser.
  * Run with `npm run test:shared`, or on its own with `node --test "__tests__/*.test.mjs"` in the hub.
  */
 
@@ -74,6 +83,8 @@ const ADMONITION_STUB = 'src/theme/Admonition/Types.js';
 const ADMONITION_TARGET = 'shared/theme/Admonition/Types';
 const BIBREF_STUB = 'src/components/BibRef/index.jsx';
 const BIBLIOGRAPHY = 'src/components/BibRef/bibliography.js';
+const UNSAVED_WORK_STUB = 'src/components/CodeEditor/unsavedWork.js';
+const EDITOR_STUB = 'src/components/CodeEditor/index.jsx';
 const DROPDOWN_STUB = 'src/components/DropDownIC/index.jsx';
 /** The folder a site mounts the hub at, as a path's start. */
 const PREFIX_FOLDER = 'shared/';
@@ -94,7 +105,7 @@ const MARKDOWN_FILE = /\.mdx?$/;
 const DROPDOWN_TAG = '<DropDownIC';
 
 /** Pieces whose stub may not grow into a wrapper. */
-const PLAIN_ONLY = ['DropDownIC'];
+const PLAIN_ONLY = ['DropDownIC', 'unsavedWork'];
 
 /**
  * Where a site kept each shared folder's files. `step`: the step of STEPS that makes a copy
@@ -107,7 +118,12 @@ const COPY_HOMES = [
   { shared: 'static/', site: 'static/', step: 'stylesheets', importable: true },
   { shared: 'theme/', site: 'src/theme/', step: 'wiring' },
   { shared: 'components/', site: 'src/components/', step: 'wiring' },
+  { shared: 'lib/', site: 'src/lib/', step: 'wiring' },
+  { shared: 'plugins/', site: 'plugins/', step: 'wiring' },
 ];
+
+/** A shared folder's own notes, at its top. A site's file of that name is about the site's files: no copy. */
+const HOME_NOTES = 'README.md';
 
 /** Old copies with no file of the same name in shared/. */
 const OLD_PATHS = [
@@ -220,13 +236,20 @@ function stubProblems({ row, stub }) {
   return problems;
 }
 
+/** A sentence for each line a piece in use needs in the config and the config, its comments aside, lacks. */
+function configLineProblems({ row, missingConfig }) {
+  return missingConfig.map(({ text, what }) => `${CONFIG_FILE} lacks ${text}: ${row.name} is in use and needs ${what}`);
+}
+
 function stubsRule({ opened }) {
-  const pieces = readPieces(opened, table).filter(({ row }) => row.stub);
+  const all = readPieces(opened, table);
+  const pieces = all.filter(({ row }) => row.stub);
   const missing = pieces.filter(({ missingStub }) => missingStub);
   const present = pieces.filter(({ stub }) => stub.exists);
   return [
     ...missing.map(({ row }) => `${row.stub} is missing: ${row.name} is in use`),
     ...present.flatMap(stubProblems),
+    ...all.flatMap(configLineProblems),
   ];
 }
 
@@ -235,9 +258,12 @@ function importedByPath({ opened }, file) {
   return opened.docTexts().some(({ text }) => text.includes(`@site/${file}`));
 }
 
-/** The old copies still in one home of COPY_HOMES. */
-function copiesIn(site, home) {
-  const files = sharedFiles({ skipTemplate: true }).filter((file) => file.startsWith(home.shared));
+/**
+ * The old copies still in one home of COPY_HOMES. `shared` lists what shared/ holds, from its root: the real
+ * folder's files, or a test's.
+ */
+function copiesIn(site, home, shared = sharedFiles({ skipTemplate: true })) {
+  const files = shared.filter((file) => file.startsWith(home.shared) && file !== `${home.shared}${HOME_NOTES}`);
   const stubs = new Set(table.ENTRIES.map((row) => row.stub));
   const copies = files.map((file) => `${home.site}${file.slice(home.shared.length)}`);
   return copies.filter((file) => !stubs.has(file) && site.exists(file)).map((file) => ({ file, home }));
@@ -508,8 +534,8 @@ function withNotesPlugin(options, above = '') {
 /** A git that reads no setting of the machine, as the scripts' own fixture has it. */
 const FIXTURE_ENV = { ...process.env, GIT_CONFIG_GLOBAL: os.devNull, GIT_CONFIG_NOSYSTEM: '1' };
 
-/** The folders a fixture site tracks: its docs, and the folder of the content plugin of its own below. */
-const TRACKED_FOLDERS = ['docs', 'notes'];
+/** The folders a fixture site tracks: its docs, the folder of the content plugin of its own below, its client modules. */
+const TRACKED_FOLDERS = ['docs', 'notes', 'src/clientModules'];
 
 /** Writes a fixture site with its TRACKED_FOLDERS tracked, and removes it when the test ends. */
 function writeFixture(t, files) {
@@ -561,12 +587,27 @@ const BREAKS = [
 export default function DropDownIC(props) { return <Shared {...props} />; }
 `,
   }, 'plain re-export'],
+  ['the registry stub missing while a client module imports it', {
+    'src/clientModules/buildIdReload.js': "import { hasUnsavedWork } from '../components/CodeEditor/unsavedWork.js';\n",
+  }, 'unsavedWork is in use'],
+  ['a copy of the editor\'s registry', { [UNSAVED_WORK_STUB]: 'export const hasUnsavedWork = () => false;\n' }, 'local copy of unsavedWork'],
+  ['the editor\'s stub with no Monaco plugin in the config', { [EDITOR_STUB]: plainStub('CodeEditor') }, `${CONFIG_FILE} lacks codeRunnerPlugin(`],
+  ['the editor\'s stub with its Monaco plugin commented out', {
+    [EDITOR_STUB]: plainStub('CodeEditor'),
+    ...configWith('  themeConfig:', '  plugins: [\n    // codeRunnerPlugin(),\n  ],\n  themeConfig:'),
+  }, 'CodeEditor is in use and needs the Monaco plugin'],
+  ['a wrapper round the editor\'s registry', {
+    [UNSAVED_WORK_STUB]: `import { hasUnsavedWork as shared } from '@site/shared/components/CodeEditor/unsavedWork.js';
+export const hasUnsavedWork = () => shared();
+`,
+  }, 'plain re-export'],
   ['a stylesheet left in src/css', { 'src/css/custom.scss': '' }, 'src/css/custom.scss is a leftover'],
   ['a font left in static', { 'static/fonts/IBM-Plex-Sans-400.woff2': '' }, 'IBM-Plex-Sans-400.woff2 is a leftover'],
   ['an icon left in static', { 'static/icons/dot.svg': '' }, 'dot.svg is a leftover'],
   ['a custom Type file left', { 'src/theme/Admonition/Type/DWF.js': '' }, 'DWF.js is a leftover'],
   ['a stock Type file left', { 'src/theme/Admonition/Type/Note.js': '' }, 'Note.js is a leftover'],
   ['a component file left', { 'src/components/LC/problems.js': '' }, 'problems.js is a leftover'],
+  ['a plugin left in plugins/', { 'plugins/monaco-editor/index.js': '' }, 'plugins/monaco-editor/index.js is a leftover'],
   ['the old macros file left', { 'katex-macros.js': '' }, 'katex-macros.js is a leftover'],
   ['a plain BibRef stub', { [BIBREF_STUB]: plainStub('BibRef') }, 'does not pass bibItems'],
   ['no bibliography', { [BIBLIOGRAPHY]: null }, `${BIBLIOGRAPHY} is missing`],
@@ -638,6 +679,29 @@ test('an icon a doc imports from static/ hides shared\'s copy, and its sentence 
     'static/icons/arrow_right.svg is a leftover copy: shared/ holds it now, and it hides shared/static/icons/arrow_right.svg: '
     + 'a doc imports @site/static/icons/arrow_right.svg, so import @site/shared/static/icons/arrow_right.svg there and delete the copy',
   ]);
+});
+
+test('the editor\'s stub with codeRunnerPlugin() in the config\'s plugins passes', (t) => {
+  const site = writeFixture(t, siteWith({
+    [EDITOR_STUB]: plainStub('CodeEditor'),
+    ...configWith('  themeConfig:', '  plugins: [codeRunnerPlugin()],\n  themeConfig:'),
+  }));
+  assert.ok(site.config.includes('codeRunnerPlugin()'), 'the fixture lost its plugin line');
+  assert.deepEqual(allProblems(site), []);
+});
+
+test('a library or a plugin left where the site kept it is a leftover once shared/ holds the file', (t) => {
+  const site = writeFixture(t, siteWith({ 'src/lib/reload/rules.js': '', 'plugins/stamp/index.js': '', 'src/lib/other/own.js': '' }));
+  const held = ['lib/reload/rules.js', 'lib/reload/__tests__/rules.test.js', 'plugins/stamp/index.js', 'components/LC/index.jsx'];
+  const left = COPY_HOMES.flatMap((home) => copiesIn(site, home, held)).map(({ file }) => file);
+  assert.deepEqual(left, ['src/lib/reload/rules.js', 'plugins/stamp/index.js']);
+});
+
+test('a site\'s own README.md at the top of a folder shared/ has too is no leftover', (t) => {
+  const site = writeFixture(t, siteWith({ 'src/lib/README.md': 'This site\'s libraries.\n', 'src/lib/reload/README.md': '' }));
+  const held = ['lib/README.md', 'lib/reload/README.md'];
+  const left = COPY_HOMES.flatMap((home) => copiesIn(site, home, held)).map(({ file }) => file);
+  assert.deepEqual(left, ['src/lib/reload/README.md']);
 });
 
 test('a doc that imports the icon from shared/static/ passes', (t) => {

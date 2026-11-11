@@ -1,0 +1,41 @@
+{
+ "request": {
+  "language": "c++",
+  "version": "10.2.0",
+  "files": [
+   {
+    "name": "main",
+    "content": "#include <cassert>\nint check(int x) {\n    assert(x > 0 && \"x must be positive\");\n    return x;\n}\nint main() {\n    return check(0);\n}\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "compile": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "",
+   "code": 0,
+   "output": "",
+   "memory": 16720000,
+   "message": null,
+   "status": null,
+   "cpu_time": 193,
+   "wall_time": 197
+  },
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "a.out: main.cpp:3: int check(int): Assertion `x > 0 && \"x must be positive\"' failed.\n/piston/packages/gcc/10.2.0/run: line 6:     3 Aborted                 (core dumped) ./a.out \"$@\"\n",
+   "code": 134,
+   "output": "a.out: main.cpp:3: int check(int): Assertion `x > 0 && \"x must be positive\"' failed.\n/piston/packages/gcc/10.2.0/run: line 6:     3 Aborted                 (core dumped) ./a.out \"$@\"\n",
+   "memory": 896000,
+   "message": "Exited with error status 134",
+   "status": "RE",
+   "cpu_time": 6,
+   "wall_time": 219
+  },
+  "language": "c++",
+  "version": "10.2.0"
+ }
+}

@@ -1,0 +1,22 @@
+/**
+ * shared/theme/DocRoot/Layout/Sidebar/styles.module.css — the docs sidebar's column (the wrapper
+ * beside it, index.jsx, loads it).
+ *
+ * overflow-anchor: none takes the sidebar's <aside> out of the browser's scroll anchoring. When
+ * something above the reader changes size, the browser keeps the page still by "anchoring" on an
+ * element in view: walking the page in reading order, it takes the first element that is even
+ * partly in view and looks no further (Chrome, Safari 27+ and Firefox alike). In the docs layout
+ * that is the <aside>, which comes before the doc and is as tall as the page — and it never
+ * moves, so on a wide window the browser never corrected anything on a docs page (below 997 px
+ * the aside is hidden, and it worked). Without the aside it anchors on the doc's own text, as on
+ * any other page: an image or a font loading above the reader no longer pushes the text away.
+ * The collapse and expand themselves are held by readingPlace.js: the browser leaves a toggle's
+ * first frame alone by design, and the whole expand happens in it (the whole collapse too, on a
+ * window wider than about 1,640 px); Safari before 27 has no scroll anchoring at all.
+ *
+ * HOW TO CHANGE IT  Keep the rule global: the theme names the column with this class. A rule of one
+ * site's own goes in that site's src/css/site.scss.
+ */
+:global(.theme-doc-sidebar-container) {
+	overflow-anchor: none;
+}

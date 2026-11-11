@@ -15,7 +15,7 @@ server from the site and a browser driver from a cache folder. Neither is an imp
 | `settings.mjs` | The names every script agrees on: `PREFIX`, `REMOTE`, `BRANCH`, `SITE_BRANCH`, `REMOTE_URL`, the word list's path, the four site files the scripts read (`package.json`, its lock, `.nvmrc`, `netlify.toml`), and the other names two scripts share, `MS_PER_SECOND` among them |
 | `exitCodes.mjs` | `EXIT`, `ScriptError`, `runScript`, and `STOP_SIGNALS`: the signals a long run stops on, with their exit codes |
 | `npmArgs.mjs` | Stops when npm kept an option typed without `--` |
-| `git.mjs` | The one way to start git: real exit codes, no shell, `git-subtree`'s counter filtered out |
+| `git.mjs` | The one way to start git: real exit codes, no shell, `git-subtree`'s counter filtered out. A call with `group: true` and a `timeout` (the fetch, the push) stops git and its ssh at the limit |
 | `gitTimed.mjs` | Runs one networked git command under a limit, and at the limit stops what git started too, ssh included |
 | `checkout.mjs` | Plain facts: the root, the branch, main checkout or worktree, changed files, tracked and ignored files, whether a remote holds a commit. Also a file's text and a folder's real path, which other files read through it |
 | `state.mjs` | The state reader: the six states, the commits going out and coming in, the commits a split would carry, `commitsToPublish` |
@@ -28,9 +28,10 @@ server from the site and a browser driver from a cache folder. Neither is an imp
 | `muiRefusals.mjs` | The MUI X terms `shared/` must never hold |
 | `oldMuiApis.json` | The old MUI names `check-mui-api.mjs` fails on. JSON, which that check does not read, so it never trips on them |
 | `stubs.mjs` | Reads a site's stub: where it points, and whether it is a plain re-export |
-| `requirements.mjs` | Reads `requirements.cjs` against a site: which pieces it uses, a missing stub, packages against the lock |
+| `sourceText.mjs` | A source file with its comments gone and its strings set aside. The requirements reader takes a site's config through it, and the tests in `__tests__/` every shared file |
+| `requirements.mjs` | Reads `requirements.cjs` against a site: which pieces it uses, a missing stub, a config line a piece in use needs and the config lacks, packages against the lock |
 | `suites.mjs` | What `test:shared` runs in a site, what it leaves out and why |
-| `testEvents.mjs` | The second reporter `test:shared` hands node, and what its file says: a planned file with no test, the tests skipped |
+| `testEvents.mjs` | The second reporter `test:shared` hands node, and what its file says: a planned file with no test, the tests skipped, the tests that ran out of time |
 | `range.mjs` | A small version-range comparator, since `shared/` has no `semver`, and `readVersionWord` for a version typed after a command |
 | `pin.mjs` | The one version pin in `template/`: a site's manifest, lock and Node against it, and what npm has: the newest Docusaurus, one version, every version |
 | `pinRange.mjs` | A Docusaurus version against the `@docusaurus` ranges of `requirements.cjs`: the refusal `shared:all -- bump` and `shared:bump` share, with the newest version npm has inside them |
@@ -64,7 +65,7 @@ server from the site and a browser driver from a cache folder. Neither is an imp
 | `joinFacts.mjs` | What a join reads about a folder. It writes nothing, so `--check` may read any folder |
 | `joinChecks.mjs` | The lines of `--check`, and the `FAIL` lines a join refuses on |
 | `joinHousekeeping.mjs` | The `.gitignore`, deploy line and `netlify.toml` a joined site needs, worked out as text |
-| `joinStubs.mjs` | Which component folders are copies of shared code, and the stub that replaces one |
+| `joinStubs.mjs` | Which component folders are copies of shared code, and the stub that replaces one. A row nested in another's folder is read on its own, and one folder's rows move together |
 | `joinPatch.mjs` | How the MUI patch fits a site, and the one `git apply` line |
 | `joinNetlify.mjs` | Whether Netlify builds a linked site on a push. One word comes out of the CLI's answer |
 | `joinByHand.mjs` | The list a join prints at its end |
@@ -227,8 +228,10 @@ business, and it stays. A package under `@docusaurus/` on version numbers of its
 
 ## Add a kind of piece
 
-A row in `requirements.cjs` needs no change here. A new kind needs an entry in `USE_BY_KIND` and
-`REQUIRED_FIELD` in `requirements.mjs`.
+A row in `requirements.cjs` needs no change here, whatever evidence it names and whatever lines its
+`needsConfig` asks of a site's config. A new kind needs an entry in `USE_BY_KIND` and `REQUIRED_FIELD` in
+`requirements.mjs`. A new kind of evidence is a key `hasEvidence` reads there. A row's `needsConfig` is read
+for every kind, in `readPieces`, and the `stubs` check and the wiring test print what a site lacks of it.
 
 ## Add a test suite
 

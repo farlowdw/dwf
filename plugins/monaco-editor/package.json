@@ -1,0 +1,7 @@
+{
+	"//": "A local Docusaurus plugin that serves Monaco from /vendor/monaco-editor-<version>/vs (index.js). Not named after the npm package it serves, so the two never get mixed up.",
+	"name": "monaco-editor-plugin",
+	"version": "0.0.0",
+	"private": true,
+	"main": "index.js"
+}

@@ -625,6 +625,40 @@ test('an entry with parts fails in a built file and in a path, in another spelli
   assert.match(output, /word list line 1: \(a path that holds a listed word\) \(in the path\)/);
 });
 
+test('an entry with parts fails in a tracked file with a dot, a slash or any spacing between its parts', (t) => {
+  const texts = {
+    'docs/email.md': 'write to otter.raft@example.com\n',
+    'docs/slash.md': 'see otter/raft\n',
+    'docs/two-spaces.md': 'see otter  raft\n',
+    'docs/tab.md': 'see otter\traft\n',
+    'docs/no-break.md': 'see otter\u00a0raft\n',
+    'docs/entity.html': '<p>see otter&nbsp;raft</p>\n',
+  };
+  for (const [file, text] of Object.entries(texts)) {
+    const { status, output } = run(partedRepo(t, { [file]: text }));
+    assert.equal(status, EXIT_FOUND, `${file}: ${output}`);
+    assert.match(output, new RegExp(`word list line 1: ${file.replaceAll('.', '\\.')} \\(line 1\\)`), file);
+    assertSilentAbout(output, 'otter', 'raft');
+  }
+});
+
+test('a built page holds the entry split by emphasis, wrapped, or in two React text nodes: each fails', (t) => {
+  const pages = {
+    'build/emphasis/index.html': '<p>see Otter <em>Raft</em> here</p>',
+    'build/wrapped/index.html': '<p>see Otter\n      Raft here</p>',
+    'build/react/index.html': '<p>see <!-- -->Otter<!-- --> <!-- -->Raft<!-- --> here</p>',
+    'build/spaced/index.html': '<p>see Otter&nbsp;Raft here</p>',
+  };
+  for (const [file, text] of Object.entries(pages)) {
+    const root = partedRepo(t);
+    write(root, file, text);
+    const { status, output } = run(root);
+    assert.equal(status, EXIT_FOUND, `${file}: ${output}`);
+    assert.match(output, /word list line 1: /, file);
+    assertSilentAbout(output, 'otter', 'raft');
+  }
+});
+
 test('spellings of one entry that overlap count once', () => {
   const [entry] = parseWordFile(`/made-up-folder/\n`).entries;
   assert.equal(countEntryHits('a="file/made-up-folder/name"', entry), 1);

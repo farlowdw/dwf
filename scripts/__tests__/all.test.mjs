@@ -32,8 +32,8 @@ import { commitSubject } from '../lib/bumpSettings.mjs';
 import { EXIT } from '../lib/exitCodes.mjs';
 import { STATES, readState } from '../lib/state.mjs';
 import { allSites, lineWith } from './allFixture.mjs';
-import { FROM, PIN, isRunning, pageOf, waitFor } from './bumpFixture.mjs';
-import { assertLine, startServer, stopProcess, writeFiles } from './fixture.mjs';
+import { FROM, PIN, isRunning, pageOf, stopGently, waitFor, waitForPidFile } from './bumpFixture.mjs';
+import { assertLine, startServer, writeFiles } from './fixture.mjs';
 import { assertExit, hubSubjects, pushToOrigin, stateOf } from './flows.mjs';
 
 const SCRIPTS_FOLDER = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -366,6 +366,24 @@ test('pull: the end prints one chained line per site, with a public check first'
   ]);
 });
 
+test('pull: the site the run starts from gets a push line for its own commits, the change it pushed and its rejoin', (t) => {
+  const context = allSites(t);
+  const { one } = context.sites;
+  const origin = path.join(context.fixture.base, 'one-origin.git');
+  context.fixture.git(['init', '-q', '--bare', origin], context.fixture.base);
+  context.fixture.git(['remote', 'add', 'origin', origin], one);
+  context.fixture.git(['push', '-q', '-u', 'origin', 'master'], one);
+  context.fixture.commitToSite(one, { 'shared/css/custom.scss': 'Pushed from one\n' }, 'Change the styles from one');
+  assertExit(context.fixture.script('push.mjs', one, '--yes', '--skip-tests'), EXIT.OK);
+  context.pathOfFreshBuild(one);
+  const result = context.all(one, 'pull');
+  assertExit(result, EXIT.OK);
+  assert.match(result.stdout, /^one: nothing to do\./m);
+  const lines = result.stdout.split('\n').filter((line) => line.startsWith('  cd ../'));
+  assert.equal(lines[0], '  cd ../one && git push', result.stdout);
+  assert.ok(lines.some((line) => line.startsWith('  cd ../two && ')), result.stdout);
+});
+
 test('pull: both sides of the compare are the site\'s, kept before the pull and outside it', (t) => {
   const context = allSites(t);
   const { one } = context.sites;
@@ -446,6 +464,7 @@ test('pull: a site ahead of the hub is left alone, and one that diverged is pull
   const context = allSites(t, { names: ['one', 'two', 'zed'] });
   const { one, two, zed } = context.sites;
   context.fixture.commitToSite(two, { 'shared/notes.txt': 'A change here.\n' }, 'Add a note');
+  context.pathOfFreshBuild(two);
   const ahead = context.all(one, 'pull');
   assertExit(ahead, EXIT.OK);
   assert.equal(stateOf(context.fixture, two), STATES.AHEAD);
@@ -683,20 +702,63 @@ test('red pull, undone: status and Next point at a fix forward until the hub mov
   assert.equal(hasRedLine(context.fixture.status(two, '--offline')), false, 'the green proof cleared the red');
 });
 
-test('red pull, undone, then taken by hand: the site\'s own pull settles the red, and a run there goes on', (t) => {
+test('red pull, undone, then taken by hand: a warning until a verify run proves the site, and a run in sync is no proof', (t) => {
   const { context, undo } = redPullAtTwo(t, { verify: 'fail' });
   const { one, two } = context.sites;
   assert.equal(context.shell(one, undo).status, 0);
-  assertExit(context.fixture.script('pull.mjs', two), EXIT.OK);
+  const pulled = context.fixture.script('pull.mjs', two);
+  assertExit(pulled, EXIT.OK);
+  assert.match(pulled.stdout, /This pull took back hub [0-9a-f]{7}, which went red here in an earlier run/);
+  assert.match(pulled.stdout, /^ {2}npm run shared:verify \(this pull took back a hub commit that went red here\)$/m, 'every site gets the proof in Next');
   const status = context.fixture.status(two, '--offline');
-  assert.equal(hasRedLine(status), false, 'a pull of its own after the undo is the site\'s call, so status reads no red');
+  assertExit(status, EXIT.OK);
+  const warned = assertLine(status, 'warn', 'red', /took it again by hand: not proven here since/);
+  assert.ok(warned.endsWith('(fix: npm run shared:verify here, then npm run shared:all -- run shared:verify --only two)'), warned);
   assert.deepEqual(nextOf(context.all(one, 'status', '--offline')).filter((line) => line.includes(undo)), []);
-  context.setScenario({});
   const again = context.all(one, 'pull', '--only', 'two');
   assertExit(again, EXIT.OK);
-  assert.doesNotMatch(again.output, /run its undo first/);
-  assert.match(lineWith(again.stdout, 'two: the pull of hub'), /that red is cleared: it took hub [0-9a-f]{7} again in a pull of its own\. It has no build\/: build it before any deploy\.$/);
+  assert.doesNotMatch(again.output, /run its undo first|that red is cleared/);
+  assert.doesNotMatch(lineWith(again.stdout, 'Green: '), /two/);
+  assert.match(again.stdout, /^two: a red there was taken again by hand and is not proven since: npm run shared:all -- run shared:verify --only two$/m);
+  assert.equal(hasRedLine(context.fixture.status(two, '--offline')), true, 'a turn with nothing to do proves nothing');
+  const failing = context.all(one, 'run', 'shared:verify', '--only', 'two');
+  assert.notEqual(failing.status, EXIT.OK, failing.output);
+  assert.equal(hasRedLine(context.fixture.status(two, '--offline')), true, 'a red verify clears nothing');
+  context.setScenario({});
+  const proved = context.all(one, 'run', 'shared:verify', '--only', 'two');
+  assertExit(proved, EXIT.OK);
+  assert.match(proved.stdout, /that red is cleared: it took hub [0-9a-f]{7} again by hand, and shared:verify passed here\./);
   assert.equal(hasRedLine(context.fixture.status(two, '--offline')), false);
+});
+
+/** The process group of a live process, or null. */
+function groupOf(pid) {
+  const result = spawnSync('ps', ['-o', 'pgid=', '-p', String(pid)], { encoding: 'utf8' });
+  const group = Number(result.stdout.trim());
+  return Number.isInteger(group) && group > 1 ? group : null;
+}
+
+test('red pull, undone, then a run killed outright in its turn there: the red it took up still reads', async (t) => {
+  const { context, undo } = redPullAtTwo(t, { verify: 'fail' });
+  const { one, two } = context.sites;
+  assert.equal(context.shell(one, undo).status, 0);
+  assert.equal(hasRedLine(context.fixture.status(two, '--offline')), true, 'undone, the red waits');
+  context.setScenario({ sites: { two: { verify: 'hang' } } });
+  const args = [context.ownAll, 'pull', '--only', 'two', '--keep', context.keep()];
+  const child = spawn(process.execPath, args, { cwd: one, env: context.env, stdio: ['ignore', 'pipe', 'pipe'] });
+  t.after(() => stopGently(child));
+  let output = '';
+  child.stdout.setEncoding('utf8').on('data', (chunk) => { output += chunk; });
+  child.stderr.setEncoding('utf8').on('data', (chunk) => { output += chunk; });
+  const hung = await waitForPidFile(child, path.join(context.base, 'hung.pid'), () => output);
+  const group = groupOf(hung);
+  t.after(() => { if (group !== null) try { process.kill(-group, 'SIGKILL'); } catch { /* gone */ } });
+  assert.equal(hasRedLine(context.fixture.status(two, '--offline')), false, 'while the turn runs it holds the record');
+  const closed = new Promise((resolve) => { child.once('close', (code, signal) => resolve(signal)); });
+  child.kill('SIGKILL');
+  assert.equal(await closed, 'SIGKILL');
+  const after = context.fixture.status(two, '--offline');
+  assert.equal(hasRedLine(after), true, `a run that died in its turn must not leave the site reading green:\n${after.stdout}`);
 });
 
 test('red verify: build/ goes aside, and a take-back that builds nothing clears the red and says to build first', (t) => {
@@ -898,13 +960,11 @@ test('pull: a signal stops the run, leaves no process, and says how to go back',
   const recorded = context.head(two);
   const args = [context.ownAll, 'pull', '--keep', context.keep()];
   const child = spawn(process.execPath, args, { cwd: one, env: context.env, stdio: ['ignore', 'pipe', 'pipe'] });
-  t.after(() => stopProcess(child));
+  t.after(() => stopGently(child));
   let output = '';
   child.stdout.setEncoding('utf8').on('data', (chunk) => { output += chunk; });
   child.stderr.setEncoding('utf8').on('data', (chunk) => { output += chunk; });
-  const hungFile = path.join(context.base, 'hung.pid');
-  assert.ok(await waitFor(() => fs.existsSync(hungFile), 30_000), output);
-  const pid = Number(fs.readFileSync(hungFile, 'utf8'));
+  const pid = await waitForPidFile(child, path.join(context.base, 'hung.pid'), () => output);
   const closed = new Promise((resolve) => { child.once('close', resolve); });
   child.kill('SIGTERM');
   assert.equal(await closed, 143);

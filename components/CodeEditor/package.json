@@ -1,0 +1,4 @@
+{
+	"//": "Marks the .js files of this folder (props.js, sizing.js, autoHeight.js, runtimeChoice.js, folding.js, monacoSetup.js, messages.js, the hooks, and the tests with their jsxHooks.js; the subfolders lib/codeRunner/, lib/registry/ and CodeRef/ carry their own package.json) as ES modules, so that `node --test` runs the pure ones without guessing. Webpack reads them as ES modules either way; the .jsx files are not affected. Keep every import in this folder fully specified ('./props.js', not './props').",
+	"type": "module"
+}

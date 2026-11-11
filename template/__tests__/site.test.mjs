@@ -47,7 +47,7 @@ const PAGE_FILES = Object.freeze([
 const KEYWORD_CLASSES = Object.freeze({ caution: 'warning', note: 'secondary', tip: 'success' });
 
 /** The paths of the config, each a relative string for Docusaurus to resolve. */
-const RELATIVE_PATHS = Object.freeze(['./sidebars.js', './shared/css/custom.scss', './src/css/site.scss', './plugins/katex-css']);
+const RELATIVE_PATHS = Object.freeze(['./sidebars.js', './shared/css/custom.scss', './src/css/site.scss']);
 
 const BLOCK_COMMENT = /\/\*[\s\S]*?\*\//g;
 const LINE_COMMENT = /^\s*\/\/.*$/gm;

@@ -46,6 +46,22 @@ test('behind: the pull lands, records the hub tip and names its commits', (t) =>
   assert.doesNotMatch(result.stdout, /shared:verify/);
 });
 
+test('the Next list ends with the push, and on a site whose build command checks its public files, with that check in front of it', (t) => {
+  const fixture = fixtureFor(t);
+  const site = fixture.addSite('one');
+  fixture.commitToHub(ADD_FILE, 'Add a file');
+  const plain = pullIn(fixture, site);
+  assertExit(plain, EXIT.OK);
+  assert.equal(plain.stdout.trimEnd().split('\n').at(-1), '  build it and look, then git push');
+  const netlify = fs.readFileSync(path.join(site, 'netlify.toml'), 'utf8');
+  const withCheck = `${netlify}\n[build]\n  command = "npm run build && node shared/scripts/check-public.mjs"\n`;
+  fixture.commitToSite(site, { 'netlify.toml': withCheck }, 'Check the public files in the build');
+  fixture.commitToHub({ 'b.txt': 'b\n' }, 'Add a second file');
+  const result = pullIn(fixture, site);
+  assertExit(result, EXIT.OK);
+  assert.equal(result.stdout.trimEnd().split('\n').at(-1), '  build it and look, then node shared/scripts/check-public.mjs && git push');
+});
+
 test('one commit reads as one, and a pull run twice changes nothing the second time', (t) => {
   const fixture = fixtureFor(t);
   const site = fixture.addSite('one');

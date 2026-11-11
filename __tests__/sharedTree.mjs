@@ -9,15 +9,17 @@
  * HOW TO CHANGE IT
  *   NEVER_WALKED: folders no test reads. TEMPLATE_FOLDER: the folder of a new site's files, which
  *   some tests skip on purpose. CONFIG_FILE: what makes the parent of a folder named shared a site.
- *   maskSource is a small reader, not a parser: it knows comments, strings and regular expressions,
- *   and it needs no more, because the tests only look for imports, rules and tokens. exactExists reads
- *   names letter for letter, as a case-sensitive disk does.
+ *   maskSource, stripComments and unquote live in scripts/lib/sourceText.mjs, which the scripts read a
+ *   site's config through too: change them there. exactExists reads names letter for letter, as a
+ *   case-sensitive disk does.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PREFIX } from '../scripts/lib/settings.mjs';
+
+export { maskSource, stripComments, unquote } from '../scripts/lib/sourceText.mjs';
 
 /** This folder's parent: the hub's root, or shared/ in a site. */
 export const SHARED_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -31,14 +33,6 @@ const NEVER_WALKED = new Set(['.git', 'node_modules']);
 const SYSTEM_FILES = new Set(['.DS_Store']);
 
 const CONFIG_FILE = 'docusaurus.config.js';
-
-const QUOTES = ['"', "'", '`'];
-
-/** After one of these, a slash opens a regular expression and is no division or closing tag. */
-const REGEX_MAY_FOLLOW = /(?:^|[(,=:[!&|?{;]|\breturn|\btypeof)\s*$/;
-
-/** How far back REGEX_MAY_FOLLOW looks. */
-const REGEX_LOOK_BEHIND = 12;
 
 /**
  * Every file below `folder`, as paths from it with forward slashes. A NEVER_WALKED name is left out whatever it
@@ -78,94 +72,6 @@ export function hostSite(root = SHARED_ROOT) {
   const parent = path.dirname(root);
   const isMount = path.basename(root) === PREFIX;
   return isMount && fs.existsSync(path.join(parent, CONFIG_FILE)) ? parent : null;
-}
-
-/** Where the quoted text opening at `start` ends. A ' or " stops at its line: JSX words hold apostrophes. */
-function stringEnd(text, start) {
-  const quote = text[start];
-  let index = start + 1;
-  while (index < text.length) {
-    const char = text[index];
-    if (char === '\\') {
-      index += 2;
-    } else if (char === quote) {
-      return index + 1;
-    } else if (char === '\n' && quote !== '`') {
-      return index;
-    } else {
-      index += 1;
-    }
-  }
-  return text.length;
-}
-
-/** Where the regular expression opening at `start` ends, or null when it never closes on its line. */
-function regexEnd(text, start) {
-  let inClass = false;
-  for (let index = start + 1; index < text.length; index += 1) {
-    const char = text[index];
-    if (char === '\n') return null;
-    if (char === '\\') index += 1;
-    else if (char === '[') inClass = true;
-    else if (char === ']') inClass = false;
-    else if (char === '/' && !inClass) return index + 1;
-  }
-  return null;
-}
-
-/** True when a line comment starts here. A // right after a colon is an address, as in https://. */
-function opensLineComment(text, index) {
-  return text.startsWith('//', index) && text[index - 1] !== ':';
-}
-
-/** The next token at `index`: a comment, a literal (string or regex) or one character of code. */
-function tokenAt(text, index, written, regexLiterals) {
-  if (text.startsWith('/*', index)) {
-    const close = text.indexOf('*/', index + 2);
-    return { kind: 'comment', end: close === -1 ? text.length : close + 2 };
-  }
-  if (opensLineComment(text, index)) {
-    const close = text.indexOf('\n', index);
-    return { kind: 'comment', end: close === -1 ? text.length : close };
-  }
-  if (QUOTES.includes(text[index])) return { kind: 'literal', end: stringEnd(text, index) };
-  if (regexLiterals && text[index] === '/' && REGEX_MAY_FOLLOW.test(written.slice(-REGEX_LOOK_BEHIND))) {
-    const end = regexEnd(text, index);
-    if (end !== null) return { kind: 'literal', end };
-  }
-  return { kind: 'code', end: index + 1 };
-}
-
-/**
- * The source without comments: { code, literals }. Each string or regular expression in `code` is
- * "<n>", its number in `literals`, quotes included. Set regexLiterals false for a stylesheet.
- */
-export function maskSource(text, { regexLiterals = true } = {}) {
-  const literals = [];
-  let code = '';
-  let index = 0;
-  while (index < text.length) {
-    const { kind, end } = tokenAt(text, index, code, regexLiterals);
-    if (kind === 'code') {
-      code += text[index];
-    } else if (kind === 'literal') {
-      literals.push(text.slice(index, end));
-      code += `"${literals.length - 1}"`;
-    }
-    index = end;
-  }
-  return { code, literals };
-}
-
-/** The source without comments, strings back in place. */
-export function stripComments(text, options) {
-  const { code, literals } = maskSource(text, options);
-  return code.replace(/"(\d+)"/g, (match, number) => literals[Number(number)] ?? match);
-}
-
-/** A literal's text without its quotes. */
-export function unquote(literal) {
-  return literal.slice(1, -1);
 }
 
 /**

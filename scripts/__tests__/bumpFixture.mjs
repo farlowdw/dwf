@@ -18,6 +18,9 @@
  *   failBuildOn the version whose build fails, for the "before" side
  *   verify      'ok', 'fail', 'hang', or 'stubborn' (hangs and ignores SIGTERM). Both leave a child
  *   compare     the stand-in compare's exit code
+ *   compareFirst  its exit code on a site's first call only, so a test can see a second try
+ *   firstReport the report.json of that first call: 'timeouts' (every view failed by running out of time) or
+ *               'broken' (a view that answered 404)
  *   report      true to have it write a report.json
  *   scripts     other npm scripts by name, each with its exit code
  *   newest      what `npm view` prints for the newest version
@@ -31,6 +34,7 @@
  *   Another way for a step to behave: a key above and a line in NPM_STAND_IN. SITE_FILES is the seed.
  */
 
+import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -248,13 +252,29 @@ fs.writeFileSync(path.join(base, 'compare-call.json'), JSON.stringify(record));
 fs.appendFileSync(path.join(base, 'compare-calls.jsonl'), JSON.stringify({ site, ...record }) + '\n');
 fs.appendFileSync(path.join(base, 'steps.log'), site + ' compare\n');
 console.log('the end of the compare log');
-if (scenario.report) {
+const calls = fs.readFileSync(path.join(base, 'compare-calls.jsonl'), 'utf8').split('\n').filter(Boolean);
+const first = calls.filter((line) => JSON.parse(line).site === site).length === 1;
+const FIRST_FAILURES = {
+  timeouts: ['after: no result after 180000 ms', 'before: Navigation timeout of 60000 ms exceeded'],
+  broken: ['after: the server answered 404'],
+};
+const writeReport = (report) => {
   const out = valueOf('--out');
   fs.mkdirSync(out, { recursive: true });
-  const report = { views: [], verdict: 'a list to read', browser: 'Chrome/1', out };
-  fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(report));
+  fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify({ browser: 'Chrome/1', out, ...report }));
+};
+if (first && scenario.firstReport) {
+  const view = {
+    pagePath: '/', theme: 'dark', viewport: 'desktop', kind: 'failed', failures: FIRST_FAILURES[scenario.firstReport],
+    elementsBefore: 0, elementsAfter: 0, changedElements: 0, groups: [], firstDifference: null, onlyBefore: [], onlyAfter: [],
+    notes: [], pixels: { compared: false, differing: null, total: null },
+  };
+  const views = [view];
+  writeReport({ state: 'done', verdict: 'red', views, origins: { before: 'http://127.0.0.1:1', after: 'http://127.0.0.1:2' } });
+} else if (scenario.report) {
+  writeReport({ views: [], verdict: 'a list to read' });
 }
-process.exit(scenario.compare ?? 0);
+process.exit(first && scenario.compareFirst !== undefined ? scenario.compareFirst : (scenario.compare ?? 0));
 `;
 
 /** Writes both stand-ins. Returns npm's command. */
@@ -331,6 +351,48 @@ export async function waitFor(check, timeoutMs = 3000) {
     await new Promise((resolve) => { setTimeout(resolve, 25); });
   }
   return check();
+}
+
+/** How long a test waits for a run to reach a step that never ends: far above the 2 to 15 s it takes, even loaded. */
+export const REACH_STEP_MS = 120_000;
+
+/** How long a stopped run gets to stop its own steps before it is killed. */
+const GENTLE_STOP_MS = 10_000;
+
+/** The process id a file holds, or null while it holds none (not there yet, or empty in the instant it is made). */
+function pidIn(file) {
+  try {
+    const pid = Number(fs.readFileSync(file, 'utf8'));
+    return Number.isInteger(pid) && pid > 1 ? pid : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Waits until `file` holds a process id, or `child` has ended, or `limitMs` passed, and returns the id. Fails with the
+ * run's output (`output()`) otherwise, so a run that ended early or a machine too slow reads as what it is.
+ */
+export async function waitForPidFile(child, file, output, limitMs = REACH_STEP_MS) {
+  const ended = () => child.exitCode !== null || child.signalCode !== null;
+  await waitFor(() => pidIn(file) !== null || ended(), limitMs);
+  const pid = pidIn(file);
+  const why = ended() ? `the run ended (exit ${child.exitCode ?? child.signalCode})` : `nothing after ${limitMs} ms`;
+  if (pid === null) assert.fail(`${why} before its step wrote a process id:\n${output()}`);
+  return pid;
+}
+
+/**
+ * Stops a run as Ctrl-C would, so it stops its own steps (each sits in a process group of its own), and kills it
+ * only when it has not ended GENTLE_STOP_MS later. For a test's `after`, on failure too.
+ */
+export function stopGently(child) {
+  if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
+  return new Promise((resolve) => {
+    const kill = setTimeout(() => child.kill('SIGKILL'), GENTLE_STOP_MS);
+    child.once('close', () => { clearTimeout(kill); resolve(); });
+    child.kill('SIGTERM');
+  });
 }
 
 /** True while a process exists. */

@@ -1,0 +1,39 @@
+/* twoslash.module.css — the look of a type query's answer in a TypeScript editor: the text
+   twoslash.js injects after a `// ^?` comment ("const total: number"). It is Monaco's injected
+   text, so its class is GLOBAL (Monaco decorations take a global class name; twoslash.js >
+   TYPE_QUERY_CLASS); CodeEditorClient.jsx imports this file once for its side effect.
+
+   COLOURS  VS Code's inlay hints: muted text on a faint grey chip, so it reads as the editor's
+   own note and not as code. The text takes the frame's --ce-muted (styles.module.css; it
+   cascades into Monaco), with a fallback for an editor outside the frame. No padding or margin:
+   Monaco measures injected text as plain characters, and spacing would push the cursor off.
+
+   WHY `.monaco-editor` IN FRONT  Monaco draws the injected text as <span class="mtk1
+   dwf-twoslash-type"> (mtk1: the default token colour) and, at run time, appends its token
+   colours to <head> as one-class rules (`.mtk1 { color: … }` in <style class="monaco-colors">),
+   AFTER the site's stylesheet. A one-class rule here would tie with them and lose on order, and
+   the text would be drawn as code (black, or the dark theme's near-white). The two classes
+   outrank them wherever Monaco puts its style (the same trap as MUI's styles: the integration's
+   decision 6). __tests__/twoslash.test.js checks the selectors.
+
+   HOW TO CHANGE IT  The colours: --twoslash-ink / --twoslash-bg below (light here, dark under
+   [data-ce-mode='dark']: the editor's theme, not the site's — styles.module.css > THE EDITOR'S
+   MODE). A theme whose muted text would fall under 4.5:1 on the chip gives a fainter chip of its
+   own (editorThemes.js > LAYER_PROPERTIES: --ce-type-chip-bg, read first; VS Code's themes give
+   none). The class name: here AND twoslash.js > TYPE_QUERY_CLASS. Keep the `.monaco-editor`
+   ancestor in both selectors (see above). */
+
+:global(.monaco-editor .dwf-twoslash-type) {
+	--twoslash-ink: var(--ce-muted, #616161);
+	--twoslash-bg: var(--ce-type-chip-bg, rgba(196, 196, 196, 0.3));
+
+	border-radius: 3px;
+	background: var(--twoslash-bg);
+	color: var(--twoslash-ink);
+	font-style: italic;
+}
+
+:global([data-ce-mode='dark'] .monaco-editor .dwf-twoslash-type) {
+	--twoslash-ink: var(--ce-muted, #a0a0a0);
+	--twoslash-bg: var(--ce-type-chip-bg, rgba(97, 97, 97, 0.3));
+}

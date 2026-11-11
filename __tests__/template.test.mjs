@@ -4,7 +4,8 @@
  *   - It holds exactly the files in TEMPLATE_FILES. A file the global ignore drops is missing from a fresh clone
  *     and reads red here, and a rules file named for one tool reads red as well.
  *   - Every file opens with a comment, below a page's front matter, apart from the two formats with none.
- *   - The config gives Docusaurus relative strings, never require.resolve, and uses no my-loaders.
+ *   - The config gives Docusaurus relative strings, never require.resolve, and uses no my-loaders. KaTeX's
+ *     stylesheet comes from the shared plugin, through the wiring.
  *   - Only known tokens, each in use, and package.json carries the lines a site runs.
  *   - The stubs are the ones a join writes, and the ignore file needs no change from a join.
  * What a real site does with these files is proved by the template's own __tests__/site.test.mjs, which a run
@@ -37,6 +38,8 @@ const { RANGES } = require('../requirements.cjs');
 const CONFIG_FILE = 'docusaurus.config.js';
 const MUI_X_PREFIX = '@mui/x-';
 const NOT_IN_A_NEW_SITE = 'my-loaders';
+/** KaTeX's stylesheet and fonts: the shared plugin, through the wiring. */
+const KATEX_CSS_LINE = 'katexCssPlugin()';
 const SHAPE_VARIABLE = 'SKIP_HTML_MINIFICATION=true';
 const TEMPLATE_README = 'README.md';
 
@@ -54,7 +57,6 @@ const TEMPLATE_FILES = Object.freeze([
   'gitignore.template',
   'netlify.toml',
   'package.json',
-  'plugins/katex-css/index.js',
   'sidebars.js',
   'src/components/Asterisk/index.jsx',
   'src/components/BibRef/bibliography.js',
@@ -65,6 +67,7 @@ const TEMPLATE_FILES = Object.freeze([
   'src/pages/index.js',
   'src/pages/index.module.scss',
   'src/theme/Admonition/Types.js',
+  'src/theme/DocRoot/Layout/Sidebar/index.jsx',
   'static/img/logo.svg',
 ]);
 
@@ -74,6 +77,7 @@ const PLAIN_STUBS = Object.freeze([
   'src/components/DropDownIC/index.jsx',
   'src/components/LC/index.jsx',
   'src/theme/Admonition/Types.js',
+  'src/theme/DocRoot/Layout/Sidebar/index.jsx',
 ]);
 
 /** JSON and a one-word version file have no comments. package.json's description does that work. */
@@ -124,9 +128,10 @@ test('every file of the template opens with a comment', () => {
 test('the config gives Docusaurus relative strings', () => {
   const code = stripComments(read(CONFIG_FILE));
   assert.equal(code.includes('require.resolve'), false);
-  for (const name of ['./sidebars.js', './shared/css/custom.scss', './src/css/site.scss', './plugins/katex-css']) {
+  for (const name of ['./sidebars.js', './shared/css/custom.scss', './src/css/site.scss']) {
     assert.ok(code.includes(`'${name}'`), `${CONFIG_FILE} lacks '${name}'`);
   }
+  assert.ok(code.includes(KATEX_CSS_LINE), `${CONFIG_FILE} lacks ${KATEX_CSS_LINE}, KaTeX's stylesheet from shared/`);
 });
 
 test('the template does not lean on the old loaders plugin', () => {

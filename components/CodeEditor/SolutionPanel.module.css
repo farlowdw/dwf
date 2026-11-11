@@ -1,0 +1,132 @@
+/* SolutionPanel.module.css — the look of the Solution panel (SolutionPanel.jsx): a header bar in
+   the editor header's style (.header: the title, the colour key, the two buttons), the "already
+   the solution" note (.same), and the box Monaco's diff view fills (.diffHost).
+
+   COLOURS  The editor's --ce-* properties (defined on .frame in styles.module.css, light and
+   dark: VS Code's header grey, borders, muted text and editor background), so the panel reads as
+   part of the same VS Code panel. The key's swatches are the diff's colours in the editor's
+   theme. Below: VS Code's own (Monaco's defaults,
+   monaco-editor/esm/vs/platform/theme/common/colors/editorColors.js: a removed line
+   rgba(255, 0, 0, 0.2) under removed text #ff000033; an inserted line rgba(155, 185, 85, 0.2)
+   under inserted text #9ccc2c33 in the dark theme, #9ccc2c40 in the light one), drawn as the
+   two layers together, as a changed word shows in the diff (one swatch for both themes: the
+   light theme's green is a shade stronger, too little to tell apart at 12 px). Another theme's
+   colours come inline on .solution (SolutionPanel.jsx > keyStyleOf, from editorThemes.js >
+   diffKeyOf: the theme's own red and green, the same two layers); a high-contrast theme's diff
+   has no fill, only dashed outlines, and so has its key (.keyOutlined).
+
+   SIZES  The diff box's height is set inline (SolutionPanel.jsx: an estimate first, then the
+   diff's own height) and held between 80 px (the editor box's shortest, sizing.js >
+   MIN_HEIGHT_PX) and --sp-max-height, past which the diff scrolls inside. On a phone the buttons
+   take a line of their own, as the editor's header does.
+
+   HOW TO CHANGE IT  The tallest diff: --sp-max-height. The swatches: --sp-key-yours /
+   --sp-key-solution (keep them Monaco's default diff colours, or the key stops matching VS
+   Code's themes; the other themes' keys follow their diff colours by themselves). Spacing: the
+   rules below. */
+
+.solution {
+	--sp-max-height: 50vh;
+	--sp-min-height: 80px;
+	--sp-key-yours: rgba(255, 0, 0, 0.36);
+	--sp-key-solution: rgba(156, 204, 44, 0.36);
+
+	border-top: 1px solid var(--ce-border);
+}
+
+/* ---- the header bar: title and colour key on the left, the buttons on the right ---- */
+
+.header {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.25rem 0.75rem;
+	min-height: var(--ce-toolbar-min-height);
+	padding: 0.25rem 0.5rem 0.25rem 0.75rem;
+	border-bottom: 1px solid var(--ce-border);
+	background: var(--ce-header-bg);
+}
+
+.title {
+	font-size: 0.875rem;
+	font-weight: var(--ifm-font-weight-semibold);
+}
+
+.key {
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: 0.25rem 0.75rem;
+	color: var(--ce-muted);
+	font-size: 0.8125rem;
+}
+
+.keyItem {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	white-space: nowrap;
+}
+
+.swatch {
+	flex: none;
+	width: 0.75rem;
+	height: 0.75rem;
+	border-radius: 2px;
+}
+
+.swatchYours {
+	background: var(--sp-key-yours);
+}
+
+.swatchSolution {
+	background: var(--sp-key-solution);
+}
+
+/* a high-contrast theme: outlines, no fill, as its diff (border before colour: the colour rules come after) */
+.keyOutlined .swatch {
+	box-sizing: border-box;
+	border: 1px dashed;
+	background: transparent;
+}
+
+.keyOutlined .swatchYours {
+	border-color: var(--sp-key-yours);
+}
+
+.keyOutlined .swatchSolution {
+	border-color: var(--sp-key-solution);
+}
+
+.actions {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+	margin-left: auto;
+}
+
+/* ---- the note when the reader's code already is the solution ---- */
+
+.same {
+	margin: 0;
+	padding: 0.375rem 0.75rem;
+	border-bottom: 1px solid var(--ce-border);
+	color: var(--ce-muted);
+	font-size: 0.875rem;
+}
+
+/* ---- the box Monaco's diff view fills ---- */
+
+.diffHost {
+	position: relative;
+	min-height: var(--sp-min-height);
+	max-height: var(--sp-max-height);
+	background: var(--ce-editor-bg);
+}
+
+@media (max-width: 480px) {
+	/* the buttons take a line of their own, as in the editor's header */
+	.actions {
+		flex-basis: 100%;
+		justify-content: flex-end;
+	}
+}

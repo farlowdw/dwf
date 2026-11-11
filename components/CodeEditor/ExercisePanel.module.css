@@ -1,0 +1,309 @@
+/* ExercisePanel.module.css — the look of an exercise's part of the output area
+   (ExercisePanel.jsx, and ExpectedOutput.jsx, which the server-rendered placeholder draws too):
+   the collapsed "Expected output" block (.expected), the line diff under a "Differs" verdict
+   (.diff), the check cases (.cases), the type errors (.typeErrors) and the titled text blocks
+   ("Other output", "Error output": .titledBlock). The verdict and the check's headline are not
+   here: they use the output's own status line (styles.module.css > .status), so they look like
+   it.
+
+   COLOURS  The editor's --ce-* properties (defined on .frame in styles.module.css: the output
+   block's grey, the muted text, the success and failure greens and reds, light and dark), and
+   the editor's code-line tokens for the diff (--ce-line-added-* / --ce-line-removed-*:
+   styles.module.css > THE CODE-LINE TOKENS, the site's --code-line-* with built-in
+   fallbacks), the same colours as an added or removed line of a code block:
+   the reader's lines are the removed (red) ones, the expected lines the added (green) ones,
+   as in the Solution panel's diff. In a light theme the removed ink is one shade darker inside
+   the diff, for its contrast (the rule under .diffRowRemoved says why). A theme that gives its
+   own added / removed bands (editorThemes.js > LAYER_PROPERTIES: --ce-band-added,
+   --ce-band-removed) has them here too; VS Code's themes give none, so they keep these.
+   Light and dark are the EDITOR's theme's (the frame's data-ce-mode: styles.module.css > THE
+   EDITOR'S MODE).
+   The text blocks are Infima <pre>s: inside the output area their background is the output
+   block's (.output sets --ifm-pre-background, which Infima's own `pre` rule reads on every
+   Docusaurus site), so they match the "Output" block.
+
+   SPACING  Every block keeps 0.5rem above it (the status lines keep 0.5rem below them; the two
+   collapse into one gap). So does what the two live regions show (the verdict, Check's line or
+   notice): after the output's own status line or Output block the margins collapse into the
+   same 0.5rem, and when Check runs before any Run its line no longer touches the output's
+   "Run the code …" hint (which has no margin). Long text scrolls inside its block, as tall at
+   most as the output block (--ce-output-max-height).
+
+   Infima's `.markdown li + li` (a gap between list items) and its list paddings reach into the
+   editor, which sits in a note's .markdown: the list rules below use two classes, so they win.
+   A rule for an MUI component (the progress bar, an icon) needs two classes too: MUI adds its
+   own styles to the page after the site's stylesheets (seen in the production build,
+   2026-10-25), so its one class wins over one of ours.
+
+   HOW TO CHANGE IT  The diff's colours: the --ce-line-* tokens (styles.module.css; where a site sets them,
+   the --code-line-* tokens behind them, which the site's code blocks share), and the light-mode removed ink in the rule after .diffRowRemoved (keep any text
+   colour at 4.5:1 or more on its band). The rest: the rules below. The "Expected output" summary must stay the same
+   height in the placeholder and the real editor: both draw ExpectedOutput.jsx, so a change here
+   reaches both. */
+
+/* ---- the panel's wrapper (ExpectedOutput.jsx > ExerciseFrame) ---- */
+
+.exercise {
+	min-width: 0;
+}
+
+/* the verdict and Check's line or notice keep a gap above them (three parts: wins over .status and .notice, margin 0) */
+.exercise > [aria-live] > :first-child {
+	margin-top: 0.5rem;
+}
+
+/* Check's progress bar, on the output area's top edge (.output is position: relative), over
+   nothing, so the text does not move when it comes and goes. Two classes on purpose: MUI's
+   own class on a LinearProgress sets position: relative, and MUI's styles are added to the
+   page AFTER the site's stylesheets, so a one-class rule (styles.module.css > .progress) loses. */
+.exercise .checkProgress {
+	position: absolute;
+	top: 0;
+	right: 0;
+	left: 0;
+}
+
+/* the last status line at the very end of the panel keeps no gap under it (the output area has its own padding) */
+.exercise > :last-child > :last-child {
+	margin-bottom: 0;
+}
+
+/* ---- the collapsed "Expected output" block ---- */
+
+.expected {
+	margin-top: 0.5rem;
+}
+
+.expectedSummary {
+	width: fit-content;
+	color: var(--ce-muted);
+	font-size: 0.875rem;
+	cursor: pointer;
+	user-select: none;
+}
+
+.expectedSummary:hover {
+	color: var(--ifm-font-color-base);
+}
+
+.expectedSummary:focus-visible {
+	border-radius: 2px;
+	outline: 2px solid var(--ifm-color-primary);
+	outline-offset: 2px;
+}
+
+.expected .expectedBlock {
+	max-height: var(--ce-output-max-height);
+	margin: 0.5rem 0 0;
+}
+
+/* ---- the line diff under a "Differs" verdict ---- */
+
+.diff {
+	margin-top: 0.5rem;
+	overflow: hidden;
+	border-radius: var(--ifm-code-border-radius);
+	background: var(--ce-output-block-bg);
+}
+
+.diffLegend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem 0.75rem;
+	margin: 0;
+	padding: 0.375rem 0.75rem;
+	border-bottom: 1px solid var(--ifm-color-emphasis-300);
+	font-family: var(--ifm-font-family-monospace);
+	font-size: var(--ifm-code-font-size);
+}
+
+.legendItem {
+	padding: 0 0.375rem;
+	border-radius: 2px;
+	white-space: pre;
+}
+
+.diffScroll {
+	max-height: var(--ce-output-max-height);
+	overflow: auto;
+}
+
+.diffScroll:focus-visible {
+	outline: 2px solid var(--ifm-color-primary);
+	outline-offset: -2px;
+}
+
+/* as wide as the longest line (or the block), so a row's band reaches the end of a scrolled line */
+.diffRows {
+	box-sizing: border-box;
+	width: max-content;
+	min-width: 100%;
+	margin: 0;
+	padding: 0.5rem 0;
+	list-style: none;
+	font: var(--ifm-code-font-size) / var(--ifm-pre-line-height) var(--ifm-font-family-monospace);
+}
+
+.diffRows .diffRow {
+	display: flex;
+	margin: 0;
+	padding: 0 0.75rem;
+	white-space: pre;
+}
+
+.diffSign {
+	flex: none;
+	width: 2ch;
+	user-select: none;
+}
+
+.diffRowAdded {
+	background: var(--ce-band-added, var(--ce-line-added-bg));
+}
+
+.diffRowRemoved {
+	background: var(--ce-band-removed, var(--ce-line-removed-bg));
+}
+
+.diffRowAdded .diffSign,
+.legendItem.diffRowAdded {
+	color: var(--ce-line-added-ink);
+}
+
+.diffRowRemoved .diffSign,
+.legendItem.diffRowRemoved {
+	color: var(--ce-line-removed-ink);
+}
+
+/* a light theme: the removed ink one shade darker inside the diff. The site's #d1242f is 3.8:1
+   on its band over the output grey (#f3f3f3), under the 4.5:1 that the legend's text needs;
+   #b31d28 is 4.9:1 (the dark ink #ff7b72 already passes: 5.7:1). Drop this rule if the token
+   (styles.module.css's fallback, or shared/css/_code-blocks.scss) is darkened itself. */
+:global([data-ce-mode='light']) .diff {
+	--ce-line-removed-ink: #b31d28;
+}
+
+.diffRowGap {
+	color: var(--ce-muted);
+	font-style: italic;
+}
+
+/* ---- titled text blocks: "Other output", "Error output" (the look of the output's code blocks) ---- */
+
+.titledBlock {
+	margin-top: 0.5rem;
+	overflow: hidden;
+	border-radius: var(--ifm-code-border-radius);
+	background: var(--ce-output-block-bg);
+}
+
+.blockTitle {
+	padding: 0.75rem var(--ifm-pre-padding);
+	border-bottom: 1px solid var(--ifm-color-emphasis-300);
+	font-size: var(--ifm-code-font-size);
+	font-weight: 500;
+}
+
+.titledBlock .blockBody {
+	max-height: var(--ce-output-max-height);
+	margin: 0;
+	border-radius: 0;
+}
+
+/* ---- the check cases: ✓ / ✗ and the name; a failing case with Expected and Got ---- */
+
+.cases {
+	margin: 0.5rem 0 0;
+	padding: 0;
+	list-style: none;
+	font-size: 0.875rem;
+}
+
+.cases .caseRow {
+	margin: 0;
+	padding: 0.25rem 0;
+}
+
+.cases .caseRow + .caseRow {
+	border-top: 1px solid var(--ce-border);
+}
+
+.caseHead {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+}
+
+/* two classes: MUI's own class on the icon (fontSize="inherit") comes later in the page and would win over one */
+.caseHead .caseIcon {
+	flex: none;
+	font-size: 1.15em;
+}
+
+.casePassed .caseIcon {
+	color: var(--ce-success);
+}
+
+.caseFailed .caseIcon {
+	color: var(--ce-failure);
+}
+
+.caseName {
+	min-width: 0;
+	font-family: var(--ifm-font-family-monospace);
+	overflow-wrap: anywhere;
+}
+
+/* "Expected" / "Got" in a two-column grid under the name, lined up with the name's text */
+.caseValues {
+	display: grid;
+	grid-template-columns: max-content minmax(0, 1fr);
+	gap: 0.125rem 0.75rem;
+	margin: 0.25rem 0 0 calc(1.15em + 0.375rem);
+}
+
+.caseValues dt {
+	margin: 0;
+	color: var(--ce-muted);
+	font-weight: normal;
+}
+
+.caseValues dd {
+	margin: 0;
+	font-family: var(--ifm-font-family-monospace);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+/* ---- the type errors of a TypeScript check ---- */
+
+.typeErrors {
+	margin: 0.5rem 0 0;
+	padding: 0;
+	list-style: none;
+	font-size: 0.875rem;
+}
+
+.typeErrors .typeError {
+	margin: 0;
+	padding: 0.125rem 0;
+	overflow-wrap: anywhere;
+}
+
+.typeErrorPlace {
+	font-weight: var(--ifm-font-weight-semibold);
+}
+
+/* TypeScript's message: a chain of reasons keeps its lines and indents (typescript.js > flattenMessage) */
+.typeErrorMessage {
+	white-space: pre-wrap;
+}
+
+/* the line's source under the message, as inline code on a line of its own */
+.typeErrorSource {
+	display: block;
+	width: fit-content;
+	max-width: 100%;
+	margin-top: 0.125rem;
+	white-space: pre-wrap;
+}

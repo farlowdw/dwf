@@ -5,7 +5,8 @@
  *
  * `--no-build` skips the command in netlify.toml's [build], so a public site's check of its build has
  * to be chained in by hand: it is read from that command. This file reads that one line of netlify.toml
- * and prints only the check's own command.
+ * and prints only the check's own command. shared:pull puts the same check in front of its `git push`
+ * (publicCheck): a plain `npm run build` does not run it either, and a push to a public site stays.
  *
  * HOW TO CHANGE IT
  *   DEPLOY_STEPS is the line. PUBLIC_CHECK is what a [build] command's check looks like.
@@ -21,7 +22,7 @@ const DEPLOY_STEPS = Object.freeze(['git push', 'netlify deploy --prod --no-buil
 const PUBLIC_CHECK = /^[ \t]*command[ \t]*=.*?(node[ \t]+\S*check-public\.mjs)/m;
 
 /** The public check of this site's build command, or null. */
-function publicCheck(root) {
+export function publicCheck(root) {
   try {
     return fs.readFileSync(path.join(root, NETLIFY_FILE), 'utf8').match(PUBLIC_CHECK)?.[1] ?? null;
   } catch {

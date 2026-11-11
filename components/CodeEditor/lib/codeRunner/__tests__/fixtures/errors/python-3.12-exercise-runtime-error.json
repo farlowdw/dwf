@@ -1,0 +1,33 @@
+{
+ "request": {
+  "language": "python",
+  "version": "3.12.0",
+  "files": [
+   {
+    "name": "main.py",
+    "content": "from solution import first\nprint(first([]))\n"
+   },
+   {
+    "name": "solution.py",
+    "content": "def first(items):\n    return items[0]\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "Traceback (most recent call last):\n  File \"/box/submission/main.py\", line 2, in <module>\n    print(first([]))\n          ^^^^^^^^^\n  File \"/box/submission/solution.py\", line 2, in first\n    return items[0]\n           ~~~~~^^^\nIndexError: list index out of range\n",
+   "code": 1,
+   "output": "Traceback (most recent call last):\n  File \"/box/submission/main.py\", line 2, in <module>\n    print(first([]))\n          ^^^^^^^^^\n  File \"/box/submission/solution.py\", line 2, in first\n    return items[0]\n           ~~~~~^^^\nIndexError: list index out of range\n",
+   "memory": 3780000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 36,
+   "wall_time": 39
+  },
+  "language": "python",
+  "version": "3.12.0"
+ }
+}

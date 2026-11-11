@@ -1,0 +1,29 @@
+{
+ "request": {
+  "language": "bash",
+  "version": "5.2.0",
+  "files": [
+   {
+    "name": "main.sh",
+    "content": "if [ 1 -eq 1 ]\n  echo yes\nfi\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "main.sh: line 3: syntax error near unexpected token `fi'\nmain.sh: line 3: `fi'\n",
+   "code": 2,
+   "output": "main.sh: line 3: syntax error near unexpected token `fi'\nmain.sh: line 3: `fi'\n",
+   "memory": 964000,
+   "message": "Exited with error status 2",
+   "status": "RE",
+   "cpu_time": 7,
+   "wall_time": 11
+  },
+  "language": "bash",
+  "version": "5.2.0"
+ }
+}

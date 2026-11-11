@@ -1,0 +1,29 @@
+{
+ "request": {
+  "language": "python",
+  "version": "3.12.0",
+  "files": [
+   {
+    "name": "main.py",
+    "content": "import json\n\njson.loads(\"{bad\")\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "",
+   "stderr": "Traceback (most recent call last):\n  File \"/box/submission/main.py\", line 3, in <module>\n    json.loads(\"{bad\")\n  File \"/piston/packages/python/3.12.0/lib/python3.12/json/__init__.py\", line 346, in loads\n    return _default_decoder.decode(s)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/piston/packages/python/3.12.0/lib/python3.12/json/decoder.py\", line 337, in decode\n    obj, end = self.raw_decode(s, idx=_w(s, 0).end())\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/piston/packages/python/3.12.0/lib/python3.12/json/decoder.py\", line 353, in raw_decode\n    obj, end = self.scan_once(s, idx)\n               ^^^^^^^^^^^^^^^^^^^^^^\njson.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)\n",
+   "code": 1,
+   "output": "Traceback (most recent call last):\n  File \"/box/submission/main.py\", line 3, in <module>\n    json.loads(\"{bad\")\n  File \"/piston/packages/python/3.12.0/lib/python3.12/json/__init__.py\", line 346, in loads\n    return _default_decoder.decode(s)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/piston/packages/python/3.12.0/lib/python3.12/json/decoder.py\", line 337, in decode\n    obj, end = self.raw_decode(s, idx=_w(s, 0).end())\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/piston/packages/python/3.12.0/lib/python3.12/json/decoder.py\", line 353, in raw_decode\n    obj, end = self.scan_once(s, idx)\n               ^^^^^^^^^^^^^^^^^^^^^^\njson.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)\n",
+   "memory": 5568000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 61,
+   "wall_time": 80
+  },
+  "language": "python",
+  "version": "3.12.0"
+ }
+}

@@ -1,0 +1,41 @@
+{
+ "note": "TypeScript compiled in the browser by typescript.js > compileTypeScript (Monaco 0.55.1, TypeScript 5.9.3), the JavaScript run on Piston as main.js. Captured 2026-10-25.",
+ "typescript": "interface Order { id: number; items: string[] }\ntype Id = Order[\"id\"];\n\nfunction firstItem(order: Order): string {\n  const item = order.items[0];\n  if (item === undefined) {\n    throw new Error(`order ${order.id} is empty`);\n  }\n  return item;\n}\n\nconst id: Id = 7;\nconsole.log(new Map<string, number>([[\"a\", 1]]).size, [1, 2, 3].at(-1));\nconsole.log(firstItem({ id, items: [] }));\n",
+ "map": {
+  "version": 3,
+  "file": "main.js",
+  "sourceRoot": "",
+  "sources": [
+   "main.ts"
+  ],
+  "names": [],
+  "mappings": ";;AAGA,SAAS,SAAS,CAAC,KAAY;IAC7B,MAAM,IAAI,GAAG,KAAK,CAAC,KAAK,CAAC,CAAC,CAAC,CAAC;IAC5B,IAAI,IAAI,KAAK,SAAS,EAAE,CAAC;QACvB,MAAM,IAAI,KAAK,CAAC,SAAS,KAAK,CAAC,EAAE,WAAW,CAAC,CAAC;IAChD,CAAC;IACD,OAAO,IAAI,CAAC;AACd,CAAC;AAED,MAAM,EAAE,GAAO,CAAC,CAAC;AACjB,OAAO,CAAC,GAAG,CAAC,IAAI,GAAG,CAAiB,CAAC,CAAC,GAAG,EAAE,CAAC,CAAC,CAAC,CAAC,CAAC,IAAI,EAAE,CAAC,CAAC,EAAE,CAAC,EAAE,CAAC,CAAC,CAAC,EAAE,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACxE,OAAO,CAAC,GAAG,CAAC,SAAS,CAAC,EAAE,EAAE,EAAE,KAAK,EAAE,EAAE,EAAE,CAAC,CAAC,CAAC"
+ },
+ "request": {
+  "language": "javascript",
+  "version": "20.11.1",
+  "files": [
+   {
+    "name": "main.js",
+    "content": "\"use strict\";\nObject.defineProperty(exports, \"__esModule\", { value: true });\nfunction firstItem(order) {\n    const item = order.items[0];\n    if (item === undefined) {\n        throw new Error(`order ${order.id} is empty`);\n    }\n    return item;\n}\nconst id = 7;\nconsole.log(new Map([[\"a\", 1]]).size, [1, 2, 3].at(-1));\nconsole.log(firstItem({ id, items: [] }));\n"
+   }
+  ]
+ },
+ "status": 200,
+ "response": {
+  "run": {
+   "signal": null,
+   "stdout": "1 3\n",
+   "stderr": "/box/submission/main.js:6\n        throw new Error(`order ${order.id} is empty`);\n        ^\n\nError: order 7 is empty\n    at firstItem (/box/submission/main.js:6:15)\n    at Object.<anonymous> (/box/submission/main.js:12:13)\n    at Module._compile (node:internal/modules/cjs/loader:1376:14)\n    at Module._extensions..js (node:internal/modules/cjs/loader:1435:10)\n    at Module.load (node:internal/modules/cjs/loader:1207:32)\n    at Module._load (node:internal/modules/cjs/loader:1023:12)\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:135:12)\n    at node:internal/main/run_main_module:28:49\n\nNode.js v20.11.1\n",
+   "code": 1,
+   "output": "1 3\n/box/submission/main.js:6\n        throw new Error(`order ${order.id} is empty`);\n        ^\n\nError: order 7 is empty\n    at firstItem (/box/submission/main.js:6:15)\n    at Object.<anonymous> (/box/submission/main.js:12:13)\n    at Module._compile (node:internal/modules/cjs/loader:1376:14)\n    at Module._extensions..js (node:internal/modules/cjs/loader:1435:10)\n    at Module.load (node:internal/modules/cjs/loader:1207:32)\n    at Module._load (node:internal/modules/cjs/loader:1023:12)\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:135:12)\n    at node:internal/main/run_main_module:28:49\n\nNode.js v20.11.1\n",
+   "memory": 6800000,
+   "message": "Exited with error status 1",
+   "status": "RE",
+   "cpu_time": 52,
+   "wall_time": 56
+  },
+  "language": "javascript",
+  "version": "20.11.1"
+ }
+}
