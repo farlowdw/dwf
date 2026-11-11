@@ -142,6 +142,13 @@ with from CDNs (`stylesheets` and `scripts` in the config). Pseudocode's stylesh
 or font, cdnjs's wins: the KaTeX fonts a page uses still come from cdnjs, each only when a formula
 needs it.
 
+Known limit: on a page with a code editor, Monaco's loader puts `define.amd` on the page. A CDN script
+that arrives after it (the KaTeX script, `pseudocode.js`, or the copy `<Pseudocode>` adds when it
+mounts) registers with that loader and sets no global, so `window.katex` and `window.pseudocode` stay
+undefined in that tab, the console shows "Can only have one anonymous define call per script file",
+and pseudocode blocks reached from there by a link stay unrendered until the page is loaded again.
+Bundling both from npm in `src/components/Pseudocode` would end it.
+
 ## Deploying
 
 Through Netlify, built on this machine. Link the folder to the Netlify project once with
