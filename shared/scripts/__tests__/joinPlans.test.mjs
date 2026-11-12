@@ -19,7 +19,8 @@ import { holdsEnv, planDeploy, planIgnore, planNetlify } from '../lib/joinHousek
 import { applyLine, patchFit, patchedFiles } from '../lib/joinPatch.mjs';
 import { readOnPush, ON_PUSH } from '../lib/joinNetlify.mjs';
 import {
-  DEPLOY_LINE, IGNORE_TEMPLATE_FILE, MUI_PATCH, PLAIN_BUILD_LINE, PUBLIC_BUILD_LINE, PUBLIC_CHECK_LINE,
+  DEPLOY_LINE, DEPLOY_STEPS_LINE, IGNORE_TEMPLATE_FILE, MUI_PATCH, OLD_DEPLOY_LINES, PLAIN_BUILD_LINE, PUBLIC_BUILD_LINE,
+  PUBLIC_CHECK_LINE,
 } from '../lib/joinSettings.mjs';
 import { sameCode, stubTarget, stubText, writeStub } from '../lib/joinStubs.mjs';
 import { NVMRC_FILE } from '../lib/settings.mjs';
@@ -134,8 +135,25 @@ test('a line with a carriage return still reads as itself', () => {
 test('the deploy line: absent or old is replaced, Netlify stays, anything else is the site\'s', () => {
   assert.deepEqual(planDeploy(undefined), { line: DEPLOY_LINE, state: 'replace' });
   assert.deepEqual(planDeploy('docusaurus deploy'), { line: DEPLOY_LINE, state: 'replace' });
+  assert.deepEqual(planDeploy('netlify deploy --prod --context production'), { line: DEPLOY_LINE, state: 'replace' });
+  assert.deepEqual(planDeploy(DEPLOY_LINE), { line: DEPLOY_LINE, state: 'ok' });
   assert.deepEqual(planDeploy('netlify deploy --prod'), { line: 'netlify deploy --prod', state: 'ok' });
   assert.deepEqual(planDeploy('sh ship.sh'), { line: 'sh ship.sh', state: 'own' });
+});
+
+test('the deploy line deploys nothing: it prints the two steps, nvm use first, and exits 1', () => {
+  const { status, stdout, stderr } = spawnSync('sh', ['-c', DEPLOY_LINE], { encoding: 'utf8' });
+  assert.equal(status, 1, 'a chain that runs npm run deploy stops there');
+  assert.equal(stderr, '');
+  assert.deepEqual(stdout.split('\n'), [
+    'Nothing was deployed: this script only says how.',
+    'Deploy in two steps, with the netlify command on your PATH:',
+    `  ${DEPLOY_STEPS_LINE}`,
+    '',
+  ]);
+  assert.ok(DEPLOY_STEPS_LINE.startsWith('nvm use && '), 'Node switches first');
+  assert.ok(DEPLOY_STEPS_LINE.endsWith(' && netlify deploy --prod --no-build'), 'the deploy publishes the build netlify build made');
+  assert.equal(OLD_DEPLOY_LINES.includes(DEPLOY_LINE), false);
 });
 
 test('the template\'s netlify.toml has the line --public changes, and its Node is the pin', () => {

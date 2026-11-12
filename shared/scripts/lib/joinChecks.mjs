@@ -17,15 +17,15 @@
 
 import { LEVELS, fail, info, ok, subtreeCheck, warn } from './checks.mjs';
 import {
-  CORE_PACKAGE, DEPLOY_LINE, DOTENV_PACKAGE, ENV_FILE, FIRST_JOINABLE_MAJOR, IGNORE_FILE, MUI_PACKAGE, PUBLIC_CHECK_LINE,
-  SCRIPT,
+  CORE_PACKAGE, DEPLOY_LINE, DEPLOY_STEPS_LINE, DOTENV_PACKAGE, ENV_FILE, FIRST_JOINABLE_MAJOR, IGNORE_FILE, MUI_PACKAGE,
+  PUBLIC_CHECK_LINE, SCRIPT,
 } from './joinSettings.mjs';
 import { MOUNT, REMOTE_STATE } from './joinFacts.mjs';
 import { ON_PUSH } from './joinNetlify.mjs';
 import { applyLine } from './joinPatch.mjs';
 import { COPY } from './joinStubs.mjs';
 import { capped, counted } from './phrases.mjs';
-import { MANIFEST_FILE, NETLIFY_FILE, NVMRC_FILE, PREFIX, REMOTE, SITE_BRANCH } from './settings.mjs';
+import { MANIFEST_FILE, NETLIFY_FILE, NVMRC_FILE, PREFIX, REMOTE, SITE_BRANCH, TEMPLATE_FOLDER } from './settings.mjs';
 
 /** Where a person reads the rest. */
 const JOIN_SECTION = `"Join an existing site" in ${PREFIX}/README.md`;
@@ -95,11 +95,19 @@ function envLine({ envTracked }) {
   return warn('env', `${ENV_FILE} is tracked`, `git rm --cached ${ENV_FILE}, then replace what it held`);
 }
 
-/** The deploy line goes through Netlify. */
+/** Where a site that deploys some other way finds the line to copy. */
+const TEMPLATE_MANIFEST = `${PREFIX}/${TEMPLATE_FOLDER}/${MANIFEST_FILE}`;
+
+/** The deploy line: the one that only prints the two steps, or another that goes through Netlify. */
 function deployScriptLine({ deploy: { line, state } }) {
-  if (state === 'ok') return ok('deploy', `deploys through Netlify: ${line}`);
-  if (state === 'replace') return info('deploy', `no Netlify deploy script: the join sets ${DEPLOY_LINE}`);
-  return warn('deploy', `deploy reads ${line}`, `change it to ${DEPLOY_LINE}`);
+  if (state === 'ok' && line === DEPLOY_LINE) {
+    return ok('deploy', `npm run deploy deploys nothing and prints the two steps: ${DEPLOY_STEPS_LINE}`);
+  }
+  if (state === 'ok') return ok('deploy', `deploys through Netlify, the site's own line: ${line}`);
+  if (state === 'replace') {
+    return info('deploy', `the join sets npm run deploy to deploy nothing and print the two steps: ${DEPLOY_STEPS_LINE}`);
+  }
+  return warn('deploy', `deploy reads ${line}`, `copy the deploy line of ${TEMPLATE_MANIFEST}, which prints the two steps`);
 }
 
 /** netlify.toml: tracked, or absent. One on disk and out of git may hold a secret, so a person reads it. */

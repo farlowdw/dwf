@@ -24,7 +24,7 @@
  */
 
 import {
-  DEPLOY_LINE, DEPLOY_SIGN, IGNORE_FILE, OLD_DEPLOY_LINE, PLAIN_BUILD_LINE, PUBLIC_BUILD_LINE,
+  DEPLOY_LINE, DEPLOY_SIGN, IGNORE_FILE, OLD_DEPLOY_LINES, PLAIN_BUILD_LINE, PUBLIC_BUILD_LINE,
 } from './joinSettings.mjs';
 import { NETLIFY_FILE } from './settings.mjs';
 
@@ -112,9 +112,13 @@ export function planIgnore(text, { keepNetlifyOut, starter }) {
   return { text: withAddedLines(kept, missing).join('\n'), changes: [...changes, ...added] };
 }
 
-/** { line, state }: the deploy line a site needs, and whether it is `ok`, `replace` or `own`. */
+/**
+ * { line, state }: the deploy line a site needs, and whether it is `ok`, `replace` or `own`. No line, or one of
+ * the older lines, is replaced by DEPLOY_LINE. DEPLOY_LINE itself, and any other line that goes through
+ * Netlify, are `ok` and stay as they are. Anything else is the site's own: a person decides.
+ */
 export function planDeploy(current) {
-  if (current === undefined || current === OLD_DEPLOY_LINE) return { line: DEPLOY_LINE, state: 'replace' };
+  if (current === undefined || OLD_DEPLOY_LINES.includes(current)) return { line: DEPLOY_LINE, state: 'replace' };
   return current.includes(DEPLOY_SIGN) ? { line: current, state: 'ok' } : { line: current, state: 'own' };
 }
 

@@ -6,7 +6,9 @@
  *   - Every file opens with a comment, below a page's front matter, apart from the two formats with none.
  *   - The config gives Docusaurus relative strings, never require.resolve, and uses no my-loaders. KaTeX's
  *     stylesheet comes from the shared plugin, through the wiring.
- *   - Only known tokens, each in use, and package.json carries the lines a site runs.
+ *   - Only known tokens, each in use, and package.json carries the lines a site runs, with mermaid on one exact
+ *     version (MERMAID_PACKAGE), as its description says.
+ *   - The README's "Publish it" gives the two deploy steps that npm run deploy prints, and says it deploys nothing.
  *   - The stubs are the ones a join writes, and the ignore file needs no change from a join.
  * What a real site does with these files is proved by the template's own __tests__/site.test.mjs, which a run
  * of shared:new reads.
@@ -24,7 +26,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { planIgnore } from '../scripts/lib/joinHousekeeping.mjs';
 import {
-  DEPLOY_LINE, IGNORE_TEMPLATE_FILE, MUI_GUARD_LINE, SITE_LINES, VERIFY_LINE_NAME,
+  DEPLOY_LINE, DEPLOY_STEPS_LINE, IGNORE_TEMPLATE_FILE, MUI_GUARD_LINE, SITE_LINES, VERIFY_LINE_NAME,
 } from '../scripts/lib/joinSettings.mjs';
 import { MANIFEST_FILE, NVMRC_FILE } from '../scripts/lib/settings.mjs';
 import { stubText } from '../scripts/lib/joinStubs.mjs';
@@ -42,6 +44,11 @@ const NOT_IN_A_NEW_SITE = 'my-loaders';
 const KATEX_CSS_LINE = 'katexCssPlugin()';
 const SHAPE_VARIABLE = 'SKIP_HTML_MINIFICATION=true';
 const TEMPLATE_README = 'README.md';
+/** What the README says of the deploy script, which prints the steps and publishes nothing. */
+const DEPLOY_SCRIPT_WORDS = '`npm run deploy` deploys nothing';
+/** The diagrams' package: one exact version, whose katex range takes the site's KaTeX 0.16 (the description says why). */
+const MERMAID_PACKAGE = 'mermaid';
+const EXACT_VERSION = /^\d+\.\d+\.\d+$/;
 
 /** Every file of the template, in sorted order. */
 const TEMPLATE_FILES = Object.freeze([
@@ -150,6 +157,12 @@ test('a new site gets every shared line, the deploy line and the shape of a buil
   assert.ok(scripts.build.startsWith(SHAPE_VARIABLE), 'the build sets the shape itself');
 });
 
+test('the README gives the two deploy steps that npm run deploy prints, and says it deploys nothing', () => {
+  const readme = read(TEMPLATE_README);
+  assert.ok(readme.includes(`\n${DEPLOY_STEPS_LINE}\n`), `${TEMPLATE_README} lacks the line ${DEPLOY_STEPS_LINE}`);
+  assert.ok(readme.includes(DEPLOY_SCRIPT_WORDS), `${TEMPLATE_README} lacks "${DEPLOY_SCRIPT_WORDS}"`);
+});
+
 test('shared:verify and comparePages start with sensible lines', () => {
   const { scripts, comparePages } = manifest();
   assert.ok(scripts[VERIFY_LINE_NAME].includes('test:shared'));
@@ -167,6 +180,13 @@ test('a package with a row in requirements.cjs has that range, and no MUI X pack
   const drift = Object.entries(packages).filter(([name, spec]) => RANGES[name] && !pinned(name) && RANGES[name] !== spec);
   assert.deepEqual(drift, []);
   assert.deepEqual(Object.keys(packages).filter((name) => name.startsWith(MUI_X_PREFIX)), []);
+});
+
+test('mermaid is one exact version, and the description names it and says why', () => {
+  const { dependencies, description } = manifest();
+  const version = dependencies[MERMAID_PACKAGE] ?? '';
+  assert.match(version, EXACT_VERSION, 'a range would let a new site take a mermaid that nests KaTeX 0.18');
+  assert.ok(description.includes(`on one exact version, ${version},`), 'the description names the version held');
 });
 
 test('the README calls a stub one line only when it is, and names the one that hands in data', () => {
