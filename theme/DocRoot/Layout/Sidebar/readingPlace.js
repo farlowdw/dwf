@@ -22,8 +22,8 @@
  *   (findReadingAnchor: the first block of the doc that starts at or below the reading line —
  *   the navbar's bottom edge, the window's top while the navbar is hidden — or the block the line
  *   crosses when nothing starts in view) and note where it is on the screen. Then, every frame
- *   for HOLD_MS (counted from the first frame, which always corrects), scroll the window by
- *   however far it moved, before the frame is drawn. The text re-wraps around a page that
+ *   for HOLD_MS (counted from the first frame, which always corrects), scroll the window to the
+ *   place that puts it back there, before the frame is drawn. The text re-wraps around a page that
  *   otherwise stays put. A second toggle during the hold keeps the same place a little longer.
  *   Meanwhile the hold is the only thing that moves the page: the browser's own scroll anchoring
  *   is paused (it would hold another element), and Docusaurus's scroll events are off (the wrapper
@@ -34,7 +34,23 @@
  * NEVER AGAINST THE READER  their own wheel, touch, key or mouse press ends the hold at once,
  *   except a press inside the sidebar: that is the toggle again, or a link that leaves the page
  *   (the hold ends when its anchor is gone).
- *   Any scroll the hold did not make (a dragged scrollbar, Space on the expand strip) ends it too.
+ *   Any scroll to a place the hold did not put the page (a dragged scrollbar, Space on the expand
+ *   strip) ends it too.
+ *
+ * LATE REPORTS (the iPad)  On an iPad the system scrolls the page, outside the page, and tells
+ *   the page its position a moment later. So in the frame after one of the hold's own scrolls the
+ *   browser may report a position from before it: where the toggle began, or where an earlier
+ *   correction left the page. Every position the hold started from, sent the page to or found it
+ *   at is therefore its own for as long as it lasts (run.made): such a frame does not end the
+ *   hold, and it asks for the same place again. That is why a correction names a PLACE
+ *   (window.scrollTo), never a distance: an iPad's system adds a distance (window.scrollBy) to
+ *   its own position, so a distance asked twice would move the page twice; a place asked twice is
+ *   one place. (Until 2026-11 only the last position counted and a correction was a distance.
+ *   On an iPad a collapse then lost its later corrections, a line or more of the place each
+ *   time, while an expand, which needs one correction, kept it: seen on a device on 2026-11-11,
+ *   and gone there with this change. That the cause is a late report is read from WebKit's
+ *   source, where the system's reports reach the page on a path of their own; it was not
+ *   measured on the device.)
  *
  * KNOWN LIMIT  Docusaurus does not note the scroll position while its scroll events are off, so
  *   the reader's FIRST scroll after a toggle is compared with the position from before it: the
@@ -44,7 +60,8 @@
  *   outside without it seeing the whole correction as a scroll.
  *
  * HOW TO CHANGE IT
- *   How long: HOLD_MS. What counts as the reader scrolling: USER_SCROLL_EVENTS. Where the reading
+ *   How long: HOLD_MS. What counts as the reader scrolling: USER_SCROLL_EVENTS, and any position
+ *   that is not the hold's own (scrolledByOthers, run.made). Where the reading
  *   line is: readingLine() (NAVBAR_SELECTOR). Which block is the anchor: findReadingAnchor() and
  *   UNANCHORED_POSITIONS. Tests: __tests__/readingPlace.test.js (npm run test:shared), with
  *   invented boxes and a hand-run clock; __tests__/docusaurusContract.test.js checks the
@@ -144,12 +161,12 @@ function pauseNativeAnchoring() {
 	};
 }
 
-/** The browser's side of a hold; the tests pass a hand-run clock, frames they step and a record of the scrolling. */
+/** The browser's side of a hold; the tests pass a hand-run clock, frames they step and a record of the scrolling. It scrolls to a place only: see LATE REPORTS. */
 function browserEnv() {
 	return {
 		now: () => performance.now(),
 		nextFrame: (callback) => requestAnimationFrame(callback),
-		scrollBy: (pixels) => window.scrollBy({ top: pixels, behavior: 'instant' }),
+		scrollTo: (top) => window.scrollTo({ top, behavior: 'instant' }),
 		scrollY: () => window.scrollY,
 		maxScrollY: () => document.documentElement.scrollHeight - window.innerHeight,
 		listen: (type, handler) => window.addEventListener(type, handler, { capture: true, passive: true }),
@@ -173,7 +190,7 @@ function isOwnersScroll(event) {
  * (useScrollController): its scroll events are off during a hold and on again after it.
  */
 export function createReadingPlace(env = browserEnv()) {
-	let current = null; // the hold in progress: { anchor, top, until, scrolledTo, scrollController, restoreAnchoring, onInput }
+	let current = null; // the hold in progress: { anchor, top, until, made, scrollController, restoreAnchoring, onInput }
 
 	/**
 	 * Ends `run` (if it is still the hold in progress) and puts back everything it turned off.
@@ -192,18 +209,29 @@ export function createReadingPlace(env = browserEnv()) {
 		});
 	}
 
-	/** Did something other than the hold scroll the page since its last frame? (A page that got shorter under the window is clamped by the browser: not the reader.) */
+	/**
+	 * Did something other than the hold scroll the page? Not while the page is at a position of the
+	 * hold's own (run.made: on an iPad an earlier one comes back for a frame, see LATE REPORTS), and
+	 * not when a page that got shorter under the window was clamped by the browser: not the reader.
+	 */
 	function scrolledByOthers(run) {
 		const scrollY = env.scrollY();
-		const clamped = scrollY >= env.maxScrollY() - TOLERANCE_PX;
-		return Math.abs(scrollY - run.scrolledTo) >= TOLERANCE_PX && !clamped;
+		if (scrollY >= env.maxScrollY() - TOLERANCE_PX) return false;
+		for (const made of run.made) {
+			if (Math.abs(scrollY - made) < TOLERANCE_PX) return false;
+		}
+		return true;
 	}
 
-	/** Undoes the anchor's movement since the toggle. */
+	/** Undoes the anchor's movement since the toggle, and notes the positions that makes the hold's own. */
 	function correct(run) {
 		const moved = run.anchor.getBoundingClientRect().top - run.top;
-		if (Math.abs(moved) >= TOLERANCE_PX) env.scrollBy(moved);
-		run.scrolledTo = env.scrollY();
+		if (Math.abs(moved) >= TOLERANCE_PX) {
+			const place = env.scrollY() + moved; // a place, not a distance (LATE REPORTS): measured in a frame that began at an older position, it is still the right place
+			run.made.add(place); // where the page is sent
+			env.scrollTo(place);
+		}
+		run.made.add(env.scrollY()); // where the browser says the page is now: a whole pixel, or an end of the page
 	}
 
 	/** One frame of the hold: stop (time is up, the anchor left the page, or something else scrolled it), or correct and ask for the next frame. */
@@ -236,7 +264,7 @@ export function createReadingPlace(env = browserEnv()) {
 		}
 		const anchor = env.findAnchor();
 		if (!anchor) return;
-		const run = { anchor, top: anchor.getBoundingClientRect().top, until: null, scrolledTo: env.scrollY(), scrollController };
+		const run = { anchor, top: anchor.getBoundingClientRect().top, until: null, made: new Set([env.scrollY()]), scrollController };
 		run.onInput = (event) => {
 			if (isOwnersScroll(event)) stop(run);
 		};

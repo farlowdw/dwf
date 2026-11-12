@@ -33,10 +33,14 @@ npm run build            # the same build a deploy publishes
 
 ## Publish it
 
-`netlify.toml` holds the build, and a deploy runs it. Deploys go out from this machine:
+`netlify.toml` holds the build. Deploys go out from this machine in two steps, with the `netlify` command on
+your PATH, after `nvm use`: `netlify build` makes the build, and `netlify deploy --prod --no-build` publishes
+that same build.
 
 ```sh
-npm run deploy
+nvm use && netlify build && netlify deploy --prod --no-build
 ```
+
+`npm run deploy` deploys nothing: it prints these steps and exits with status 1.
 
 The commands that start with `shared:` are in `shared/README.md`.

@@ -419,7 +419,7 @@ test('pinDrift, looseEntries and lockedVersions on their own', (t) => {
   assert.equal(lockedVersions(fixture.base), null);
 });
 
-test('the real template: nine exact entries, one version, a Node pin, and ranges for the rest', (t) => {
+test('the real template: nine exact @docusaurus entries, one version, a Node pin, and React and MUI as ranges', (t) => {
   const pin = readPin(mountedHub(t));
   assert.deepEqual(pin.problems, []);
   assert.equal(pin.node, '22');

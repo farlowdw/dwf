@@ -681,8 +681,10 @@ cp -R build ../keep-build
 On a site that passes, a join:
 
 1. adds the `shared` remote and fetches, so a hub out of reach changes nothing;
-2. commits the housekeeping: a tracked `.gitignore` that lists `.env`, `deploy` through Netlify, and
-   `netlify.toml` and `.nvmrc` from `template/` when they are absent;
+2. commits the housekeeping: a tracked `.gitignore` that lists `.env`, a `deploy` line that deploys nothing and
+   prints the two Netlify steps (in place of none, `docusaurus deploy` or the older
+   `netlify deploy --prod --context production`; a site's own line through Netlify stays), and `netlify.toml`
+   and `.nvmrc` from `template/` when they are absent;
 3. refreshes the index and runs `git subtree add --squash`;
 4. commits the npm lines, a default `comparePages`, the stub of each theme piece the site lacks
    (`src/theme/Admonition/Types.js` first of all), and a stub for each

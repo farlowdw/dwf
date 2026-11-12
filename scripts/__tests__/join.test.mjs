@@ -20,7 +20,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { EXIT } from '../lib/exitCodes.mjs';
 import { hubAddress } from '../lib/joinFacts.mjs';
-import { MUI_GUARD_LINE, MUI_PATCH, NETLIFY_COMMAND_ENV, SITE_LINES, VERIFY_LINE } from '../lib/joinSettings.mjs';
+import { DEPLOY_LINE, MUI_GUARD_LINE, MUI_PATCH, NETLIFY_COMMAND_ENV, SITE_LINES, VERIFY_LINE } from '../lib/joinSettings.mjs';
 import { sameCode } from '../lib/joinStubs.mjs';
 import { REMOTE_URL, REMOTE_URL_ENV } from '../lib/settings.mjs';
 import { readStub } from '../lib/stubs.mjs';
@@ -170,7 +170,7 @@ test('--check on an older site says what the join does and what stays by hand, a
   assert.match(stdout, /^info gitignore\s+\.gitignore is not tracked and does not list \.env/m);
   assert.match(stdout, /drops the line that ignores \.gitignore itself/);
   assert.match(stdout, /widens \/node_modules to node_modules/);
-  assert.match(stdout, /^info deploy\s+no Netlify deploy script/m);
+  assert.match(stdout, /^info deploy\s+the join sets npm run deploy to deploy nothing and print the two steps: /m);
   assert.match(stdout, /^info netlify\s+no netlify\.toml/m);
   assert.match(stdout, /^warn mui\s+@mui\/material 6\.5\.0 is outside/m);
   assert.match(stdout, /^warn dotenv\s+docusaurus2-dotenv is listed/m);
@@ -395,11 +395,41 @@ test('a join sets the Netlify deploy line and the template\'s Node, and keeps th
   const site = olderSite(fixture);
   join(site, '.');
   const manifest = manifestOf(site);
-  assert.equal(manifest.scripts.deploy, 'netlify deploy --prod --context production');
+  assert.equal(manifest.scripts.deploy, DEPLOY_LINE);
   assert.equal(manifest.scripts.build, 'docusaurus build');
   assert.deepEqual(manifest.dependencies, OLD_MANIFEST.dependencies);
   assert.equal(read(site, '.nvmrc'), read(SHARED_ROOT, 'template/.nvmrc'));
   assert.equal(read(site, 'netlify.toml'), read(SHARED_ROOT, 'template/netlify.toml'));
+});
+
+/** What --check says of a site that already holds DEPLOY_LINE. */
+const NEW_DEPLOY_ROW = /^ok\s+deploy\s+npm run deploy deploys nothing and prints the two steps: nvm use && netlify build && netlify deploy --prod --no-build$/m;
+
+/** What --check says of a line the join replaces. */
+const REPLACE_DEPLOY_ROW = /^info deploy\s+the join sets npm run deploy to deploy nothing and print the two steps: nvm use && netlify build && netlify deploy --prod --no-build$/m;
+
+/** The three deploy lines a join meets: the line each site holds after it, and what --check says before. */
+const DEPLOY_CASES = Object.freeze([
+  { name: 'old-docusaurus', deploy: 'docusaurus deploy', row: REPLACE_DEPLOY_ROW, after: DEPLOY_LINE },
+  { name: 'old-netlify', deploy: 'netlify deploy --prod --context production', row: REPLACE_DEPLOY_ROW, after: DEPLOY_LINE },
+  {
+    name: 'own-netlify',
+    deploy: 'netlify deploy --prod --dir build',
+    row: /^ok\s+deploy\s+deploys through Netlify, the site's own line: netlify deploy --prod --dir build$/m,
+    after: 'netlify deploy --prod --dir build',
+  },
+]);
+
+test('a join replaces both older deploy lines with the one that prints the two steps, and keeps a site\'s own Netlify line', (t) => {
+  const { fixture, join, check } = setUp(t);
+  for (const { name, deploy, row, after } of DEPLOY_CASES) {
+    const manifest = { ...OLD_MANIFEST, scripts: { ...OLD_MANIFEST.scripts, deploy } };
+    const site = olderSite(fixture, name, { 'package.json': `${JSON.stringify(manifest, null, 2)}\n` });
+    assert.match(check(site).stdout, row, `${name}: --check before the join`);
+    assert.equal(join(site, '.').status, EXIT.OK, name);
+    assert.equal(manifestOf(site).scripts.deploy, after, name);
+    assert.match(check(site).stdout, after === DEPLOY_LINE ? NEW_DEPLOY_ROW : row, `${name}: --check after the join`);
+  }
 });
 
 test('a deploy line of the site\'s own stays, and goes on the check as by hand', (t) => {

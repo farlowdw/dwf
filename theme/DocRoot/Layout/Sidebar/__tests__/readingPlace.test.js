@@ -7,7 +7,9 @@
  * from the first frame, which always corrects; Docusaurus's scroll events and the browser's own
  * scroll anchoring off meanwhile and back on at every way out, the scroll events one frame later;
  * a second toggle lengthens it; the
- * reader's own scrolling, or any scroll it did not make, ends it). Invented boxes, a hand-run clock
+ * reader's own scrolling, or any scroll to a place it did not put the page, ends it; a position of
+ * its own that the browser reports late, as an iPad does, does not, and a correction asks for a
+ * place, never a distance, so that asking twice moves the page once). Invented boxes, a hand-run clock
  * and frames. Run with `npm run test:shared`, in a site that has the stub.
  *
  * HOW TO CHANGE IT  A new rule of the hold or the anchor: a test here, with the page drawn as
@@ -110,9 +112,9 @@ function fakePage({ docTop = 600, scrollY = 400, maxScrollY = 100_000 } = {}) {
 	const env = {
 		now: () => page.time,
 		nextFrame: (callback) => page.frames.push(callback),
-		scrollBy: (pixels) => {
-			page.scrolls.push(pixels);
-			page.scrollY += pixels;
+		scrollTo: (top) => {
+			page.scrolls.push(top - page.scrollY); // how far that moves the page: what the tests read
+			page.scrollY = Math.max(0, top); // a browser stops at the top of the page
 		},
 		scrollY: () => page.scrollY,
 		maxScrollY: () => page.maxScrollY,
@@ -273,6 +275,222 @@ test('a scroll the hold did not make (a dragged scrollbar, Space on the expand s
 	assert.equal(place.holding(), false);
 	assert.deepEqual(page.scrolls, []);
 	assertAllBack();
+});
+
+test('a position that comes back late (an iPad reports the page’s position a moment after the hold scrolled it) does not end the hold: the correction is made again', () => {
+	const { page, env, scrollController, step, screenTop } = fakePage();
+	const place = createReadingPlace(env);
+	place.hold(scrollController);
+	step(); // the first frame: nothing has moved yet
+	page.docTop -= 96; // a collapse: the first lines above re-wrap
+	step();
+	assert.deepEqual(page.scrolls, [-96]);
+	page.scrollY = 400; // the late report: where the page was before that correction
+	step();
+	assert.equal(place.holding(), true, 'the hold’s own earlier position is not the reader’s scrolling');
+	assert.equal(screenTop(), 200);
+	page.docTop -= 24; // the last line re-wraps a few frames later
+	step();
+	assert.equal(screenTop(), 200);
+	assert.deepEqual(page.scrolls, [-96, -96, -24]);
+});
+
+test('any earlier position of the hold may come back, not only the one it started from', () => {
+	const { page, env, scrollController, step, screenTop } = fakePage();
+	const place = createReadingPlace(env);
+	place.hold(scrollController);
+	step();
+	page.docTop -= 96;
+	step(); // 400 -> 304
+	page.docTop -= 24;
+	step(); // 304 -> 280
+	page.scrollY = 304; // the first correction's position, reported after the second
+	step();
+	assert.equal(place.holding(), true);
+	assert.equal(screenTop(), 200);
+	assert.deepEqual(page.scrolls, [-96, -24, -24]);
+});
+
+test('a browser that has not moved the page yet when asked: the position it was sent to is the hold’s own', () => {
+	const { page, env, scrollController, step, screenTop } = fakePage();
+	const waiting = [];
+	env.scrollTo = (top) => {
+		page.scrolls.push(top - page.scrollY);
+		waiting.push(top); // the page moves only after this frame
+	};
+	const arrive = () => waiting.splice(0).forEach((top) => (page.scrollY = top));
+	const place = createReadingPlace(env);
+	place.hold(scrollController);
+	step();
+	page.docTop -= 96;
+	step(); // asked for -96; scrollY still reads 400
+	arrive(); // now 304
+	step();
+	assert.equal(place.holding(), true);
+	assert.equal(screenTop(), 200);
+	assert.deepEqual(page.scrolls, [-96]);
+});
+
+test('a place the hold never put the page still ends it, after a late report too', () => {
+	const { page, env, scrollController, step, assertAllBack } = fakePage();
+	const place = createReadingPlace(env);
+	place.hold(scrollController);
+	step();
+	page.docTop -= 96;
+	step(); // 400 -> 304
+	page.scrollY = 400; // late report
+	step(); // corrected again: 304
+	page.scrollY = 350; // between two positions of the hold's own, and neither: the reader
+	page.docTop -= 24;
+	step();
+	assert.equal(place.holding(), false);
+	assert.deepEqual(page.scrolls, [-96, -96]);
+	assertAllBack();
+});
+
+test('the first of three corrections’ positions may come back after the third', () => {
+	const { page, env, scrollController, step, screenTop } = fakePage();
+	const place = createReadingPlace(env);
+	place.hold(scrollController);
+	step();
+	for (const rise of [72, 24, 24]) {
+		page.docTop -= rise;
+		step(); // 400 -> 328 -> 304 -> 280
+	}
+	page.scrollY = 328; // the first correction's position, reported after the third
+	step();
+	assert.equal(place.holding(), true);
+	assert.equal(screenTop(), 200);
+});
+
+test('a place exactly TOLERANCE_PX from every position of the hold’s own ends it', () => {
+	const { page, env, scrollController, step } = fakePage();
+	const place = createReadingPlace(env);
+	place.hold(scrollController);
+	step();
+	page.scrollY += TOLERANCE_PX;
+	step();
+	assert.equal(place.holding(), false);
+});
+
+test('a correction the browser stops at the top of the page leaves the page at a place of the hold’s own', () => {
+	const { page, env, scrollController, step, screenTop } = fakePage({ docTop: 250, scrollY: 50 });
+	const place = createReadingPlace(env);
+	place.hold(scrollController);
+	step();
+	page.docTop -= 96; // the anchor rises 96 px; the page can go up 50 only
+	step();
+	assert.equal(page.scrollY, 0);
+	step(); // the frame after: the page stands at 0, where the browser left it
+	assert.equal(place.holding(), true, 'the stopped position is not someone else’s scroll');
+	page.docTop += 96; // the sidebar is opened again inside the hold: the anchor comes back down
+	place.hold(scrollController);
+	step();
+	assert.equal(screenTop(), 200);
+});
+
+test('a place that is not a whole pixel: the browser cuts it and a report may round it; neither ends the hold', () => {
+	const { page, env, scrollController, step } = fakePage();
+	env.scrollTo = (top) => {
+		page.scrolls.push(top - page.scrollY);
+		page.scrollY = Math.trunc(top); // a browser that keeps whole pixels cuts the place
+	};
+	const place = createReadingPlace(env);
+	place.hold(scrollController);
+	step();
+	page.docTop -= 96.4; // the place is 303.6; the page stands at 303
+	step();
+	assert.equal(page.scrollY, 303);
+	step();
+	assert.equal(place.holding(), true, 'the cut position is the hold’s own');
+	page.scrollY = 304; // a report that rounded 303.6 instead of cutting it
+	step();
+	assert.equal(place.holding(), true, 'under 1 px from the place sent: the hold’s own');
+});
+
+test('a second toggle inside the hold keeps the positions made so far: an older one may still come back after it', () => {
+	const { page, env, scrollController, step, screenTop } = fakePage();
+	const place = createReadingPlace(env);
+	place.hold(scrollController);
+	step();
+	page.docTop -= 72;
+	step(); // 400 -> 328
+	page.docTop -= 24;
+	step(); // 328 -> 304
+	place.hold(scrollController); // the sidebar is opened again inside the hold
+	page.docTop += 96;
+	step(); // 304 -> 400
+	page.scrollY = 328; // the collapse's first position, reported after the expand's correction
+	step();
+	assert.equal(place.holding(), true);
+	assert.equal(screenTop(), 200);
+});
+
+/**
+ * A page and its system apart, as on an iPad: pageY is what the page reads (window.scrollY), systemY
+ * is where the system holds the page, which is what the reader sees. The page's own scroll moves pageY
+ * at once and leaves a request; systemTakes() lets the system take the requests (it ADDS a distance to
+ * its own position and GOES TO a place); report() tells the page the system's position. The page offers
+ * both ways of scrolling, so that a hold that went back to distances would be caught here.
+ */
+function iPadPage({ docTop = 600, scrollY = 400 } = {}) {
+	const page = { docTop, pageY: scrollY, systemY: scrollY, time: 1000, frames: [], asked: [] };
+	const anchor = { isConnected: true, getBoundingClientRect: () => ({ top: page.docTop - page.pageY }) };
+	const env = {
+		now: () => page.time,
+		nextFrame: (callback) => page.frames.push(callback),
+		scrollBy: (pixels) => {
+			page.pageY += pixels;
+			page.asked.push({ by: pixels });
+		},
+		scrollTo: (top) => {
+			page.pageY = top;
+			page.asked.push({ to: top });
+		},
+		scrollY: () => page.pageY,
+		maxScrollY: () => 100_000,
+		listen: () => {},
+		unlisten: () => {},
+		pauseNativeAnchoring: () => () => {},
+		findAnchor: () => anchor,
+	};
+	const scrollController = { disableScrollEvents: () => {}, enableScrollEvents: () => {} };
+	const step = (ms = 16) => {
+		page.time += ms;
+		page.frames.splice(0).forEach((frame) => frame());
+	};
+	const systemTakes = () => {
+		for (const request of page.asked.splice(0)) page.systemY = 'by' in request ? page.systemY + request.by : request.to;
+	};
+	const report = () => (page.pageY = page.systemY);
+	const onScreen = () => page.docTop - page.systemY;
+	return { page, env, scrollController, step, systemTakes, report, onScreen };
+}
+
+test('an iPad’s system adds a distance to its own position and goes to a place: a correction asked again after a late report moves the page once', () => {
+	const { page, env, scrollController, step, systemTakes, report, onScreen } = iPadPage();
+	const place = createReadingPlace(env);
+	place.hold(scrollController);
+	assert.equal(onScreen(), 200);
+	step(); // the first frame: nothing has moved yet
+	page.docTop -= 96; // a collapse: the first lines above re-wrap
+	step(); // the hold corrects: the page reads 304 at once, the system still holds 400
+	report(); // the late report: the system's position from before it took the request
+	step(); // the page reads 400 again: the hold asks for the same place again
+	systemTakes(); // the system takes both requests
+	report();
+	step();
+	assert.equal(onScreen(), 200, 'after the first re-wrap the reader sees the anchor where it was');
+	page.docTop -= 24; // the last line re-wraps
+	step();
+	report(); // late again
+	step();
+	systemTakes();
+	report();
+	step();
+	assert.equal(onScreen(), 200, 'after the last re-wrap too');
+	assert.equal(place.holding(), true, 'and the hold is still running');
+	assert.equal(page.asked.length, 0);
 });
 
 test('a page that got shorter under the window (the browser clamps the scroll) is not taken for the owner', () => {

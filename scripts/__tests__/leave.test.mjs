@@ -14,7 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { EXIT } from '../lib/exitCodes.mjs';
-import { SITE_LINES } from '../lib/joinSettings.mjs';
+import { DEPLOY_LINE, SITE_LINES } from '../lib/joinSettings.mjs';
 import { LEAVE_SUBJECT, isSharedLine, linesBeforeLeave, sharedLineNames } from '../lib/siteLines.mjs';
 import { STATES, readState } from '../lib/state.mjs';
 import { fixtureFor } from './fixture.mjs';
@@ -34,7 +34,7 @@ const TIDY_SITE = Object.freeze({
   'package.json': `${JSON.stringify({
     name: 'tidy-site',
     private: true,
-    scripts: { build: 'docusaurus build', deploy: 'netlify deploy --prod --context production', 'test:site': 'node --test' },
+    scripts: { build: 'docusaurus build', deploy: DEPLOY_LINE, 'test:site': 'node --test' },
     dependencies: { '@docusaurus/core': '3.10.2', react: '^19.0.0' },
   }, null, 2)}\n`,
   '.gitignore': '/node_modules\n# Any folder\'s, as the joined sites hold it.\nnode_modules\n.env\n.netlify\n',

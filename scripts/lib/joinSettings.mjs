@@ -3,10 +3,11 @@
  *
  * HOW TO CHANGE IT
  *   A new command for every site: SITE_LINES here, and its line in the README's package.json block. A test
- *   holds the two equal. The deploy line a site ends up with: DEPLOY_LINE. What a joined site's .gitignore
- *   must hold: the lists in lib/joinHousekeeping.mjs. Tests point the script at a stand-in for the Netlify
- *   CLI through NETLIFY_COMMAND_ENV, so they need no network. package.json, .nvmrc and netlify.toml are
- *   named in settings.mjs, since other scripts read them too.
+ *   holds the two equal. The deploy line a site ends up with: DEPLOY_LINE, which prints DEPLOY_STEPS_LINE; the
+ *   template's package.json holds it too, and a template test holds the two equal. A line a join replaces:
+ *   OLD_DEPLOY_LINES. What a joined site's .gitignore must hold: the lists in lib/joinHousekeeping.mjs. Tests
+ *   point the script at a stand-in for the Netlify CLI through NETLIFY_COMMAND_ENV, so they need no network.
+ *   package.json, .nvmrc and netlify.toml are named in settings.mjs, since other scripts read them too.
  */
 
 export const SCRIPT = 'shared:join';
@@ -29,12 +30,32 @@ export const DOTENV_PACKAGE = 'docusaurus2-dotenv';
 /** Below this major a site is refused: shared/ was never built for it. */
 export const FIRST_JOINABLE_MAJOR = 3;
 
-/** What the older sites hold. It publishes outside Netlify, so a join replaces it. */
-export const OLD_DEPLOY_LINE = 'docusaurus deploy';
+/**
+ * What older sites hold, each replaced by a join. `docusaurus deploy` publishes outside Netlify. The Netlify
+ * line runs the older netlify-cli of the site's own node_modules and builds again, so it uploads something
+ * other than what `netlify build` made.
+ */
+export const OLD_DEPLOY_LINES = Object.freeze([
+  'docusaurus deploy',
+  'netlify deploy --prod --context production',
+]);
 
-export const DEPLOY_LINE = 'netlify deploy --prod --context production';
+/** How a site deploys: two steps a person runs, with the netlify command on the PATH, after `nvm use`. */
+export const DEPLOY_STEPS_LINE = 'nvm use && netlify build && netlify deploy --prod --no-build';
 
-/** A deploy line holding this already goes through Netlify, so it stays as it is. */
+/**
+ * A site's `npm run deploy`: it deploys nothing, prints the two steps and exits 1, so a chain that runs it
+ * stops. The template's package.json holds the same line, with its backslash written twice.
+ */
+export const DEPLOY_LINE = [
+  "printf '%s\\n'",
+  "'Nothing was deployed: this script only says how.'",
+  "'Deploy in two steps, with the netlify command on your PATH:'",
+  `'  ${DEPLOY_STEPS_LINE}'`,
+  '&& exit 1',
+].join(' ');
+
+/** Any other deploy line holding this goes through Netlify, so it stays as it is: the site's own. */
 export const DEPLOY_SIGN = 'netlify deploy';
 
 /** The lines every joined site holds, the same ones the README prints. */
