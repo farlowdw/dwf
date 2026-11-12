@@ -7,7 +7,7 @@
     "start": "NODE_OPTIONS=--max-old-space-size=8192 docusaurus start",
     "build": "NODE_OPTIONS=--max-old-space-size=8192 docusaurus build",
     "swizzle": "docusaurus swizzle",
-    "deploy": "netlify deploy --prod --context production",
+    "deploy": "printf '%s\\n' 'Nothing was deployed: this script only says how.' 'Deploy in two steps, with the netlify command on your PATH:' '  nvm use && netlify build && netlify deploy --prod --no-build' && exit 1",
     "clear": "docusaurus clear",
     "serve": "docusaurus serve",
     "write-translations": "docusaurus write-translations",

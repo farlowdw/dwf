@@ -34,12 +34,17 @@
  *                           --no-build, the section says what differs: the script runs the netlify-cli
  *                           installed in this folder and builds again, so what it uploads is not what
  *                           `netlify build` made and the checks read
+ *   the deploy script       package.json's deploy script deploys nothing: it prints the two steps,
+ *                           `nvm use` first, and exits 1, as shared/template/package.json's does. The
+ *                           README says so under "Deploying" and shows the line it prints after
+ *                           `nvm use`
  *
  * How to change it: a new check is a test below with a line in the list above. A name Finder or an
  * editor leaves in a folder goes in IGNORED_NAMES. A new wording of the README's sentence must still
  * match POINTER_SENTENCE. A post published for the first time adds its address to
  * PUBLISHED_POST_ADDRESSES; a post moved on purpose needs a redirect first, and then its line goes.
  * Red on the five rules after a pull: copy the list from shared/README.md into the README.
+ * A deploy script that deploys again: reword "Deploying" first, then the deploy script's test.
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -68,6 +73,12 @@ const PACKAGE = 'package.json';
 const DEPLOY_SCRIPT_BUILDS = (line) => /\bnetlify deploy\b/.test(line) && !line.includes('--no-build');
 const SAME_AS_TWO_STEPS = /`npm run deploy` does the same/;
 const OWN_CLI_BUILDS_AGAIN = /`npm run deploy` is not the same: it runs the `netlify-cli` installed in this folder[^.]*\bbuilds again\b/;
+/** The deploy script that deploys nothing: printf of quoted lines, then exit 1, and no other command. */
+const PRINTS_AND_EXITS_1 = /^printf (?:'[^']*' )+&& exit 1$/;
+const QUOTED = /'([^']*)'/g;
+/** How the steps the script prints start: Node's switch, which reads .nvmrc, comes before the build. */
+const SWITCH_NODE_FIRST = 'nvm use && ';
+const DEPLOYS_NOTHING = /`npm run deploy` deploys nothing: it prints\b/;
 
 const SHARED_README = 'shared/README.md';
 /** The heading both READMEs give the rules, at any level from ## to ####. */
@@ -225,4 +236,15 @@ test("the README does not call `npm run deploy` the same as the two-step deploy"
   if (!DEPLOY_SCRIPT_BUILDS(deployScript)) return;
   const advice = 'say that it runs the `netlify-cli` installed in this folder and builds again';
   assert.match(section, OWN_CLI_BUILDS_AGAIN, `${README}, "${DEPLOYING_HEADING}", does not say how \`npm run deploy\` differs: ${advice}`);
+});
+
+test('the deploy script deploys nothing, and Deploying says so and shows the steps it prints, nvm use first', () => {
+  const deployScript = JSON.parse(fs.readFileSync(path.join(ROOT, PACKAGE), 'utf8')).scripts?.deploy ?? '';
+  assert.match(deployScript, PRINTS_AND_EXITS_1, `${PACKAGE}'s deploy script should only print how to deploy and exit 1, as shared/template/package.json's does`);
+  const steps = [...deployScript.matchAll(QUOTED)].at(-1)[1].trim();
+  assert.ok(steps.startsWith(SWITCH_NODE_FIRST), `the steps ${PACKAGE}'s deploy script prints should start with \`nvm use\`: ${steps}`);
+  const section = textUnder(README, DEPLOYING_HEADING);
+  const deployLine = steps.slice(SWITCH_NODE_FIRST.length);
+  assert.ok(section.includes(deployLine), `${README}, "${DEPLOYING_HEADING}", does not show ${deployLine}, the line the deploy script prints after \`nvm use\``);
+  assert.match(section, DEPLOYS_NOTHING, `${README}, "${DEPLOYING_HEADING}", should say that \`npm run deploy\` deploys nothing: it prints the steps`);
 });
