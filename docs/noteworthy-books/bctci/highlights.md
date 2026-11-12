@@ -178,7 +178,7 @@ LinkedIn Sales Navigator will help you find hiring managers, RocketReach will he
 
 :::tip
 
-When you're actually ready to begin acting on the content in this section, consulting the following section in detail will be useful: [Treat your job search like a sales funnel](/docs/bctci/job-searches-start-to-finish/c7/#treat-your-job-search-like-a-sales-funnel)
+When you're actually ready to begin acting on the content in this section, consulting the following section in detail will be useful: Treat your job search like a sales funnel
 
 :::
 
@@ -391,7 +391,7 @@ In IIO's experience, they've never heard of a candidate regretting their decisio
 
 ### Consult "air traffic control" section on speeding up or slowing down when appropriate
 
-There are a lot of context-specific scenarios outlined in the [air traffic control](/docs/bctci/job-searches-start-to-finish/c9/#air-traffic-control---stalling-and-speeding-up) section for when and how to stall or speed up the interview process at different companies. Consult this section in more detail as appropriate.
+There are a lot of context-specific scenarios outlined in the air traffic control section for when and how to stall or speed up the interview process at different companies. Consult this section in more detail as appropriate.
 
 ### Questions to ask hiring managers specifically
 
