@@ -3,7 +3,7 @@
  * docusaurus.config.js: the whole site's configuration: title and URL, the docs, blog and pages,
  * the plugins, the navbar and the footer. The lists every site of the family repeats (admonition
  * keywords, KaTeX options, <DropDownIC>'s MDX plugins, Prism's languages and magic comments) and the
- * plugin entries of the code editor, KaTeX's stylesheet and the PDF viewer come from
+ * plugin entries of the code editor, KaTeX's stylesheet, the PDF viewer and the build id come from
  * shared/wiring/index.cjs, and shared/ also holds the global stylesheets (customCss) and static files
  * (staticDirectories).
  *
@@ -21,6 +21,9 @@
  *   pins it) from /vendor/katex-<version>/. The KaTeX script below stays: pseudocode.js typesets with it.
  *   Pseudocode's stylesheet below imports KaTeX 0.16.7's from cdnjs, whose fonts win (README.md > Maths).
  *   The PDF viewer: pdfjsWorkerPlugin() in `plugins` serves its worker; it takes no options.
+ *   The reload after a deploy: buildIdPlugin() in `plugins` gives each build an id, and the client
+ *   module src/clientModules/buildIdReload.js, named in `clientModules`, reloads an open tab that
+ *   still runs an older build, at a safe moment. Its header says how to remove it.
  *   The options of Docusaurus itself: https://docusaurus.io/docs/api/docusaurus-config
  * (`@type` JSDoc annotations below give editor autocompletion with `@ts-check`.)
  */
@@ -30,11 +33,11 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 // The lists every site shares, the inline dropdown's MDX plugins (<DropDownIC>,
 // shared/components/DropDownIC/mdx.cjs: a title read as markdown and maths, and the paragraph that
-// holds it drawn as a <div>), and the plugin entries of the code editor, KaTeX's stylesheet and the
-// PDF viewer.
+// holds it drawn as a <div>), and the plugin entries of the code editor, KaTeX's stylesheet, the
+// PDF viewer and the build id.
 const {
-  ADDITIONAL_LANGUAGES, MAGIC_COMMENTS, admonitionsConfig, codeRunnerPlugin, katexCssPlugin, katexOptions,
-  pdfjsWorkerPlugin, preprocessDropDownIc, rehypeDropDownIc, remarkDropDownIc,
+  ADDITIONAL_LANGUAGES, MAGIC_COMMENTS, admonitionsConfig, buildIdPlugin, codeRunnerPlugin, katexCssPlugin,
+  katexOptions, pdfjsWorkerPlugin, preprocessDropDownIc, rehypeDropDownIc, remarkDropDownIc,
 } = require('./shared/wiring/index.cjs');
 
 /** @type {import('@docusaurus/types').Config} */
@@ -58,6 +61,14 @@ const config = {
     forbiddenGiscusBlogPaths: [
     ],
   },
+
+  clientModules: [
+    // Reloads a tab that still runs an older build after a deploy, when nothing is unsaved (rules:
+    // shared/lib/pageReload/decide.js; the ids come from buildIdPlugin() below). A relative string,
+    // which Docusaurus resolves from this folder: this config ships in the public main bundle, so
+    // require.resolve would publish this machine's absolute path there.
+    './src/clientModules/buildIdReload.js',
+  ],
 
   i18n: {
     defaultLocale: 'en',
@@ -164,6 +175,9 @@ const config = {
     // The PDF viewer (<PDFViewer>, shared/components/PDFViewer): serves PDF.js's worker from this site at
     // /vendor/pdfjs-dist-<version>/ instead of a CDN, at the exact version the viewer bundles.
     pdfjsWorkerPlugin(),
+    // `npm run build` only: a fresh build id in every page's <meta> and in build/build-id.json, read
+    // by src/clientModules/buildIdReload.js (shared/plugins/build-id). It takes no options.
+    buildIdPlugin(),
   ],
 
   themeConfig:

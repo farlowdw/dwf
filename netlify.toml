@@ -89,3 +89,12 @@
   [headers.values]
     # Lower case, as in the two blocks above: Netlify warns when one header name comes in two cases.
     cache-control = "public, max-age=31536000, immutable"
+
+# The live build's id (shared/plugins/build-id; src/clientModules/buildIdReload.js asks for it): never
+# served from a cache, so an open tab learns about a deploy at once. To stop it: remove this block
+# with the feature (the client module's header says how).
+[[headers]]
+  for = "/build-id.json"
+  [headers.values]
+    # Lower case, as in the blocks above.
+    cache-control = "no-cache"

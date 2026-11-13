@@ -23,7 +23,7 @@ Install with `npm ci`, never `npm update`: `package-lock.json` holds the exact v
 | `env SKIP_HTML_MINIFICATION=true npm run build` | Production build into `build/`. Netlify builds with that variable set, so set it here too or the HTML differs. |
 | `npm run serve` | Serves `build/` on http://localhost:3000. |
 | `npm run clear` | Removes Docusaurus's caches and `build/`. |
-| `node --test scripts/site-files.test.mjs` | Checks on this site's own files that need no build: no file in `static/` hides one in `shared/static/`, the sentence below on `shared/README.md` sends readers to `--help`, every blog address the site has published still belongs to a post (a post whose date changes keeps its address with `slug:` in its front matter), the five rules below say what `shared/README.md`'s say, the docs sidebar's stub is still there, with the sidebar hideable, and Deploying says that `npm run deploy` deploys nothing and shows the steps it prints, `nvm use` first. The file's header lists them. |
+| `node --test scripts/site-files.test.mjs` | Checks on this site's own files that need no build: no file in `static/` hides one in `shared/static/`, the sentence below on `shared/README.md` sends readers to `--help`, every blog address the site has published still belongs to a post (a post whose date changes keeps its address with `slug:` in its front matter), the five rules below say what `shared/README.md`'s say, the docs sidebar's stub is still there, with the sidebar hideable, Deploying says that `npm run deploy` deploys nothing and shows the steps it prints, `nvm use` first, and the reload of an open tab after a deploy is wired and waits while a code editor holds unsaved text or once the comment box has had the focus. The file's header lists them. |
 | `node shared/scripts/check-mui-api.mjs` | Fails on an old MUI API name, such as `componentsProps` or `GridToolbar`. The Netlify build command runs it first, so a hit stops the build in under a second. Exit 0 is clean, 1 found a name, 2 could not run. The list is `shared/scripts/lib/oldMuiApis.json`, and the script's header says how to change it. |
 
 ## The shared folder
@@ -162,6 +162,26 @@ Deploy with the line above, after `nvm use` (Node 22). `npm run deploy` deploys 
 these steps, `nvm use` first, and exits with status 1. The line above reads `netlify.toml`, and
 `netlify build` takes `SKIP_HTML_MINIFICATION` from the Netlify project. Never use
 `docusaurus deploy`: it publishes to GitHub Pages, not to Netlify.
+
+## Open tabs after a deploy
+
+A tab left open keeps running the build it loaded. `buildIdPlugin()` in `docusaurus.config.js` gives
+every production build an id, in each page and in `/build-id.json`, and the client module
+`src/clientModules/buildIdReload.js` starts the shared reloader, `shared/lib/pageReload`. When the tab
+gets attention again, at most every ten minutes, it asks for `/build-id.json` and reloads onto a newer
+build. `netlify.toml` serves that file with `no-cache`. A tab loaded from a build that had no reloader
+stays as it is until someone reloads it.
+
+The reload waits while a text field has focus, a dialog is open or a code run is under way, and while
+a code editor holds unsaved text: the client module reads the editor's flag through the one-line stub
+`src/components/CodeEditor/unsavedWork.js`. The comment box is a frame of another site, so the page
+cannot see what is typed there: once that frame has had the focus, the tab keeps its build until it
+loads a page afresh (`src/clientModules/commentsFocus.js`). `npm start` writes no id, so nothing reloads
+there.
+
+No error reports a check that was dropped, so `scripts/site-files.test.mjs` runs the client module and
+fails when a reload no longer waits. `shared/lib/README.md` says how the reloader works, and the client
+module's header how to remove it.
 
 ## The public check
 

@@ -38,6 +38,19 @@
  *                           `nvm use` first, and exits 1, as shared/template/package.json's does. The
  *                           README says so under "Deploying" and shows the line it prints after
  *                           `nvm use`
+ *   the page reload         src/clientModules/buildIdReload.js starts the shared reloader, which
+ *                           reloads an open tab onto a newer build. Here that file is RUN in a fake
+ *                           browser page, with the real reloader: a newer build reloads a page that holds
+ *                           nothing; the reload waits while the code editor's registry holds unsaved text,
+ *                           read through the stub as the page reads it; it waits for good once the comment
+ *                           box has had the focus; and a page with no build id (`npm start`) installs
+ *                           nothing. No error reports a check that was dropped: the reloader's default is
+ *                           "nothing is unsaved", and a page then reloads over typed text. The wiring
+ *                           around it is read as text: the config names the client module as a relative
+ *                           string (require.resolve would publish this machine's path in the main bundle)
+ *                           and holds buildIdPlugin(), and netlify.toml serves /build-id.json with
+ *                           no-cache, or a cached copy hides a deploy. It cannot see the bundle, a real
+ *                           browser or the comments' frame: it runs the source files under Node
  *
  * How to change it: a new check is a test below with a line in the list above. A name Finder or an
  * editor leaves in a folder goes in IGNORED_NAMES. A new wording of the README's sentence must still
@@ -45,13 +58,20 @@
  * PUBLISHED_POST_ADDRESSES; a post moved on purpose needs a redirect first, and then its line goes.
  * Red on the five rules after a pull: copy the list from shared/README.md into the README.
  * A deploy script that deploys again: reword "Deploying" first, then the deploy script's test.
+ * The page reload: another place that holds typed text gets a test like the comment box's.
+ * site-files.hooks.mjs says how the client module's imports are followed under Node; the registry
+ * moves: EDITOR_REGISTRY, with the client module's import.
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { register } from 'node:module';
 import path from 'node:path';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseBlogFileName } from '@docusaurus/plugin-content-blog/lib/blogUtils.js';
+
+// Before the first dynamic import below: the client module's Docusaurus and @site names (site-files.hooks.mjs).
+register('./site-files.hooks.mjs', import.meta.url);
 
 /** The repo's top folder, so the tests read the same files from any working folder. */
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -112,6 +132,30 @@ const SIDEBAR_STUB_CODE = "export { default } from '@site/shared/theme/DocRoot/L
 const SIDEBAR_WRAPPER = 'shared/theme/DocRoot/Layout/Sidebar/index.jsx';
 /** themeConfig.docs.sidebar with hideable on: the collapse button and the expand strip exist. */
 const HIDEABLE = /\bdocs:\s*\{\s*sidebar:\s*\{[^}]*\bhideable:\s*true\b/;
+
+/** The reload after a deploy: the client module, how the config names it, and the registry the editor writes to. */
+const RELOAD_MODULE = 'src/clientModules/buildIdReload.js';
+const RELOAD_MODULE_ENTRY = `'./${RELOAD_MODULE}'`;
+const EDITOR_REGISTRY = 'shared/components/CodeEditor/unsavedWork.js';
+/** The config's clientModules list, up to its closing bracket, and the plugin that writes the build ids. */
+const CLIENT_MODULES_LIST = /\bclientModules:\s*\[([^\]]*)\]/;
+const BUILD_ID_PLUGIN_CALL = 'buildIdPlugin()';
+/** netlify.toml's block for the live build's id: its path, then no-cache, with comment lines allowed between. */
+const NETLIFY = 'netlify.toml';
+const BUILD_ID_HEADER = /\[\[headers\]\]\s*\n\s*for = "\/build-id\.json"\s*\n\s*\[headers\.values\]\s*\n(?:\s*#[^\n]*\n)*\s*cache-control = "no-cache"/i;
+/** The fake page: its address, the build it loaded and the build that is live. */
+const ORIGIN = 'https://site.test';
+const LOADED_BUILD = 'old-1';
+const LIVE_BUILD = 'new-2';
+/** What webpack rejects with when a chunk of the old build is gone: the reloader then checks at once. */
+const CHUNK_FAILURE = Object.freeze({ reason: { name: 'ChunkLoadError', message: 'Loading chunk 1 failed.' } });
+/** What document.activeElement is on a plain page, and while the focus is in the comments' frame. */
+const PAGE_BODY = Object.freeze({ tagName: 'BODY', closest: () => null });
+const COMMENTS_WIDGET = Object.freeze({
+  tagName: 'GISCUS-WIDGET',
+  closest: (selector) => (selector.split(',').some((part) => part.trim() === 'giscus-widget') ? COMMENTS_WIDGET : null),
+});
+const DROPPED_CHECK = `${RELOAD_MODULE} must hand startReloader a hasUnsavedWork that asks the code editor's registry (${EDITOR_REGISTRY}, through its stub) and the comment box`;
 
 /** Every file under a folder of the repo, as paths relative to that folder. */
 function filesUnder(folder) {
@@ -188,6 +232,74 @@ function postAddresses() {
     .filter(Boolean);
 }
 
+/** Lets the reloader's awaited fetch and its JSON finish. */
+async function settle() {
+  for (let round = 0; round < 5; round += 1) await Promise.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
+}
+
+/**
+ * A fake browser page for the client module. Its build id is `buildId` (null: a page of `npm start`,
+ * which has none), and /build-id.json answers LIVE_BUILD. `fire` sends an event to the page's
+ * listeners, `runTimers` runs what was set with setTimeout, and `reloads` counts location.reload().
+ */
+function fakePage(buildId) {
+  const page = { reloads: 0, timers: [], listeners: {}, session: new Map() };
+  const listen = (type, listener) => {
+    (page.listeners[type] ??= []).push(listener);
+  };
+  page.document = {
+    visibilityState: 'visible',
+    activeElement: PAGE_BODY,
+    createElement: () => ({}),
+    // The build id's <meta>, when the page has one. No dialog is open: every other selector finds nothing.
+    querySelector: (selector) => (buildId !== null && String(selector).startsWith('meta[') ? { getAttribute: () => buildId } : null),
+    addEventListener: listen,
+  };
+  page.window = {
+    document: page.document,
+    fetch: async () => ({ ok: true, json: async () => ({ buildId: LIVE_BUILD }) }),
+    location: { origin: ORIGIN, reload: () => { page.reloads += 1; } },
+    addEventListener: listen,
+    setTimeout: (callback) => page.timers.push(callback),
+    sessionStorage: { getItem: (key) => page.session.get(key) ?? null, setItem: (key, value) => page.session.set(key, value) },
+  };
+  page.fire = async (type, event = {}) => {
+    for (const listener of page.listeners[type] ?? []) listener(event);
+    await settle();
+  };
+  page.runTimers = async () => {
+    const due = page.timers;
+    page.timers = [];
+    due.forEach((callback) => callback());
+    await settle();
+  };
+  return page;
+}
+
+let pagesOpened = 0;
+
+/** Opens a fresh fake page and loads the client module into it, as a page load does. */
+async function openPage(buildId = LOADED_BUILD) {
+  const page = fakePage(buildId);
+  globalThis.window = page.window;
+  globalThis.document = page.document;
+  pagesOpened += 1;
+  await import(`${pathToFileURL(path.join(ROOT, RELOAD_MODULE)).href}?page=${pagesOpened}`);
+  return page;
+}
+
+/** Takes the fake page away again. */
+function closePage() {
+  delete globalThis.window;
+  delete globalThis.document;
+}
+
+/** The registry the code editor writes to, by the file's own address: the one copy the stub must hand on. */
+function editorRegistry() {
+  return import(pathToFileURL(path.join(ROOT, EDITOR_REGISTRY)).href);
+}
+
 test('no file in static/ hides a file of shared/static/', () => {
   assert.ok(fs.existsSync(path.join(ROOT, SHARED_STATIC)), `${SHARED_STATIC} is missing: is shared/ mounted?`);
   const hidden = hiddenSharedFiles();
@@ -247,4 +359,87 @@ test('the deploy script deploys nothing, and Deploying says so and shows the ste
   const deployLine = steps.slice(SWITCH_NODE_FIRST.length);
   assert.ok(section.includes(deployLine), `${README}, "${DEPLOYING_HEADING}", does not show ${deployLine}, the line the deploy script prints after \`nvm use\``);
   assert.match(section, DEPLOYS_NOTHING, `${README}, "${DEPLOYING_HEADING}", should say that \`npm run deploy\` deploys nothing: it prints the steps`);
+});
+
+test('the reload after a deploy: a newer build reloads a page that holds nothing', async () => {
+  try {
+    const page = await openPage();
+    assert.ok((page.listeners.unhandledrejection ?? []).length > 0, `${RELOAD_MODULE} started the reloader in the page`);
+    assert.equal((page.listeners.blur ?? []).length, 1, 'and the watch on the comment box');
+    await page.fire('unhandledrejection', CHUNK_FAILURE);
+    assert.equal(page.reloads, 1, 'nothing holds the page, so it reloads. Without this, "no reload" in the tests below would prove nothing');
+  } finally {
+    closePage();
+  }
+});
+
+test('the reload after a deploy waits while a code editor holds unsaved text, and goes once it is saved', async () => {
+  const { setUnsavedWork } = await editorRegistry();
+  const editor = {};
+  try {
+    const page = await openPage();
+    setUnsavedWork(editor, true); // as the editor does while its code differs from the page's
+    await page.fire('unhandledrejection', CHUNK_FAILURE);
+    assert.equal(page.reloads, 0, `the page reloaded over unsaved code: ${DROPPED_CHECK}`);
+    assert.equal(page.timers.length, 1, 'held, not dropped: the reloader looks again shortly');
+    await page.runTimers();
+    assert.equal(page.reloads, 0, 'still unsaved, so still held');
+    setUnsavedWork(editor, false); // saved, reset or unmounted
+    await page.runTimers();
+    assert.equal(page.reloads, 1, 'nothing unsaved any more: the page reloads onto the new build');
+  } finally {
+    setUnsavedWork(editor, false);
+    closePage();
+  }
+});
+
+test('the reload after a deploy waits for good once the comment box has had the focus', async () => {
+  try {
+    const page = await openPage();
+    page.document.activeElement = COMMENTS_WIDGET; // a click into the comments' frame
+    await page.fire('blur'); // the window loses the focus to it
+    page.document.activeElement = PAGE_BODY; // then a click back on the page
+    await page.fire('unhandledrejection', CHUNK_FAILURE);
+    assert.equal(page.reloads, 0, `the page reloaded over a comment that may be half typed: ${DROPPED_CHECK}`);
+    await page.runTimers();
+    await page.runTimers();
+    assert.equal(page.reloads, 0, 'the focus is back on the page and the reload still waits: the typed text cannot be seen, so the tab keeps its build');
+  } finally {
+    closePage();
+  }
+});
+
+test('the reload after a deploy also waits when the reloader asks while the focus is in the comment box, with no blur seen', async () => {
+  try {
+    const page = await openPage();
+    page.document.activeElement = COMMENTS_WIDGET; // a tab that comes back with the cursor still in the frame
+    await page.fire('unhandledrejection', CHUNK_FAILURE);
+    assert.equal(page.reloads, 0, `the page reloaded with the cursor in the comment box: ${DROPPED_CHECK}`);
+    page.document.activeElement = PAGE_BODY;
+    await page.runTimers();
+    assert.equal(page.reloads, 0, 'and it stays held after the focus has left the frame');
+  } finally {
+    closePage();
+  }
+});
+
+test('the reload after a deploy installs nothing in a page with no build id, as under npm start', async () => {
+  try {
+    const page = await openPage(null);
+    assert.deepEqual(Object.keys(page.listeners), [], 'no listener: neither the reloader nor the watch on the comment box');
+    assert.equal(page.timers.length, 0, 'and no timer');
+  } finally {
+    closePage();
+  }
+});
+
+test('the reload after a deploy is wired: a relative client module, the build id plugin, no cache for /build-id.json', () => {
+  const config = codeOf(CONFIG);
+  const list = config.match(CLIENT_MODULES_LIST)?.[1];
+  assert.ok(list, `${CONFIG} has no clientModules list: the reloader never starts, and an old tab keeps its build`);
+  assert.ok(list.includes(RELOAD_MODULE_ENTRY), `${CONFIG}'s clientModules should name ${RELOAD_MODULE_ENTRY}`);
+  assert.ok(!list.includes('require.resolve'), `${CONFIG}'s clientModules calls require.resolve: the config ships in the public main bundle, so write a relative string`);
+  assert.ok(fs.existsSync(path.join(ROOT, RELOAD_MODULE)), `${RELOAD_MODULE} is missing`);
+  assert.ok(config.includes(BUILD_ID_PLUGIN_CALL), `${CONFIG} has no ${BUILD_ID_PLUGIN_CALL} in plugins: no page carries a build id, and the reloader installs nothing`);
+  assert.match(fs.readFileSync(path.join(ROOT, NETLIFY), 'utf8'), BUILD_ID_HEADER, `${NETLIFY} should serve /build-id.json with cache-control "no-cache": a cached copy hides a deploy`);
 });
