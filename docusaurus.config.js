@@ -24,6 +24,21 @@
  *   The reload after a deploy: buildIdPlugin() in `plugins` gives each build an id, and the client
  *   module src/clientModules/buildIdReload.js, named in `clientModules`, reloads an open tab that
  *   still runs an older build, at a safe moment. Its header says how to remove it.
+ *   The page-feedback prompt under docs pages and blog posts (src/components/PageFeedback; its
+ *   function is functions/feedback), in customFields: feedbackEnabled switches it on (true) or off
+ *   (false) on every page at once. While it is true, scripts/site-files.test.mjs fails until every
+ *   word it needs is written in src/components/PageFeedback/words.js; with a site key (below),
+ *   captchaFailed must be written there too. The pages that never show it:
+ *   forbiddenFeedbackDocPaths and forbiddenFeedbackBlogPaths. An entry is one page's permalink, as
+ *   in '/docs/intro', and matches that page with or without a trailing slash. No '*' in an entry:
+ *   there is no wildcard, and scripts/site-files.test.mjs reads this file without knowing strings.
+ *   Unlisted pages never show it. feedbackCaptchaSiteKey is the captcha's site key (Cloudflare
+ *   Turnstile; '' for no captcha): public by design, since it ships in every page. Its secret is
+ *   the Netlify variable FEEDBACK_CAPTCHA_SECRET, never a file. A site key is at most 32
+ *   characters, so a longer value is most likely the secret, and scripts/site-files.test.mjs fails
+ *   on it. The function's mails link to the pages at the site's `url`:
+ *   functions/feedback/lib/mail.mjs > SITE_ORIGIN holds the same address, and
+ *   scripts/site-files.test.mjs compares the two.
  *   The options of Docusaurus itself: https://docusaurus.io/docs/api/docusaurus-config
  * (`@type` JSDoc annotations below give editor autocompletion with `@ts-check`.)
  */
@@ -60,6 +75,15 @@ const config = {
     ],
     forbiddenGiscusBlogPaths: [
     ],
+    feedbackEnabled: false,
+    forbiddenFeedbackDocPaths: [
+      '/docs/intro',
+      '/docs/admonitions',
+      '/docs/reference-list',
+    ],
+    forbiddenFeedbackBlogPaths: [
+    ],
+    feedbackCaptchaSiteKey: '',
   },
 
   clientModules: [

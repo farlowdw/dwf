@@ -1,3 +1,22 @@
+/**
+ * src/theme/DocItem/Layout/index.js: the frame of every docs page (the article, the Previous / Next
+ * buttons, the table of contents). A copy (swizzle, eject) of @docusaurus/theme-classic 3.10.2's
+ * DocItem/Layout, with two additions:
+ *   - Giscus, the comment box, under the Previous / Next buttons below a horizontal bar, except on
+ *     the pages in docusaurus.config.js > customFields.forbiddenGiscusDocPaths;
+ *   - the page-feedback prompt (src/components/PageFeedback), between the page's content and its
+ *     footer (the Tags and "Edit this page" rows). The prompt decides itself whether it shows:
+ *     customFields.feedbackEnabled and forbiddenFeedbackDocPaths, and the page's own unlisted flag.
+ * Apart from those, the copy differs from the original only in spacing and the original's licence
+ * header. styles.module.css beside it is the original's, without that header.
+ *
+ * HOW TO CHANGE IT
+ *   After a Docusaurus upgrade, compare this copy with the installed original (-w hides the spacing):
+ *     diff -w node_modules/@docusaurus/theme-classic/lib/theme/DocItem/Layout/index.js src/theme/DocItem/Layout/index.js
+ *   and carry over what changed there, keeping the two additions. scripts/site-files.test.mjs goes red
+ *   when the original no longer renders DocItemContent and then DocItemFooter, the place the prompt
+ *   sits, and when the prompt is no longer mounted here. The prompt itself: src/components/PageFeedback.
+ */
 import React from 'react';
 import clsx from 'clsx';
 import { useWindowSize } from '@docusaurus/theme-common';
@@ -16,6 +35,7 @@ import Giscus from '@giscus/react';
 import { useColorMode } from '@docusaurus/theme-common';
 import { useLocation } from '@docusaurus/router';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+import PageFeedback from '@site/src/components/PageFeedback';
 /**
  * Decide if the toc should be rendered, on mobile or desktop viewports
  */
@@ -73,6 +93,7 @@ export default function DocItemLayout({ children }) {
             <DocVersionBadge />
             {docTOC.mobile}
             <DocItemContent>{children}</DocItemContent>
+            <PageFeedback key={metadata.permalink} permalink={metadata.permalink} unlisted={metadata.unlisted} />
             <DocItemFooter />
           </article>
           <DocItemPaginator />

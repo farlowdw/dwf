@@ -1,18 +1,22 @@
 /**
  * buildIdReload.js: reloads a tab that still runs an OLD build after a deploy, at a safe moment
- * (never while a code editor holds unsaved text, after the comment box has had the focus, while a
- * dialog is open or a text field has focus, or during a code run). A Docusaurus client module
+ * (never while a code editor holds unsaved text or the page-feedback card holds text not sent yet,
+ * after the comment box has had the focus, while a dialog is open or a text field has focus, or
+ * during a code run). A Docusaurus client module
  * (docusaurus.config.js > clientModules): it runs once per page load, in the browser only. During
  * the static build and under `npm start` (no build id in the page) it does nothing.
  *
  * How it works: shared/lib/pageReload/reloader.js (the browser side) and decide.js (the rules and
  * timings), the one copy every site that mounts shared/ runs. This file stays the site's own and
- * hands the reloader this site's unsaved-text check, which asks two things:
+ * hands the reloader this site's unsaved-text check, which asks three things:
  *   - the code editor's own flag (shared/components/CodeEditor/unsavedWork.js > hasUnsavedWork),
  *     imported through the stub src/components/CodeEditor/unsavedWork.js. The stub must stay a
  *     plain re-export: a copy would be a second, empty registry, and no error says so;
  *   - the comment box (./commentsFocus.js): its text is in a frame of another site, where this
- *     page cannot see it, so the tab keeps its build once that frame has had the focus.
+ *     page cannot see it, so the tab keeps its build once that frame has had the focus;
+ *   - the page-feedback card's own flag (src/components/PageFeedback/unsentText.js >
+ *     hasUnsentText): set while the card's field holds text and while a message is on its way,
+ *     and kept when the card is closed, until the text is sent, emptied or the page is left.
  * The ids come from shared/plugins/build-id (buildIdPlugin() in docusaurus.config.js), and
  * netlify.toml serves /build-id.json with no cache.
  * The reloader's default is "nothing is unsaved": drop the argument below and a reload can take
@@ -30,11 +34,12 @@ import ExecutionEnvironment from '@docusaurus/ExecutionEnvironment';
 import { hasUnsavedWork as editorHasUnsavedWork } from '../components/CodeEditor/unsavedWork.js';
 import { startReloader } from '../../shared/lib/pageReload/reloader.js';
 import { watchCommentsFocus } from './commentsFocus.js';
+import { hasUnsentText as feedbackHasUnsentText } from '../components/PageFeedback/unsentText.js';
 
 if (ExecutionEnvironment.canUseDOM) {
   /** Answers false until the reloader has started: a page with no build id watches nothing. */
   let commentsHadFocus = () => false;
-  const hasUnsavedWork = () => editorHasUnsavedWork() || commentsHadFocus();
+  const hasUnsavedWork = () => editorHasUnsavedWork() || commentsHadFocus() || feedbackHasUnsentText();
   const started = startReloader({ win: window, doc: document, hasUnsavedWork });
   if (started !== null) commentsHadFocus = watchCommentsFocus({ win: window, doc: document });
 }

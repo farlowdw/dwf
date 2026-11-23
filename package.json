@@ -22,7 +22,7 @@
     "shared:bump": "node shared/scripts/bump.mjs",
     "shared:all": "node shared/scripts/all.mjs",
     "shared:compare": "node shared/scripts/compare.mjs",
-    "shared:verify": "node shared/scripts/check-mui-api.mjs && node --test shared/scripts/__tests__/check-public.test.mjs scripts/site-files.test.mjs && npm run test:shared"
+    "shared:verify": "node shared/scripts/check-mui-api.mjs && node --test shared/scripts/__tests__/check-public.test.mjs scripts/site-files.test.mjs src/components/PageFeedback/__tests__/rules.test.js src/components/PageFeedback/__tests__/unsentText.test.js src/components/PageFeedback/__tests__/sendFeedback.test.js src/components/PageFeedback/__tests__/captcha.test.js functions/feedback/__tests__/feedback.test.mjs functions/feedback/__tests__/fields.test.mjs functions/feedback/__tests__/captcha.test.mjs functions/feedback/__tests__/mail.test.mjs && npm run test:shared"
   },
   "comparePages": [
     "/",
@@ -37,6 +37,9 @@
     "/blog/2026/01/15/2026/docusaurus-mui-light-dark/",
     "/about/",
     "/resume/"
+  ],
+  "ownFunctions": [
+    "feedback"
   ],
   "dependencies": {
     "@docusaurus/plugin-content-blog": "3.10.2",

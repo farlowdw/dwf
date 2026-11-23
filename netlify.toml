@@ -1,6 +1,6 @@
 # netlify.toml: how Netlify builds and serves this site. [build] holds the build command and the
-# folders, [build.environment] the Node version, [functions] the code editor's two functions, [dev]
-# what `netlify dev` runs, and each [[headers]] block one path's headers.
+# folders, [build.environment] the Node version, [functions] the site's functions, [dev] what
+# `netlify dev` runs, and each [[headers]] block one path's headers.
 # To change it: edit the block concerned, then run `netlify build` to check it. This file is
 # public, so no secret goes here: anything private is a variable on the Netlify project.
 # The build command starts with shared/scripts/check-mui-api.mjs, which stops on an old MUI name in under a
@@ -24,6 +24,9 @@
 [build.environment]
   NODE_VERSION = "22"
 
+# The site's functions, all in netlify/functions: the code editor's two shims, and the functions
+# package.json names in ownFunctions as the site's own. Nothing else goes in that folder: any other
+# file there deploys as a public endpoint, and `npm run test:shared` fails on it.
 # The code editor's two functions, the proxies its Run button calls: netlify/functions/execute.mjs
 # (POST /.netlify/functions/execute, runs a program) and runtimes.mjs (GET
 # /.netlify/functions/runtimes, what the server has installed). Each is a one-line shim of
@@ -31,18 +34,26 @@
 # what it imports. They need PISTON_BASE_URL and PISTON_PROXY_SECRET on the Netlify project, scope
 # Functions; without them each answers 500 and Run says so in plain words. This site is public, so
 # the functions' own guards decide who may run: only this site's pages, and 20 runs per 60 s per
-# client, the default, because CODE_RUNNER_RATE_LIMIT is left unset. Nothing else goes in that
-# folder: any other file there deploys as a public endpoint, and `npm run test:shared` fails on it.
+# client, the default, because CODE_RUNNER_RATE_LIMIT is left unset.
 # The rest: shared/functions/code-runner/README.md.
+# The page feedback's function, the site's own: netlify/functions/feedback.mjs (POST
+# /.netlify/functions/feedback, mails one message from the prompt under a page) is a one-line shim
+# of functions/feedback/feedback.mjs. It needs FEEDBACK_EMAIL_API_KEY, FEEDBACK_EMAIL_FROM and
+# FEEDBACK_EMAIL_TO on the Netlify project, scope Functions; while one is missing it refuses every
+# message. FEEDBACK_CAPTCHA_SECRET, the fourth, turns its captcha check on.
+# The rest: functions/feedback/README.md.
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# `netlify dev`: the Docusaurus dev server on 3020, served with the two functions on 8892, so open
+# `netlify dev`: the Docusaurus dev server on 3020, served with the functions on 8892, so open
 # http://localhost:8892. `npm start` serves no function, so Run fails there. Both ports are this
 # site's own, so it runs beside other sites' dev servers. Run needs the folder linked to the Netlify
-# project (`netlify link`, once): the CLI then brings the two variables above. To change a port: the
-# `--port` in `command` and `targetPort` must agree, and `port` is the one to open.
+# project (`netlify link`, once): the CLI then brings the two PISTON_ variables above. It brings the
+# page feedback's variables too, each one that has a value for local development. Whether a Send
+# there sends a real mail depends on those and on the captcha: functions/feedback/README.md, "Trying
+# it". To change a port: the `--port` in `command` and `targetPort` must agree, and `port` is the one
+# to open.
 [dev]
   command = "npm run start -- --port 3020 --no-open"
   targetPort = 3020

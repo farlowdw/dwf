@@ -1,0 +1,381 @@
+/* styles.module.css: the look of the page-feedback prompt (index.jsx). The row: the question and
+   two thumbs on a quiet tint with fully rounded ends, as wide as what it holds (never the page's
+   width on a desktop), at the left; a question or thanks too long for one line wraps beside the
+   thumbs, which keep their place at the row's end. The card, under the row while a thumb is
+   chosen: a thin border round the line for that thumb, the field, the optional note, the problem
+   line, the count, the captcha's place, and Cancel and Send at the right. The page below moves
+   down while it is open. Two elements are for a screen reader only and are never seen
+   (.visuallyHidden): the prompt's status line, and the count as it is read out. Every rule is on
+   the component's own elements; none reaches outside it.
+
+   COLOURS  Infima's variables only, so both colour modes follow html[data-theme] before the first
+   paint (the docs row is in the server's HTML, and useColorMode knows the reader's mode only after
+   hydration). The ratios below are measured on the site's values (shared/css/custom.scss and
+   _custom-dark.scss).
+   - The thumbs: light --ifm-color-success-darker and --ifm-color-danger-darker; dark (under
+     html[data-theme='dark']) --ifm-color-success and --ifm-color-danger. On the page 4.64 and
+     4.93 : 1 light, 6.67 and 5.56 : 1 dark. On the row's tint (--ifm-code-background, the site's
+     quiet grey, also under its pseudocode boxes: #f3f5f7 light, #1c262f dark) 4.25 and 4.51 : 1
+     light, 5.95 and 4.95 : 1 dark, where an icon needs 3 : 1. The two thumbs differ by shape too,
+     so colour is never the only signal, and the chosen one is drawn filled.
+   - The question and the card's text: the page's own (--ifm-font-color-base). The note and the
+     count: --ifm-color-emphasis-700 (5.72 : 1 light, 12.64 : 1 dark). The problem line, and the
+     count once the field is full (data-full): the red of the thumbs down.
+   - The field's placeholder, when words.js has one: --ifm-color-emphasis-700 light (5.72 : 1 on
+     white) and --ifm-color-emphasis-400 dark (5.63 : 1 on the dark page, and dimmer than typed
+     text there, so it is not taken for it), with opacity 1 so that no browser fades it further.
+     Each browser's own placeholder grey is under 4.5 : 1 in one of the two modes.
+   - The field's edge: #8d949e in both modes (--ifm-color-emphasis-600 light, -400 dark: Infima
+     turns its emphasis scale round in dark mode), 3.06 : 1 on white and 5.63 : 1 on the dark
+     page; red while text is missing. The card's own edge is quieter: --ifm-color-emphasis-300,
+     as the site's tables.
+   - Send: white on --ifm-color-primary-dark (4.70 : 1; under white the site's own blue is only
+     3.82 : 1, too weak for a small label). The focus ring: --ifm-color-primary, at least
+     3.49 : 1 on everything it meets.
+
+   SIZES  The question at 0.9rem; each icon 1.25rem in a 40 × 40 px button (a hit area well above
+   WCAG 2.5.8's 24 px), with 0.5rem between the two. Each thumb's edge is a transparent 1px border
+   inside those 40 px: invisible, but drawn in forced colours (Windows High Contrast), where the
+   buttons then keep an outline. The row is 3rem tall with a 1.5rem radius: fully round ends; a
+   question that wraps makes it taller. The field's text is 1rem (16 px: iOS zooms into a field
+   with smaller text); the field is at least four lines tall, grows with its text where the
+   browser can (field-sizing) up to 40% of the window's height, and can be dragged taller on a
+   desktop (a phone draws no handle: one that knows no field-sizing either keeps the four lines,
+   and a longer text scrolls inside them). The card is at most 42rem wide. Cancel and Send are as tall as a thumb. The row's padding and the
+   count's alignment are written by direction (padding-inline, text-align: end), so a page set
+   right to left mirrors them.
+
+   SPACING  The component has 3rem above and below it. On a docs page it sits between the page's
+   text and the footer (Tags, "Edit this page"), whose own top margin of 3rem collapses with the
+   component's bottom one: the row has the same space above and below. On a blog post it sits
+   inside the post's div.markdown, above the comment box's <hr>, whose top margin of 1.5rem
+   collapses with the component's 3rem: the same space above and below there too. Infima's
+   .markdown rules reach only its direct children's headings, paragraphs and lists, and its last
+   child's bottom margin, which they set to 0: on a post without the comment box the component is
+   that last child, and the space below it is what follows the post's text. Every element below
+   sets its own margin, font and colour. Inside the card the gaps are margins in normal flow, so
+   an empty line (the problem line, the count, a captcha that shows nothing) takes no space.
+
+   BEFORE HYDRATION  While <html> carries data-has-hydrated="false" (Docusaurus sets it to "true"
+   once the page is live: node_modules/@docusaurus/core/lib/client/hasHydratedDataAttribute.js),
+   the component is visibility: hidden. Its space stays, so nothing moves, and nobody can press a
+   button before it works. With scripts off it never shows; a browser that knows the media query
+   (scripting: none) then leaves it out (display: none), so no empty band stays above the footer,
+   and an older browser keeps its space, empty.
+
+   HOW TO CHANGE IT  A colour: its variable below, and its twin under html[data-theme='dark'];
+   check its ratio on the row's tint and on both pages. A size or a gap: its rule. The words are in
+   words.js, the icons in index.jsx. */
+
+.feedback {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin: 3rem 0;
+}
+
+:global(html[data-has-hydrated='false']) .feedback {
+  visibility: hidden;
+}
+
+/* with scripts off the prompt cannot work: no space is kept for it */
+@media (scripting: none) {
+  .feedback {
+    display: none;
+  }
+}
+
+/* THE ROW */
+
+.row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.75rem;
+  box-sizing: border-box;
+  max-width: 100%;
+  min-height: 3rem;
+  padding-block: 0.25rem;
+  padding-inline: 1rem 0.25rem;
+  border-radius: 1.5rem;
+  background-color: var(--ifm-code-background);
+  color: var(--ifm-font-color-base);
+}
+
+/* the question, or the thanks in its place: a long one wraps beside the thumbs. The scroll margins
+   are for the thanks, which is brought into view after a send (index.jsx > focusThanks): clear of
+   the site's navbar, which hides while the page scrolls down and comes back over the top of the
+   window when it scrolls up, as it does on the way to the thanks; and a little air below */
+.question {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  scroll-margin-top: calc(var(--ifm-navbar-height) + 1rem);
+  scroll-margin-bottom: 1rem;
+}
+
+.thumbs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.thumb {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background-color: transparent;
+  appearance: none;
+  cursor: pointer;
+  transition: background-color var(--ifm-transition-fast) ease;
+}
+
+.thumb:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
+}
+
+/* while a message is on its way, and once it was sent: the thumbs stay as they are and do nothing */
+.thumb[aria-disabled='true'] {
+  cursor: default;
+}
+
+.up {
+  color: var(--ifm-color-success-darker);
+}
+
+.down {
+  color: var(--ifm-color-danger-darker);
+}
+
+.icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: currentColor;
+}
+
+/* THE CARD */
+
+.card {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 42rem;
+  margin: 0;
+  padding: 0.75rem 1rem 1rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: calc(2 * var(--ifm-global-radius));
+  color: var(--ifm-font-color-base);
+}
+
+/* the line for the chosen thumb: the field's label */
+.ask {
+  display: block;
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  font-weight: var(--ifm-font-weight-semibold);
+  line-height: 1.4;
+}
+
+.field {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: calc(6em + 1rem + 2px); /* four lines of 1.5em, the padding and the border */
+  max-height: 40vh;
+  margin: 0;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--ifm-color-emphasis-600);
+  border-radius: var(--ifm-global-radius);
+  background-color: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.5;
+  appearance: none; /* no inner shadow of its own on iOS */
+  resize: vertical;
+  field-sizing: content;
+}
+
+.field::placeholder {
+  color: var(--ifm-color-emphasis-700);
+  opacity: 1;
+}
+
+.field:focus {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 1px;
+}
+
+.field[aria-invalid='true'] {
+  border-color: var(--ifm-color-danger-darker);
+}
+
+.note {
+  margin: 0.5rem 0 0;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+/* in the card from the start (role="alert"); empty, it takes no space */
+.problem {
+  margin: 0.5rem 0 0;
+  color: var(--ifm-color-danger-darker);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+/* "1834 / 2000", from COUNTER_FROM on; empty before. A screen reader gets its copy (.visuallyHidden) */
+.count {
+  margin: 0.25rem 0 0;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  text-align: end;
+}
+
+/* the field is full: it takes no more */
+.count[data-full] {
+  color: var(--ifm-color-danger-darker);
+}
+
+/* Cloudflare's widget, drawn here only when it needs the reader (captcha.js) */
+.captcha {
+  max-width: 100%;
+  margin-top: 0.75rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.cancel,
+.send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 2.5rem;
+  margin: 0;
+  padding: 0.375rem 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--ifm-global-radius);
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  appearance: none;
+  cursor: pointer;
+  transition: background-color var(--ifm-transition-fast) ease;
+}
+
+.cancel {
+  border-color: var(--ifm-color-emphasis-300);
+  background-color: transparent;
+  color: var(--ifm-font-color-base);
+}
+
+.send {
+  background-color: var(--ifm-color-primary-dark);
+  color: var(--ifm-color-white);
+  font-weight: var(--ifm-font-weight-semibold);
+}
+
+.cancel:focus-visible,
+.send:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
+}
+
+/* while a message is on its way: Cancel waits, Send says `sending` */
+.cancel[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.send[aria-disabled='true'] {
+  cursor: progress;
+}
+
+/* FOR A SCREEN READER ONLY: read out, never seen (the status line, the count's copy) */
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* HOVER, only where there is a pointer that hovers (a tap would leave it stuck on a phone) */
+
+@media (hover: hover) {
+  .thumb:not([aria-disabled='true']):hover,
+  .cancel:not([aria-disabled='true']):hover {
+    background-color: var(--ifm-hover-overlay);
+  }
+
+  .send:not([aria-disabled='true']):hover {
+    background-color: var(--ifm-color-primary-darker);
+  }
+}
+
+/* DARK MODE */
+
+:global(html[data-theme='dark']) .up {
+  color: var(--ifm-color-success);
+}
+
+:global(html[data-theme='dark']) .down {
+  color: var(--ifm-color-danger);
+}
+
+:global(html[data-theme='dark']) .problem,
+:global(html[data-theme='dark']) .count[data-full] {
+  color: var(--ifm-color-danger);
+}
+
+:global(html[data-theme='dark']) .field {
+  border-color: var(--ifm-color-emphasis-400);
+}
+
+:global(html[data-theme='dark']) .field::placeholder {
+  color: var(--ifm-color-emphasis-400);
+}
+
+:global(html[data-theme='dark']) .field[aria-invalid='true'] {
+  border-color: var(--ifm-color-danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thumb,
+  .cancel,
+  .send {
+    transition: none;
+  }
+}
+
+@media print {
+  .feedback {
+    display: none;
+  }
+}

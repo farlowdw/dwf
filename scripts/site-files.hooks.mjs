@@ -11,8 +11,8 @@
  *                                        it. The stub of the code editor's registry imports that way
  *   everything else                      Node's own resolution. So the imports the test is about, the
  *                                        client module's and the stub's, are followed as written
- *   The site's own browser files in ES_MODULE_TAILS are also marked as ES modules: their folders
- *   have no package.json that says so, and Node would otherwise have to find out.
+ *   The site's own browser files in ES_MODULE_TAILS are also marked as ES modules: most of their
+ *   folders have no package.json that says so, and Node would otherwise have to find out.
  *
  * How to change it: the client module imports another Docusaurus name: a row in DOCUSAURUS_EXPORTS
  * (the same folder as the alias). Another file of the site that the test runs: ES_MODULE_TAILS.
@@ -42,6 +42,7 @@ const ES_MODULE_TAILS = Object.freeze([
   '/src/clientModules/buildIdReload.js',
   '/src/clientModules/commentsFocus.js',
   '/src/components/CodeEditor/unsavedWork.js',
+  '/src/components/PageFeedback/unsentText.js',
 ]);
 
 /** An address without its '?...': the test imports the client module again with a query, for a fresh copy. */

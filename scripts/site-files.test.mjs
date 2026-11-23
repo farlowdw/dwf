@@ -51,6 +51,66 @@
  *                           and holds buildIdPlugin(), and netlify.toml serves /build-id.json with
  *                           no-cache, or a cached copy hides a deploy. It cannot see the bundle, a real
  *                           browser or the comments' frame: it runs the source files under Node
+ *   the feedback hold       in the same fake page, the reload also waits while the page-feedback card
+ *                           holds text not sent yet (its registry, src/components/PageFeedback/unsentText.js,
+ *                           as the client module imports it), and goes once the card lets go
+ *   the feedback words      while docusaurus.config.js switches the page-feedback prompt on
+ *                           (customFields.feedbackEnabled, read as text: true or false),
+ *                           src/components/PageFeedback/words.js holds every word the prompt needs, and
+ *                           on a site with a captcha the captcha's words too (words.js > CAPTCHA_WORDS;
+ *                           customFields.feedbackCaptchaSiteKey, read as a quoted string, is not ''). A
+ *                           production build shows no prompt while one is empty, and no error says so
+ *   the captcha's site key  customFields.feedbackCaptchaSiteKey is '' or a Turnstile site key: at most
+ *                           32 letters, digits, '_' and '-', Cloudflare's limit for a site key. A longer
+ *                           value is most likely the widget's secret, which belongs in the Netlify
+ *                           variable FEEDBACK_CAPTCHA_SECRET and never in a file: the config ships in
+ *                           every page. No message prints the value
+ *   the feedback lists      the config's two lists of pages without the prompt (forbiddenFeedbackDocPaths,
+ *                           forbiddenFeedbackBlogPaths) hold page addresses only, each a quoted string:
+ *                           an entry that is no page's address matches nothing, and the prompt stays on
+ *                           the page it was meant to leave. An entry with a '*', or a // comment in either
+ *                           list that holds a '/*' (such an entry commented out), is named first, in every
+ *                           test that reads the config's code: there is no wildcard, and codeOf, which
+ *                           knows no strings, would take that '/*' for a comment's start and drop the
+ *                           config's code up to the next comment's end
+ *   the feedback mounts     src/theme/DocItem/Layout/index.js renders the prompt between a docs page's
+ *                           content and its footer, and src/theme/BlogPostItem/Content/index.js under a
+ *                           post's text, on the post's own page and in the browser only (clientOnly), which
+ *                           keeps it out of the feeds. Both files are copies of the theme's own, which
+ *                           Docusaurus calls unsafe to swizzle, so the installed originals must still have
+ *                           the shape the copies rely on: DocItemContent and then DocItemFooter, and the
+ *                           feeds' id on a post's div. An upgrade that changes them still builds, and the
+ *                           copies then hide the change without a word
+ *   the feedback function   netlify/functions/feedback.mjs is one plain re-export of
+ *                           functions/feedback/feedback.mjs; package.json > ownFunctions names
+ *                           feedback, since shared/functions/code-runner/__tests__/functionShims.test.mjs
+ *                           refuses a function in that folder that the list does not name; and
+ *                           src/components/PageFeedback/rules.js > FEEDBACK_ENDPOINT, where the page
+ *                           posts each message, is /.netlify/functions/feedback, the address Netlify
+ *                           gives that shim. At any other address every Send fails and no mail goes
+ *                           out. FEEDBACK_FUNCTION holds the name, and the shim's path is built from it
+ *   the feedback tests      package.json > scripts['shared:verify'] names in its node --test list every
+ *                           test file (.test.js, .test.mjs or .test.cjs) under the prompt's two
+ *                           __tests__ folders (FEEDBACK_TEST_FOLDERS), each by its own name, and every
+ *                           file of those folders it names is there. test:shared runs shared/'s suites
+ *                           only, and node skips a name that matches nothing without a word, so a test
+ *                           file left out, renamed or moved would never run. Names, never a pattern,
+ *                           as test:shared gives its own files (shared/scripts/lib/suites.mjs says why)
+ *   the mails' site address the address the function puts before a page's path in each mail
+ *                           (functions/feedback/lib/mail.mjs > SITE_ORIGIN) is the config's url: the
+ *                           function never takes it from the request
+ *   hydrated pages          the installed Docusaurus core still marks <html> with data-has-hydrated
+ *                           ("false" in the built HTML, "true" once the page is live). The prompt's
+ *                           stylesheet keeps it hidden until then, so no button shows before it works;
+ *                           without the mark the buttons show early, or the prompt never shows
+ *   no mail key, no address no file of the page-feedback prompt (FEEDBACK_PLACES) holds a mail service's
+ *                           key ('re_' and a letter or digit) or a mail address, and neither
+ *                           docusaurus.config.js nor netlify.toml (SETUP_FILES), where a value copied
+ *                           while setting the prompt up is most likely pasted, holds such a key. The
+ *                           repository is public, and shared/scripts/check-public.mjs knows neither
+ *                           shape: the key and the two addresses are Netlify variables, named in files
+ *                           by name only. SETUP_FILES are not searched for an address, which may one
+ *                           day stand there on purpose (a mailto: link in the footer, say)
  *
  * How to change it: a new check is a test below with a line in the list above. A name Finder or an
  * editor leaves in a folder goes in IGNORED_NAMES. A new wording of the README's sentence must still
@@ -59,12 +119,22 @@
  * Red on the five rules after a pull: copy the list from shared/README.md into the README.
  * A deploy script that deploys again: reword "Deploying" first, then the deploy script's test.
  * The page reload: another place that holds typed text gets a test like the comment box's.
- * site-files.hooks.mjs says how the client module's imports are followed under Node; the registry
- * moves: EDITOR_REGISTRY, with the client module's import.
+ * site-files.hooks.mjs says how the client module's imports are followed under Node; a registry
+ * moves: EDITOR_REGISTRY or FEEDBACK_REGISTRY, with the client module's import.
+ * The feedback prompt: a new place for its files goes in FEEDBACK_PLACES, and another file where setup
+ * values are written in SETUP_FILES, so the key and address check reads it. A new test file of the
+ * prompt: its name in package.json > shared:verify; a new test folder: FEEDBACK_TEST_FOLDERS too.
+ * Another name for the function: FEEDBACK_FUNCTION, rules.js > FEEDBACK_ENDPOINT, the shim's file
+ * name, package.json > ownFunctions and SHIM_FILE in functions/feedback/__tests__/feedback.test.mjs,
+ * together; then every other line that names the old one (search the repository for
+ * netlify/functions/feedback). Red on the installed originals after an upgrade: compare each copy
+ * with its new original (the copies' headers say how), carry the change over, then update
+ * DOCS_ORIGINAL_ORDER or BLOG_ORIGINAL_ID. A new domain: url in the config and SITE_ORIGIN in
+ * functions/feedback/lib/mail.mjs, together.
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { register } from 'node:module';
+import { createRequire, register } from 'node:module';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -75,6 +145,8 @@ register('./site-files.hooks.mjs', import.meta.url);
 
 /** The repo's top folder, so the tests read the same files from any working folder. */
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
+/** Finds installed packages as Node does from here (their package.json, for their folder). */
+const requireFromHere = createRequire(import.meta.url);
 const SITE_STATIC = 'static';
 const SHARED_STATIC = 'shared/static';
 /** Files no one ships on purpose, which may sit in both folders. */
@@ -133,10 +205,11 @@ const SIDEBAR_WRAPPER = 'shared/theme/DocRoot/Layout/Sidebar/index.jsx';
 /** themeConfig.docs.sidebar with hideable on: the collapse button and the expand strip exist. */
 const HIDEABLE = /\bdocs:\s*\{\s*sidebar:\s*\{[^}]*\bhideable:\s*true\b/;
 
-/** The reload after a deploy: the client module, how the config names it, and the registry the editor writes to. */
+/** The reload after a deploy: the client module, how the config names it, and the registries the editor and the feedback card write to. */
 const RELOAD_MODULE = 'src/clientModules/buildIdReload.js';
 const RELOAD_MODULE_ENTRY = `'./${RELOAD_MODULE}'`;
 const EDITOR_REGISTRY = 'shared/components/CodeEditor/unsavedWork.js';
+const FEEDBACK_REGISTRY = 'src/components/PageFeedback/unsentText.js';
 /** The config's clientModules list, up to its closing bracket, and the plugin that writes the build ids. */
 const CLIENT_MODULES_LIST = /\bclientModules:\s*\[([^\]]*)\]/;
 const BUILD_ID_PLUGIN_CALL = 'buildIdPlugin()';
@@ -155,7 +228,87 @@ const COMMENTS_WIDGET = Object.freeze({
   tagName: 'GISCUS-WIDGET',
   closest: (selector) => (selector.split(',').some((part) => part.trim() === 'giscus-widget') ? COMMENTS_WIDGET : null),
 });
-const DROPPED_CHECK = `${RELOAD_MODULE} must hand startReloader a hasUnsavedWork that asks the code editor's registry (${EDITOR_REGISTRY}, through its stub) and the comment box`;
+const DROPPED_CHECK = `${RELOAD_MODULE} must hand startReloader a hasUnsavedWork that asks the code editor's registry (${EDITOR_REGISTRY}, through its stub), the comment box and the feedback card's registry (${FEEDBACK_REGISTRY})`;
+
+/** The page-feedback prompt: its switch, its captcha's site key and its two lists in the config, read as text, and the files that judge them. */
+const FEEDBACK_SWITCH = /\bfeedbackEnabled:\s*([^\s,}]+)/;
+/** The captcha's site key, written as one quoted string ('' for no captcha), with no ${…} in it. */
+const FEEDBACK_SITE_KEY = /\bfeedbackCaptchaSiteKey:\s*(?:'([^'\\\n]*)'|"([^"\\\n]*)"|`([^`\\$\n]*)`)/;
+/**
+ * What a Turnstile site key holds: at most 32 characters (Cloudflare's own limit for a site key), each a
+ * letter, a digit, '_' or '-'. A longer value is most likely the widget's secret, whose place is this
+ * Netlify variable.
+ */
+const SITE_KEY_MAX_LENGTH = 32;
+const SITE_KEY_CHARACTERS = /^[A-Za-z0-9_-]*$/;
+const CAPTCHA_SECRET_VARIABLE = 'FEEDBACK_CAPTCHA_SECRET';
+const FEEDBACK_LISTS = Object.freeze(['forbiddenFeedbackDocPaths', 'forbiddenFeedbackBlogPaths']);
+/**
+ * What a list written out in the config may hold: white space, commas, a comment to the end of the line,
+ * and entries quoted with ', " or ` (no ${…}), with no quote or backslash inside.
+ */
+const LIST_TOKENS = /\s+|,|\/\/[^\n]*|'([^'\\\n]*)'|"([^"\\\n]*)"|`([^`\\$\n]*)`/g;
+/** How a comment to the end of the line starts, and what codeOf reads as the start of a comment wherever it stands. */
+const LINE_COMMENT = '//';
+const BLOCK_COMMENT_START = '/*';
+const FEEDBACK_WORDS = 'src/components/PageFeedback/words.js';
+const FEEDBACK_RULES = 'src/components/PageFeedback/rules.js';
+/** The prompt's two mounts, the line that imports it, and what each renders, white space as single spaces. */
+const DOCS_MOUNT = 'src/theme/DocItem/Layout/index.js';
+const BLOG_MOUNT = 'src/theme/BlogPostItem/Content/index.js';
+const FEEDBACK_IMPORT = "import PageFeedback from '@site/src/components/PageFeedback';";
+const DOCS_MOUNT_CODE = '<DocItemContent>{children}</DocItemContent> <PageFeedback key={metadata.permalink} permalink={metadata.permalink} unlisted={metadata.unlisted} /> <DocItemFooter />';
+const BLOG_MOUNT_CODE = '{children} {isBlogPostPage && <PageFeedback key={metadata.permalink} permalink={metadata.permalink} unlisted={metadata.unlisted} clientOnly />}';
+/** The installed theme's files the two mounts copy (inside its lib/), and what the copies rely on in them. */
+const THEME = '@docusaurus/theme-classic';
+const DOCS_ORIGINAL = 'theme/DocItem/Layout/index.js';
+const BLOG_ORIGINAL = 'theme/BlogPostItem/Content/index.js';
+const DOCS_ORIGINAL_ORDER = '<DocItemContent>{children}</DocItemContent> <DocItemFooter />';
+const BLOG_ORIGINAL_ID = 'id={isBlogPostPage ? blogPostContainerID : undefined}';
+/**
+ * The function's name: the name of its shim's file in netlify/functions, its entry in package.json >
+ * ownFunctions and the end of its address. Then the shim, and the one statement it holds once its
+ * comments are out.
+ */
+const FEEDBACK_FUNCTION = 'feedback';
+const FEEDBACK_SHIM = `netlify/functions/${FEEDBACK_FUNCTION}.mjs`;
+const FEEDBACK_SHIM_CODE = "export { default } from '../../functions/feedback/feedback.mjs';";
+/** Where Netlify serves a function of netlify/functions that keeps its default address: this, then the function's name. */
+const FUNCTIONS_ROUTE = '/.netlify/functions/';
+/** The shared helper that names the package.json field listing a site's own functions (OWN_FUNCTIONS_FIELD). */
+const FUNCTION_FOLDER = 'shared/functions/code-runner/__tests__/functionFolder.mjs';
+/** The file that writes the mail and holds the site's address (SITE_ORIGIN), and the config's url line. */
+const FEEDBACK_MAIL = 'functions/feedback/lib/mail.mjs';
+const SITE_URL_LINE = /^\s*url:\s*['"`]([^'"`]+)['"`]/m;
+/** The installed core's files (inside its lib/) that mark <html> once a page is live, and what they hold for it. */
+const CORE = '@docusaurus/core';
+const HYDRATED_FILE = 'client/hasHydratedDataAttribute.js';
+const HYDRATED_MARK = 'data-has-hydrated={isBrowser}';
+const CORE_APP = 'client/App.js';
+const HYDRATED_ELEMENT = '<HasHydratedDataAttribute />';
+const FEEDBACK_STYLES = 'src/components/PageFeedback/styles.module.css';
+/** Where the prompt keeps its files, and what none of them may hold: a mail service's key as Resend writes it, and a mail address. */
+const FEEDBACK_PLACES = Object.freeze(['src/components/PageFeedback', 'functions/feedback', FEEDBACK_SHIM]);
+const MAIL_KEY = /\bre_[A-Za-z0-9]/;
+const MAIL_ADDRESS = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/;
+/**
+ * The two files where a value copied while setting the prompt up is most likely pasted: they may not
+ * hold the key either. They are not searched for an address, which may one day stand there on purpose
+ * (a mailto: link in the footer, say).
+ */
+const SETUP_FILES = Object.freeze([CONFIG, NETLIFY]);
+/** Each shape with the words a message gives it, so that no message prints the text that matched. */
+const KEY_SHAPE = Object.freeze({ words: 'a mail service key', pattern: MAIL_KEY });
+const ADDRESS_SHAPE = Object.freeze({ words: 'a mail address', pattern: MAIL_ADDRESS });
+/** The prompt's two test folders, and the script of package.json whose node --test list must name each of their test files. */
+const FEEDBACK_TEST_FOLDERS = Object.freeze(['src/components/PageFeedback/__tests__', 'functions/feedback/__tests__']);
+const VERIFY_SCRIPT = 'shared:verify';
+/** A test file, by the endings test:shared takes too (shared/scripts/lib/suites.mjs > TEST_FILE). */
+const TEST_FILE = /\.test\.(?:cjs|mjs|js)$/;
+/** A character that makes node read a path it is given as a pattern (shared/scripts/lib/suites.mjs > PATTERN_CHARACTER). */
+const PATTERN_CHARACTER = /[*?[\]{}()!]/;
+/** Quotes round a word of an npm script, which the shell takes off before node sees it. */
+const SHELL_QUOTES = /^(['"])(.*)\1$/;
 
 /** Every file under a folder of the repo, as paths relative to that folder. */
 function filesUnder(folder) {
@@ -300,6 +453,121 @@ function editorRegistry() {
   return import(pathToFileURL(path.join(ROOT, EDITOR_REGISTRY)).href);
 }
 
+/** A module of the repo, by its path from the top folder: imported inside its test, so a broken file fails that test alone. */
+function repoModule(file) {
+  return import(pathToFileURL(path.join(ROOT, file)).href);
+}
+
+/** The registry the feedback card writes to, by the file's own address: the one copy the client module imports. */
+function feedbackRegistry() {
+  return repoModule(FEEDBACK_REGISTRY);
+}
+
+/** White space as single spaces, so a check reads code whatever its line breaks. */
+function spaced(text) {
+  return text.replace(/\s+/g, ' ');
+}
+
+/** An installed package's file, by its path inside the package's lib/ folder. */
+function installedFile(pkg, file) {
+  return fs.readFileSync(path.join(path.dirname(requireFromHere.resolve(`${pkg}/package.json`)), 'lib', file), 'utf8');
+}
+
+/** The list `name` as the config writes it: its name, a colon, then what stands between its brackets. */
+function listPattern(name) {
+  return new RegExp(`\\b${name}:\\s*\\[([^\\]]*)\\]`);
+}
+
+/** The quoted entries among `tokens`, the matches of LIST_TOKENS in a list's inside. */
+function quotedEntries(tokens) {
+  return tokens.map((token) => token[1] ?? token[2] ?? token[3]).filter((entry) => entry !== undefined);
+}
+
+/**
+ * The entries of the list `name` in the config's code (comments out), or null when there is no such list
+ * or it holds anything but LIST_TOKENS: a constant, a spread or a call would hide its entries from here.
+ */
+function configList(config, name) {
+  const inside = config.match(listPattern(name))?.[1];
+  if (inside === undefined) return null;
+  const tokens = [...inside.matchAll(LIST_TOKENS)];
+  const covered = tokens.reduce((length, token) => length + token[0].length, 0);
+  if (covered !== inside.length) return null;
+  return quotedEntries(tokens);
+}
+
+/**
+ * True for a token of a list (a match of LIST_TOKENS) that names a '*': an entry that holds one, or a //
+ * comment that holds a '/*', such as an entry with a '*' commented out. codeOf takes out block comments
+ * before line comments, so it reads that '/*' as the start of a block comment.
+ */
+function isStarred(token) {
+  const [text] = token;
+  return text.startsWith(LINE_COMMENT) ? text.includes(BLOCK_COMMENT_START) : text.includes('*');
+}
+
+/**
+ * The tokens of the two feedback lists that name a '*' (isStarred), each as `<list> holds <token>`, read
+ * from the config's raw text, before the comments are taken out: codeOf knows no strings, so it would take
+ * the '/*' of such a token for the start of a comment and drop the config's code up to the next comment's
+ * end.
+ */
+function starredEntries() {
+  const raw = fs.readFileSync(path.join(ROOT, CONFIG), 'utf8');
+  return FEEDBACK_LISTS.flatMap((name) => {
+    const inside = raw.match(listPattern(name))?.[1] ?? '';
+    return [...inside.matchAll(LIST_TOKENS)].filter(isStarred).map((token) => `${name} holds ${token[0].trim()}`);
+  });
+}
+
+/**
+ * The config's code, comments out, for every test that reads it. A list entry with a '*', or a // comment
+ * in a list with a '/*', fails first and by name (starredEntries), so no test fails instead on a part of the
+ * config that codeOf dropped.
+ */
+function configCode() {
+  const starred = starredEntries();
+  const advice = "There is no wildcard: an entry is one page's permalink, so list each page. A '/*' in a list, even in a // comment, also reads as the start of a comment to these tests";
+  assert.deepEqual(starred, [], `${CONFIG} > customFields: ${starred.join('; ')}. ${advice}`);
+  return codeOf(CONFIG);
+}
+
+/** The captcha's site key, as the config's code writes it: one quoted string. Null when it is written any other way. */
+function captchaSiteKey(config) {
+  const match = config.match(FEEDBACK_SITE_KEY);
+  return match ? (match[1] ?? match[2] ?? match[3]) : null;
+}
+
+/** The files package.json's shared:verify gives node --test, as written there, quotes off. */
+function verifiedFiles() {
+  const script = JSON.parse(fs.readFileSync(path.join(ROOT, PACKAGE), 'utf8')).scripts?.[VERIFY_SCRIPT] ?? '';
+  return script
+    .split('&&')
+    .map((command) => command.trim().split(/\s+/))
+    .filter((words) => words[0] === 'node' && words.includes('--test'))
+    .flatMap((words) => words.slice(1).filter((word) => !word.startsWith('-')))
+    .map((word) => path.posix.normalize(word.replace(SHELL_QUOTES, '$2')));
+}
+
+/** Every test file in the prompt's test folders, by its path from the repo's top folder, written with '/'. */
+function feedbackTestFiles() {
+  return FEEDBACK_TEST_FOLDERS.flatMap((folder) => filesUnder(folder).map((file) => [folder, ...file.split(path.sep)].join('/')))
+    .filter((file) => TEST_FILE.test(file));
+}
+
+/** Every file of the page-feedback prompt, by its path from the repo's top folder. */
+function feedbackFiles() {
+  return FEEDBACK_PLACES.flatMap((place) => (
+    fs.statSync(path.join(ROOT, place)).isDirectory() ? filesUnder(place).map((file) => path.join(place, file)) : [place]
+  ));
+}
+
+/** The words of the shapes among `shapes` (KEY_SHAPE, ADDRESS_SHAPE) that `file` holds: never the text that matched. */
+function privateShapesIn(file, shapes) {
+  const text = fs.readFileSync(path.join(ROOT, file), 'utf8');
+  return shapes.filter(({ pattern }) => pattern.test(text)).map(({ words }) => words);
+}
+
 test('no file in static/ hides a file of shared/static/', () => {
   assert.ok(fs.existsSync(path.join(ROOT, SHARED_STATIC)), `${SHARED_STATIC} is missing: is shared/ mounted?`);
   const hidden = hiddenSharedFiles();
@@ -393,6 +661,26 @@ test('the reload after a deploy waits while a code editor holds unsaved text, an
   }
 });
 
+test('the reload after a deploy waits while the feedback card holds text not sent yet, and goes once it lets go', async () => {
+  const { setUnsentText } = await feedbackRegistry();
+  const card = {};
+  try {
+    const page = await openPage();
+    setUnsentText(card, true); // as the card does while its field holds text, or while its message is on its way
+    await page.fire('unhandledrejection', CHUNK_FAILURE);
+    assert.equal(page.reloads, 0, `the page reloaded over feedback not sent yet: ${DROPPED_CHECK}`);
+    assert.equal(page.timers.length, 1, 'held, not dropped: the reloader looks again shortly');
+    await page.runTimers();
+    assert.equal(page.reloads, 0, 'still not sent, so still held');
+    setUnsentText(card, false); // sent, emptied or unmounted
+    await page.runTimers();
+    assert.equal(page.reloads, 1, 'nothing left to send: the page reloads onto the new build');
+  } finally {
+    setUnsentText(card, false);
+    closePage();
+  }
+});
+
 test('the reload after a deploy waits for good once the comment box has had the focus', async () => {
   try {
     const page = await openPage();
@@ -434,7 +722,7 @@ test('the reload after a deploy installs nothing in a page with no build id, as 
 });
 
 test('the reload after a deploy is wired: a relative client module, the build id plugin, no cache for /build-id.json', () => {
-  const config = codeOf(CONFIG);
+  const config = configCode();
   const list = config.match(CLIENT_MODULES_LIST)?.[1];
   assert.ok(list, `${CONFIG} has no clientModules list: the reloader never starts, and an old tab keeps its build`);
   assert.ok(list.includes(RELOAD_MODULE_ENTRY), `${CONFIG}'s clientModules should name ${RELOAD_MODULE_ENTRY}`);
@@ -442,4 +730,102 @@ test('the reload after a deploy is wired: a relative client module, the build id
   assert.ok(fs.existsSync(path.join(ROOT, RELOAD_MODULE)), `${RELOAD_MODULE} is missing`);
   assert.ok(config.includes(BUILD_ID_PLUGIN_CALL), `${CONFIG} has no ${BUILD_ID_PLUGIN_CALL} in plugins: no page carries a build id, and the reloader installs nothing`);
   assert.match(fs.readFileSync(path.join(ROOT, NETLIFY), 'utf8'), BUILD_ID_HEADER, `${NETLIFY} should serve /build-id.json with cache-control "no-cache": a cached copy hides a deploy`);
+});
+
+test("while the feedback prompt is switched on, words.js holds every word it needs, the captcha's too on a site with a captcha", async () => {
+  const config = configCode();
+  const value = config.match(FEEDBACK_SWITCH)?.[1];
+  assert.ok(value === 'true' || value === 'false', `${CONFIG} > customFields.feedbackEnabled should be written as true or false: this test reads it as text`);
+  if (value === 'false') return;
+  const siteKey = captchaSiteKey(config);
+  assert.ok(siteKey !== null, `${CONFIG} > customFields.feedbackCaptchaSiteKey should be written as one quoted string, '' for no captcha: this test reads it as text`);
+  const captcha = siteKey.trim() !== '';
+  const { missingWords } = await repoModule(FEEDBACK_WORDS);
+  const missing = missingWords(undefined, { captcha });
+  const site = captcha ? ' and the site has a captcha (customFields.feedbackCaptchaSiteKey is set)' : '';
+  assert.deepEqual(missing, [], `the feedback prompt is switched on${site}, but ${FEEDBACK_WORDS} has no words yet for ${missing.join(', ')}: a production build shows no prompt until they are written`);
+});
+
+test("the captcha's site key in the config is '' or a site key, never the widget's secret", () => {
+  const siteKey = captchaSiteKey(configCode());
+  const field = `${CONFIG} > customFields.feedbackCaptchaSiteKey`;
+  assert.ok(siteKey !== null, `${field} should be written as one quoted string, '' for no captcha: this test reads it as text`);
+  // assert.ok, not assert.equal or assert.match: the value may be the secret, and no message prints it.
+  const secret = `most likely the widget's secret, which belongs in the Netlify variable ${CAPTCHA_SECRET_VARIABLE} and never in a file: the config ships in every page`;
+  assert.ok(siteKey.length <= SITE_KEY_MAX_LENGTH, `${field} holds ${siteKey.length} characters, and a Turnstile site key at most ${SITE_KEY_MAX_LENGTH}: the value is ${secret}`);
+  assert.ok(SITE_KEY_CHARACTERS.test(siteKey), `${field} should hold only letters, digits, '_' and '-', as a Turnstile site key does: copy it again from the widget's page at Cloudflare`);
+});
+
+test('the two lists of pages without the feedback prompt hold page addresses only', async () => {
+  const { listProblems } = await repoModule(FEEDBACK_RULES);
+  const config = configCode();
+  for (const name of FEEDBACK_LISTS) {
+    const entries = configList(config, name);
+    assert.ok(entries !== null, `${CONFIG} > customFields.${name} should be a list of quoted page addresses, as in '/docs/intro', or [] for none`);
+    assert.deepEqual(listProblems(entries), [], `${CONFIG} > customFields.${name}: an entry that is no page's address matches nothing, and the prompt stays on that page`);
+  }
+});
+
+test("the feedback prompt is mounted in both theme copies: under a docs page's content, and under a post's text in the browser only", () => {
+  for (const mount of [DOCS_MOUNT, BLOG_MOUNT]) {
+    assert.ok(codeOf(mount).includes(FEEDBACK_IMPORT), `${mount} should hold ${FEEDBACK_IMPORT}`);
+  }
+  assert.ok(spaced(codeOf(DOCS_MOUNT)).includes(DOCS_MOUNT_CODE), `${DOCS_MOUNT} should render the prompt between the page's content and its footer, keyed on the page: ${DOCS_MOUNT_CODE}`);
+  assert.ok(spaced(codeOf(BLOG_MOUNT)).includes(BLOG_MOUNT_CODE), `${BLOG_MOUNT} should render the prompt under a post's text, on the post's own page and in the browser only (clientOnly keeps it out of the feeds): ${BLOG_MOUNT_CODE}`);
+});
+
+test('the installed theme files the two copies come from still have the shape the copies rely on', () => {
+  const advice = 'compare the copy with the new original (its header says how) and carry the change over';
+  assert.ok(spaced(installedFile(THEME, DOCS_ORIGINAL)).includes(DOCS_ORIGINAL_ORDER), `the installed ${THEME} lib/${DOCS_ORIGINAL} no longer renders DocItemContent and then DocItemFooter, between which ${DOCS_MOUNT} puts the prompt: ${advice}`);
+  assert.ok(spaced(installedFile(THEME, BLOG_ORIGINAL)).includes(BLOG_ORIGINAL_ID), `the installed ${THEME} lib/${BLOG_ORIGINAL} no longer gives its div the feeds' id on a post's page, the div ${BLOG_MOUNT} keeps the prompt out of: ${advice}`);
+});
+
+test("the feedback function is one plain re-export in netlify/functions, package.json names it as the site's own, and the page posts to its address", async () => {
+  assert.ok(fs.existsSync(path.join(ROOT, FEEDBACK_SHIM)), `${FEEDBACK_SHIM} is missing: Netlify deploys no feedback function, and every message fails`);
+  assert.equal(codeOf(FEEDBACK_SHIM), FEEDBACK_SHIM_CODE, `${FEEDBACK_SHIM} must stay one plain re-export of the function, with no handler`);
+  const { OWN_FUNCTIONS_FIELD } = await repoModule(FUNCTION_FOLDER);
+  const own = JSON.parse(fs.readFileSync(path.join(ROOT, PACKAGE), 'utf8'))[OWN_FUNCTIONS_FIELD];
+  assert.ok(Array.isArray(own) && own.includes(FEEDBACK_FUNCTION), `${PACKAGE} > ${OWN_FUNCTIONS_FIELD} should name ${FEEDBACK_FUNCTION}: the shared shim test refuses a function in netlify/functions that the list does not name`);
+  const { FEEDBACK_ENDPOINT } = await repoModule(FEEDBACK_RULES);
+  const address = `${FUNCTIONS_ROUTE}${FEEDBACK_FUNCTION}`;
+  assert.equal(FEEDBACK_ENDPOINT, address, `${FEEDBACK_RULES} > FEEDBACK_ENDPOINT should be ${address}, the address Netlify gives ${FEEDBACK_SHIM}: at any other, every Send fails and no mail goes out`);
+});
+
+test("package.json's shared:verify names every test file of the feedback prompt, each by its own name, and none that is gone", () => {
+  const absent = FEEDBACK_TEST_FOLDERS.filter((folder) => !fs.existsSync(path.join(ROOT, folder)));
+  assert.deepEqual(absent, [], 'FEEDBACK_TEST_FOLDERS names what is not there: list where the prompt keeps its tests now');
+  const script = `${PACKAGE} > scripts['${VERIFY_SCRIPT}']`;
+  const named = verifiedFiles();
+  const patterns = named.filter((file) => PATTERN_CHARACTER.test(file));
+  assert.deepEqual(patterns, [], `${script} gives node --test the pattern ${patterns.join(', ')}: name each file instead, as shared/scripts/lib/suites.mjs does. A pattern that matches nothing passes without a word`);
+  const unnamed = feedbackTestFiles().filter((file) => !named.includes(file));
+  assert.deepEqual(unnamed, [], `${script} does not name ${unnamed.join(', ')}, so nothing runs it: add each to its node --test list, by name`);
+  const inFolders = (file) => FEEDBACK_TEST_FOLDERS.some((folder) => file.startsWith(`${folder}/`));
+  const gone = named.filter((file) => inFolders(file) && !fs.existsSync(path.join(ROOT, file)));
+  assert.deepEqual(gone, [], `${script} names ${gone.join(', ')}, which is not there: node skips a name that matches nothing without a word, so those tests no longer run. Name each test file as it is now`);
+});
+
+test("the site's address in the feedback mails is the config's url", async () => {
+  const url = configCode().match(SITE_URL_LINE)?.[1];
+  assert.ok(url, `${CONFIG} has no url line`);
+  const origin = new URL(url).origin;
+  const { SITE_ORIGIN } = await repoModule(FEEDBACK_MAIL);
+  assert.equal(SITE_ORIGIN, origin, `${FEEDBACK_MAIL} > SITE_ORIGIN should be ${origin}, the site at url in ${CONFIG}: each mail links to the page there`);
+});
+
+test('the installed Docusaurus core still marks a page that is live, which the feedback prompt waits for', () => {
+  const advice = `${FEEDBACK_STYLES} keeps the prompt hidden while <html> has data-has-hydrated="false": read the new core and adapt that rule`;
+  assert.ok(spaced(installedFile(CORE, HYDRATED_FILE)).includes(HYDRATED_MARK), `the installed ${CORE} lib/${HYDRATED_FILE} no longer sets ${HYDRATED_MARK}: ${advice}`);
+  assert.ok(spaced(installedFile(CORE, CORE_APP)).includes(HYDRATED_ELEMENT), `the installed ${CORE} lib/${CORE_APP} no longer renders ${HYDRATED_ELEMENT}: ${advice}`);
+});
+
+test('no file of the feedback prompt holds a mail service key or a mail address, and neither the config nor netlify.toml holds such a key', () => {
+  const missing = [...FEEDBACK_PLACES, ...SETUP_FILES].filter((place) => !fs.existsSync(path.join(ROOT, place)));
+  assert.deepEqual(missing, [], 'FEEDBACK_PLACES or SETUP_FILES names what is not there: list where those files are now');
+  const searched = [
+    ...feedbackFiles().map((file) => [file, [KEY_SHAPE, ADDRESS_SHAPE]]),
+    ...SETUP_FILES.map((file) => [file, [KEY_SHAPE]]),
+  ];
+  const hits = searched.flatMap(([file, shapes]) => privateShapesIn(file, shapes).map((shape) => `${file} (${shape})`));
+  assert.deepEqual(hits, [], `the repository is public: the mail key and the two addresses are Netlify variables, named in files by name only (functions/feedback/README.md). Found in ${hits.join(', ')}`);
 });

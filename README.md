@@ -23,7 +23,7 @@ Install with `npm ci`, never `npm update`: `package-lock.json` holds the exact v
 | `env SKIP_HTML_MINIFICATION=true npm run build` | Production build into `build/`. Netlify builds with that variable set, so set it here too or the HTML differs. |
 | `npm run serve` | Serves `build/` on http://localhost:3000. |
 | `npm run clear` | Removes Docusaurus's caches and `build/`. |
-| `node --test scripts/site-files.test.mjs` | Checks on this site's own files that need no build: no file in `static/` hides one in `shared/static/`, the sentence below on `shared/README.md` sends readers to `--help`, every blog address the site has published still belongs to a post (a post whose date changes keeps its address with `slug:` in its front matter), the five rules below say what `shared/README.md`'s say, the docs sidebar's stub is still there, with the sidebar hideable, Deploying says that `npm run deploy` deploys nothing and shows the steps it prints, `nvm use` first, and the reload of an open tab after a deploy is wired and waits while a code editor holds unsaved text or once the comment box has had the focus. The file's header lists them. |
+| `node --test scripts/site-files.test.mjs` | Checks on this site's own files that need no build: no file in `static/` hides one in `shared/static/`, the sentence below on `shared/README.md` sends readers to `--help`, every blog address the site has published still belongs to a post (a post whose date changes keeps its address with `slug:` in its front matter), the five rules below say what `shared/README.md`'s say, the docs sidebar's stub is still there, with the sidebar hideable, Deploying says that `npm run deploy` deploys nothing and shows the steps it prints, `nvm use` first, and the reload of an open tab after a deploy is wired and waits while a code editor holds unsaved text, while the feedback prompt holds unsent text, or once the comment box has had the focus. For the page feedback it also checks that the switch is on only once every required word is written, `captchaFailed` too on a site with a captcha, that the captcha's site key is `''` or at most 32 letters, digits, `_` and `-` (a longer value is most likely the widget's secret), that the two lists hold page addresses only, with no wildcard, that both theme files render the prompt and the installed originals keep the shape those copies rely on, that the function's shim is one plain re-export, `ownFunctions` names it and `FEEDBACK_ENDPOINT` in `rules.js` is its address, that `shared:verify` names each test file of the feature, and none that is gone, that the site address in each mail is `url` in `docusaurus.config.js`, that the installed Docusaurus still sets `data-has-hydrated`, and that no file of the feature holds a mail key or a mail address, and neither `docusaurus.config.js` nor `netlify.toml` a mail key. The file's header lists them. |
 | `node shared/scripts/check-mui-api.mjs` | Fails on an old MUI API name, such as `componentsProps` or `GridToolbar`. The Netlify build command runs it first, so a hit stops the build in under a second. Exit 0 is clean, 1 found a name, 2 could not run. The list is `shared/scripts/lib/oldMuiApis.json`, and the script's header says how to change it. |
 
 ## The shared folder
@@ -47,7 +47,7 @@ how to change it, and the main options of the commands below; `-- --help` lists 
 | `npm run shared:pull` | Brings the shared repository's new commits into `shared/`. |
 | `npm run shared:push` | Publishes this site's `shared/` commits to the shared repository. |
 | `npm run test:shared` | Runs the tests of the shared pieces this site uses. |
-| `npm run shared:verify` | Everything that proves this site: `shared/scripts/check-mui-api.mjs`, the public check's tests, `scripts/site-files.test.mjs` and `test:shared`. `shared:bump` and `shared:all` run it. |
+| `npm run shared:verify` | Everything that proves this site: `shared/scripts/check-mui-api.mjs`, the public check's tests, `scripts/site-files.test.mjs`, the page feedback's tests and `test:shared`. `shared:bump` and `shared:all` run it. |
 | `npm run shared:compare` | Read only. Compares two builds over the pages in `comparePages` in `package.json`, in dark and light: `-- --before <folder>` is the old build. It sees a lost dark mode when a build and every test pass. Exit 0 is `0 changed`, 8 a list to read, 3 red. |
 | `npm run shared:bump` | Moves this site to the pinned Docusaurus, or to `-- <version>`: install, cold build, `shared:verify`, compare. Commits `package.json` and the lock unless a step is red, prints the undo and the line that publishes the tested build, and never pushes or deploys. |
 | `npm run shared:all` | Runs `status`, `pull`, `bump` or `run <script>` on every site that mounts the same shared repository, and stops at the first site that is not green: a red, a list to read or a conflict. In a `bump`, each site's `shared:bump` prints its own `Undo:` and `Next:` mid-run. The lines to act on are `shared:all`'s at the very end, and its `Undo:` takes back the pull too. |
@@ -91,8 +91,8 @@ when the two lists differ.
 
 ### Checks before a push
 
-1. `npm run shared:verify`: the old-MUI check, the public check's tests, `scripts/site-files.test.mjs`
-   and `test:shared`.
+1. `npm run shared:verify`: the old-MUI check, the public check's tests, `scripts/site-files.test.mjs`,
+   the page feedback's tests and `test:shared`.
 2. `env SKIP_HTML_MINIFICATION=true npm run build`, then `node shared/scripts/check-public.mjs` on that
    build, as the command in `netlify.toml` does.
 3. `npm run shared:status`: 0 failed.
@@ -111,12 +111,14 @@ and `/.netlify/functions/runtimes`. They pass the code on to a Piston server nam
 the Netlify project, `PISTON_BASE_URL` and `PISTON_PROXY_SECRET`, scope Functions. Without them each
 function answers 500, and Run says so in plain words. This site is public, so the functions' own
 guards decide who may run: only this site's pages, and 20 runs per 60 s for each client. That is the
-default, because `CODE_RUNNER_RATE_LIMIT` is left unset. Nothing else goes in `netlify/functions/`:
-any other file there deploys as a public endpoint, and `npm run test:shared` fails on it.
+default, because `CODE_RUNNER_RATE_LIMIT` is left unset. Beside the two, `netlify/functions/` holds
+only the site's own functions, each named in `ownFunctions` in `package.json`: `feedback.mjs`, the
+page feedback's (Page feedback, below). Any other file there deploys as a public endpoint, and
+`npm run test:shared` fails on it.
 
 | Command | What |
 |---|---|
-| `netlify dev` | The site with its two functions: the dev server on 3020, served with the functions on http://localhost:8892. `npm start` serves no function, so Run fails there. The ports are in `netlify.toml`, under `[dev]`. Run needs the folder linked once with `netlify link`, so the CLI brings the two variables. |
+| `netlify dev` | The site with its functions: the dev server on 3020, served with the functions on http://localhost:8892. `npm start` serves no function, so Run fails there. The ports are in `netlify.toml`, under `[dev]`. Run needs the folder linked once with `netlify link`, so the CLI brings the two variables. |
 
 `shared/components/CodeEditor/README.md` lists the props, and `shared/functions/code-runner/README.md`
 says what the functions need and how a public site runs them.
@@ -149,6 +151,72 @@ undefined in that tab, the console shows "Can only have one anonymous define cal
 and pseudocode blocks reached from there by a link stay unrendered until the page is loaded again.
 Bundling both from npm in `src/components/Pseudocode` would end it.
 
+## Page feedback
+
+Under the text of a docs page or a blog post, a row shows a question and two thumbs, up and down. A
+thumb opens a card under the row, with a text field, Cancel and Send. The page below moves down while
+the card is open. After a thumbs down, text is required; the one place that decides it is
+`isTextRequired` in `src/components/PageFeedback/rules.js`. Nothing goes to the site's function
+before Send. Send posts one message to the site's own function, which mails it to one address through
+Resend. Once it is sent, the card closes and the row shows the thanks in place of the question. The
+function's own guards decide who may send: only this site's pages, and 5 messages per 600 s for each
+client. On a site with a captcha, opening the card loads Cloudflare's script, and its check runs
+while the reader writes; each message then carries a Cloudflare Turnstile token, and the function
+checks it with Cloudflare before it mails. The widget shows in the card only when it needs the
+reader.
+
+The prompt is `src/components/PageFeedback/index.jsx`, and its look is `styles.module.css` beside it.
+`rules.js` there holds what the page and the function share: the thumbs, the limits, the page
+addresses and the codes of the function's answers. `sendFeedback.js` makes the one POST, `captcha.js`
+drives the Turnstile widget, and `unsentText.js` holds the prompt's flag for the reload after a
+deploy. `src/theme/DocItem/Layout/index.js` mounts the prompt between a doc's text and its footer,
+where Tags and "Edit this page" are. `src/theme/BlogPostItem/Content/index.js` mounts it under the
+text of a post's own page, above the comment box. There it is rendered in the browser only, so it
+stays out of the RSS and Atom feeds. The function is `functions/feedback/`. Netlify deploys it
+through the one-line shim `netlify/functions/feedback.mjs`, and `ownFunctions` in `package.json`
+names it.
+
+Every word the prompt shows a reader is in `src/components/PageFeedback/words.js`, with two
+exceptions: the count of characters near the limit, which is digits, and, on a site with a captcha,
+Cloudflare's own widget, with its own words, when it needs the reader. The file's values start
+empty, except the question. While a required word is empty, a production build shows no prompt. On a
+site with a captcha, `captchaFailed` is required too. Under `npm start` an empty word shows as its
+name in angle marks, so the layout can be seen first.
+
+The switch is `feedbackEnabled` in `customFields` of `docusaurus.config.js`. While it is `false`, no
+page shows the prompt. `forbiddenFeedbackDocPaths` and `forbiddenFeedbackBlogPaths`, beside the two
+Giscus lists, name the pages without the prompt. Each entry is one page's permalink, with or without
+a trailing slash. `scripts/site-files.test.mjs` fails on an entry that is not a page address. An
+unlisted page never shows the prompt. `feedbackCaptchaSiteKey` is the Turnstile widget's site key,
+which is public by design. Left empty, the site has no captcha, and nothing of Cloudflare loads.
+
+The function needs three variables on the Netlify project, scope Functions: `FEEDBACK_EMAIL_API_KEY`,
+a Resend key with sending access only; `FEEDBACK_EMAIL_FROM`, the sending address, on a subdomain
+Resend has verified; and `FEEDBACK_EMAIL_TO`, the one address the mail goes to. While one of them is
+missing, the function refuses every message. The fourth, `FEEDBACK_CAPTCHA_SECRET`, is the Turnstile
+widget's secret. Without it the function checks no captcha. Set the site key and the secret
+together: a secret alone refuses every message, and a site key alone sends tokens nobody checks. Set
+the mail key and the captcha's secret in the Netlify UI. A changed value reaches the function at the
+next deploy.
+
+To stop it at once, delete the key at Resend: every deploy stops sending at that moment. Removing the
+Netlify variable is not enough, because each deploy keeps the values it was made with. Then set
+`feedbackEnabled` to `false` and deploy: the new deploy shows the prompt on no page.
+
+To see the prompt under `npm start`, set `feedbackEnabled` to `true`. Set it back before a commit:
+while a required word is empty, `scripts/site-files.test.mjs` fails with the switch on.
+
+| Command | What |
+|---|---|
+| `netlify dev` | The site with its functions, the feedback function among them, on http://localhost:8892. `npm start` serves no function, so Send ends in the failure state there. In a folder linked with `netlify link`, the CLI brings each of the project's variables that has a value for local development. Whether a Send there sends a real mail depends on those and on the captcha: `functions/feedback/README.md`, "Trying it". |
+| `node --test src/components/PageFeedback/__tests__/*.test.js functions/feedback/__tests__/*.test.mjs` | The feature's own tests. They need no network and open no port. `npm run shared:verify` runs them too, each by name: a new test file goes into its list in `package.json`, or `scripts/site-files.test.mjs` fails. |
+
+`functions/feedback/README.md` has the rest: what the function checks, what the code of each refusal
+means and where it is logged, how to set it up ("Setting it up"), how to try it, with or without a
+page ("Trying it"), what to look at when no mail arrives ("When no mail arrives"), and how to change
+the mail service. The header of each file in `src/components/PageFeedback/` says how its part works
+and how to change it.
+
 ## Deploying
 
 Through Netlify, built on this machine. Link the folder to the Netlify project once with
@@ -172,9 +240,11 @@ gets attention again, at most every ten minutes, it asks for `/build-id.json` an
 build. `netlify.toml` serves that file with `no-cache`. A tab loaded from a build that had no reloader
 stays as it is until someone reloads it.
 
-The reload waits while a text field has focus, a dialog is open or a code run is under way, and while
-a code editor holds unsaved text: the client module reads the editor's flag through the one-line stub
-`src/components/CodeEditor/unsavedWork.js`. The comment box is a frame of another site, so the page
+The reload waits while a text field has focus, a dialog is open, a code run is under way or a feedback
+message is on its way. It also waits while a code editor holds unsaved text, and while the feedback
+prompt holds text that is not sent. The client module reads the editor's flag through the one-line
+stub `src/components/CodeEditor/unsavedWork.js`, and the prompt's flag from
+`src/components/PageFeedback/unsentText.js`. The comment box is a frame of another site, so the page
 cannot see what is typed there: once that frame has had the focus, the tab keeps its build until it
 loads a page afresh (`src/clientModules/commentsFocus.js`). `npm start` writes no id, so nothing reloads
 there.

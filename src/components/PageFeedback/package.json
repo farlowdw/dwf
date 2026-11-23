@@ -1,0 +1,4 @@
+{
+  "//": "Marks the .js files of this folder (rules.js, words.js, unsentText.js, captcha.js, sendFeedback.js, and the tests in __tests__) as ES modules, so that `node --test` runs the tests without guessing and without Node's MODULE_TYPELESS_PACKAGE_JSON warning. The function (functions/feedback) imports rules.js too. Webpack reads them as ES modules either way; index.jsx and styles.module.css are not affected. To keep it true: keep the type while the files use import and export, and keep every import in a .js file here fully specified ('./rules.js', not './rules').",
+  "type": "module"
+}
