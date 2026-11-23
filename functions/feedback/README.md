@@ -153,7 +153,7 @@ or Cloudflare only the status and the error name. The key and the captcha's secr
 | `fields` | A field breaks its rule. The line names the field, never its value | *captcha token*: the secret is set but the page sent no token (an empty site key, or a page from before the key was set). Anything else: an old tab, or a script |
 | `captcha` | Cloudflare refused the token (its error codes are in the line), or the token was solved on another host | `invalid-input-secret`: the secret is wrong. `missing-input-secret`, `bad-request`: the call to Cloudflare was malformed, a bug. *another host*: the widget's hostnames, or Cloudflare's dummy keys (*Trying it*) |
 | `captcha-unavailable` | Cloudflare gave no verdict | Cloudflare's status page. Nothing was sent |
-| `mail` | Resend refused the mail, or could not be reached. The line has the status and Resend's error name | `401`: the key is missing or not valid. `403`: the key is not active, or the sending subdomain is not verified. `400`, `422`: Resend refused a field, such as the `from` or `to` value. `409`: a second try while the first is still under way, or the same id with another body (after a deploy that changed the mail, say) |
+| `mail` | Resend refused the mail, or could not be reached. The line has the status and Resend's error name | `401`: the key is missing or not valid. `403`: the key is not active, or the sending subdomain is not verified. `400`: Resend refused a field, such as the `from` or `to` value, or the key variable holds something that is not a key at all. `422`: a field is missing or malformed in a way the function's own checks should rule out. (Both as Resend's errors page lists them on 2026-11-23; the line's error name is the one to look up there.) `409`: a second try while the first is still under way, or the same id with another body (after a deploy that changed the mail, say) |
 | `mail-quota` | Resend answered `429` | `daily_quota_exceeded`: no mail until the quota resets at midnight UTC. `monthly_quota_exceeded`: the month's quota is used up. `rate_limit_exceeded`: too many calls in one second |
 | `mail-timeout` | No answer from Resend within 6 s | Resend's status page. The mail may still have gone out |
 | `unexpected` | A failure no check foresaw (answer `500`, no code). The line names the error, never its message | A body cut off on its way in, or a bug |
@@ -182,12 +182,21 @@ or Cloudflare only the status and the error name. The key and the captcha's secr
   unless it is given one: without the three mail variables, every Send ends in `setup`. And with
   the captcha's secret present, a Send from localhost fails unless the widget lists localhost. A
   Send that does go through sends a real mail and counts towards Resend's quota.
-- **The sure way to try a real mail locally** is `netlify dev --offline`, which brings no
-  variable, with the three mail variables set in the shell that runs it (without them, every
-  message is refused as `setup`). In fish, with the key on the clipboard so that it never shows:
+- **The sure way to try a real mail locally** is `netlify dev --offline`, with the three mail
+  variables set in the shell that runs it (without them, every message is refused as `setup`).
+  `--offline` brings none of the project's variables from Netlify. It still reads the folder's
+  `.env` files (`.env`, `.env.development`, `.env.local`, `.env.development.local`) and prints
+  the names it took; a variable set in the shell wins over one of the same name in a file.
+
+  In fish, with the key on the clipboard so that it never shows. The line reads the clipboard at
+  the moment Return is pressed, so the order matters: put the line into the terminal first, then
+  copy the key, then press Return, and copy something else once the server runs. It starts
+  nothing unless the clipboard holds one line that starts with `re_`, as Resend's keys do. A
+  line that took whatever the clipboard held (the line's own text after it was copied, a
+  password) would hand that to Resend as the key with the first message.
 
   ```fish
-  env FEEDBACK_EMAIL_API_KEY=(pbpaste) FEEDBACK_EMAIL_FROM='<the sending address>' FEEDBACK_EMAIL_TO='<your address>' netlify dev --offline
+  begin; set -l key (pbpaste); if test (count $key) -eq 1; and string match -qr '^re_\S{10,}$' -- $key; env FEEDBACK_EMAIL_API_KEY=$key FEEDBACK_EMAIL_FROM='<the sending address>' FEEDBACK_EMAIL_TO='<your address>' netlify dev --offline; else; echo 'Not started: the clipboard does not hold a Resend key (one line that starts with re_).'; end; end
   ```
 
 - **The captcha under `netlify dev`.** Cloudflare's dummy secret keys answer every token with the
