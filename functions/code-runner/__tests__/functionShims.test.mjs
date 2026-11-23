@@ -1,19 +1,29 @@
 /**
  * functionShims.test.mjs — what Netlify finds in a site that uses these functions, which is the
- * site's netlify/functions and not this folder: exactly the two shims and nothing else that would
- * deploy, each one plain re-export of the library's function (the function itself, nothing beside
- * it, because named exports do not pass through a shim), the installed bundler
- * (`@netlify/zip-it-and-ship-it`, under netlify-cli) reads them as modern ES modules at their
- * default URLs, and netlify.toml's [functions] block names the folder and esbuild. This file reads
- * the host site, so that each site that mounts shared/ is checked as itself. The library's own
- * shape is functionsLayout.test.mjs.
- * Run with `npm run test:shared`. In the hub there is no site, so these tests skip there.
+ * site's netlify/functions and not this folder: the two shims, the functions the site lists as its
+ * own in its package.json (functionFolder.mjs > OWN_FUNCTIONS_FIELD), and nothing else that would
+ * deploy. Each of the two shims is one plain re-export of the library's function (the function
+ * itself, nothing beside it, because named exports do not pass through a shim). The installed bundler
+ * (`@netlify/zip-it-and-ship-it`, under netlify-cli) reads the two shims as modern ES modules at
+ * their default URLs, and each of the site's own functions as a modern function. netlify.toml's
+ * [functions] block names the folder and esbuild. This file reads the host site, so that each site
+ * that mounts shared/ is checked as itself, and it reads the site's list inside the tests only. The
+ * library's own shape is functionsLayout.test.mjs. When the folder or the bundler's list differs
+ * from the functions allowed (functionFolder.mjs > allowedFunctions()), the failure prints
+ * ALLOWED_FUNCTIONS_RULE, then the functions found and the ones allowed, and Node's own diff below
+ * them where Node prints one: every entry file there deploys, listed or not, so a file the site
+ * does not mean to publish is deleted, not listed.
+ * Run with `npm run test:shared`. In the hub there is no site, so every test that reads one skips
+ * there.
  *
  * HOW TO CHANGE IT
- *   A new function: functionFolder.mjs > EXPECTED_FUNCTIONS.
- *   A site with a function of its own fails the first test on purpose, because a stray file in
- *   that folder is a public endpoint. Make the site's own functions a list the site keeps, and
- *   compare against that and the two.
+ *   A new function of the library: functionFolder.mjs > EXPECTED_FUNCTIONS.
+ *   A function of the site's own: its name in the site's package.json, in the list that
+ *   functionFolder.mjs > OWN_FUNCTIONS_FIELD names. Any other function in that folder fails the
+ *   first test on purpose, because a stray file there is a public endpoint. A site's own function
+ *   is held here only to being a modern function: the rest of its shape is for the site's own tests.
+ *   What a failed comparison says: ALLOWED_FUNCTIONS_RULE, then the functions found and allowed
+ *   (assertOnlyAllowed), so the message names them on every Node, with its diff or without.
  *   The bundler check skips itself, with the reason, on a site without netlify-cli installed;
  *   where it runs, it also fails when an upgrade changes the bundler's list of entry extensions,
  *   so functionFolder.mjs > ENTRY_EXTENSIONS is updated with it (BUNDLER_FINDER_FILE holds the list).
@@ -24,18 +34,42 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { PREFIX } from '../../../scripts/lib/settings.mjs';
+import { MANIFEST_FILE, PREFIX } from '../../../scripts/lib/settings.mjs';
 import { hostSite, stripComments } from '../../../__tests__/sharedTree.mjs';
-import { ENTRY_EXTENSIONS, EXPECTED_FUNCTIONS, FUNCTION_EXTENSION, discoveredFunctions } from './functionFolder.mjs';
+import {
+	ENTRY_EXTENSIONS,
+	EXPECTED_FUNCTIONS,
+	FUNCTION_EXTENSION,
+	OWN_FUNCTIONS_FIELD,
+	allowedFunctions,
+	discoveredFunctions,
+} from './functionFolder.mjs';
 
 /** The site this folder is mounted in, or null in the hub. */
 const SITE = hostSite();
 
-/** Every test here reads the site. */
+/** For each test that reads the site, so that it skips in the hub. */
 const withSite = { skip: SITE === null ? 'no site here: this is the hub' : false };
 
 /** The folder Netlify reads in a site, from the site's root. */
 const SITE_FUNCTIONS_FOLDER = 'netlify/functions';
+
+/** Where Netlify serves a function of that folder by default: this, then the function's name. */
+const FUNCTION_URL_PREFIX = '/.netlify/functions/';
+
+/**
+ * What a comparison of the functions found with the ones allowed prints first when the two differ,
+ * before the two lists: a name on the list does not stop a file deploying, so the list is only for
+ * a function the site means to publish, and any other file goes.
+ */
+const ALLOWED_FUNCTIONS_RULE = [
+	`Every entry file in a site's ${SITE_FUNCTIONS_FOLDER} deploys as a public endpoint, by default at ${FUNCTION_URL_PREFIX}<name>, listed or not.`,
+	`A name goes under ${MANIFEST_FILE} > ${OWN_FUNCTIONS_FIELD} only for a function the site means to publish, with guards and tests of its own.`,
+	`Delete any other entry file from ${SITE_FUNCTIONS_FOLDER}.`,
+].join(' ');
+
+/** A made-up function that no list allows, for the test of that rule: not any site's. */
+const STRAY_FUNCTION = 'stray';
 
 /** The library, from that folder, as a shim's import names it. */
 const LIBRARY_FROM_SHIM = `../../${PREFIX}/functions/code-runner`;
@@ -64,6 +98,35 @@ function siteFunctions() {
 	return path.join(SITE, SITE_FUNCTIONS_FOLDER);
 }
 
+/**
+ * The site's own functions as its package.json lists them under OWN_FUNCTIONS_FIELD: undefined when
+ * it lists none, and as written otherwise, for allowedFunctions() to check. Called inside a test, so
+ * the hub, which has no site, can skip.
+ */
+function ownFunctions() {
+	const manifest = JSON.parse(fs.readFileSync(path.join(SITE, MANIFEST_FILE), 'utf8'));
+	return manifest[OWN_FUNCTIONS_FIELD];
+}
+
+/** True for a function of the library, which a site holds as a shim. */
+function isLibraryFunction(name) {
+	return EXPECTED_FUNCTIONS.includes(name);
+}
+
+/** Function names for a message: comma-separated, or 'none'. */
+function namesOf(names) {
+	return names.length === 0 ? 'none' : names.join(', ');
+}
+
+/**
+ * Fails unless the functions `found` are exactly the `allowed` ones, with ALLOWED_FUNCTIONS_RULE and then
+ * both lists: the message names the functions on every Node, and one that prints its diff under a
+ * message adds it below.
+ */
+function assertOnlyAllowed(found, allowed) {
+	assert.deepEqual(found, allowed, `${ALLOWED_FUNCTIONS_RULE} Found: ${namesOf(found)}. Allowed: ${namesOf(allowed)}.`);
+}
+
 /** The path of one shim. */
 function shimFile(name) {
 	return path.join(siteFunctions(), `${name}${FUNCTION_EXTENSION}`);
@@ -88,8 +151,15 @@ function installedBundler() {
 	return file ?? null;
 }
 
-test("a site's netlify/functions holds the two shims and no other function, so no stray file becomes a public endpoint", withSite, () => {
-	assert.deepEqual(discoveredFunctions(siteFunctions()), [...EXPECTED_FUNCTIONS].sort());
+/** What the bundler must report of a shim of the library's, beyond being modern: an ES module, `.mjs`, at its default URL. */
+function assertShimShape(fn) {
+	assert.equal(fn.inputModuleFormat, ESM_FORMAT, `${fn.name} is read as an ES module`);
+	assert.equal(fn.extension, FUNCTION_EXTENSION, fn.name);
+	assert.deepEqual(fn.routes ?? [], [], `${fn.name} has no custom route`);
+}
+
+test("a site's netlify/functions holds the two shims, the functions its package.json lists as its own, and no other, so no stray file becomes a public endpoint", withSite, () => {
+	assertOnlyAllowed(discoveredFunctions(siteFunctions()), allowedFunctions(ownFunctions()));
 	for (const name of EXPECTED_FUNCTIONS) {
 		assert.ok(fs.existsSync(shimFile(name)), `${SITE_FUNCTIONS_FOLDER}/${name}${FUNCTION_EXTENSION} exists`);
 	}
@@ -114,12 +184,10 @@ test('the installed bundler lists the entry extensions this test mirrors, and re
 	assert.deepEqual(bundlerEntryExtensions(bundler), [...ENTRY_EXTENSIONS], 'ENTRY_EXTENSIONS mirrors the bundler\'s allowedExtensions');
 	const { listFunctions } = await import(pathToFileURL(bundler));
 	const functions = await listFunctions([siteFunctions()], { parseISC: true });
-	assert.deepEqual(functions.map((fn) => fn.name).sort(), [...EXPECTED_FUNCTIONS].sort());
+	assertOnlyAllowed(functions.map((fn) => fn.name).sort(), allowedFunctions(ownFunctions()));
 	for (const fn of functions) {
 		assert.equal(fn.runtimeAPIVersion, MODERN_API_VERSION, `${fn.name} is read as a modern function`);
-		assert.equal(fn.inputModuleFormat, ESM_FORMAT, `${fn.name} is read as an ES module`);
-		assert.equal(fn.extension, FUNCTION_EXTENSION, fn.name);
-		assert.deepEqual(fn.routes ?? [], [], `${fn.name} has no custom route`);
+		if (isLibraryFunction(fn.name)) assertShimShape(fn);
 	}
 });
 
@@ -130,4 +198,13 @@ test('netlify.toml names the functions folder and the esbuild bundler', withSite
 	const body = block.split(/^\[/m)[0];
 	assert.match(body, /^\s*directory\s*=\s*"netlify\/functions"\s*$/m);
 	assert.match(body, /^\s*node_bundler\s*=\s*"esbuild"\s*$/m);
+});
+
+test('a function the site may not hold fails with the rule first, and the message names that function after it', () => {
+	const allowed = allowedFunctions();
+	assert.throws(() => assertOnlyAllowed([...allowed, STRAY_FUNCTION].sort(), allowed), (error) => {
+		assert.ok(error.message.startsWith(ALLOWED_FUNCTIONS_RULE), 'the rule comes first');
+		assert.ok(error.message.includes(STRAY_FUNCTION, ALLOWED_FUNCTIONS_RULE.length), 'the message names the function after the rule');
+		return true;
+	});
 });
