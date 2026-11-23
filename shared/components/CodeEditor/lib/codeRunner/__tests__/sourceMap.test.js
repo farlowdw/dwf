@@ -14,13 +14,13 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { decodeMappings, decodeVlq, originalLineFor, originalPositionFor, parseSourceMap } from '../sourceMap.js';
 import { resolvePackage } from '../../../__tests__/paths.js';
+import { runMain } from '../../../__tests__/runMain.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const TS_SERVICES = path.join(resolvePackage('monaco-editor'), 'esm/vs/language/typescript/lib/typescriptServices.js');
@@ -186,12 +186,12 @@ test("a real TypeScript program, compiled with the editor's options: every state
 	assert.deepEqual(originalPositionFor(map, throwLine, throwColumn), { line: 9, column: source.split('\n')[8].indexOf('throw') + 1, source: 'main.ts' });
 });
 
-/** Run `js` as main.js in this machine's node: its stderr. */
+/** Run `js` as main.js in this machine's node (the component's __tests__/runMain.js): its stderr. */
 function stderrOfNode(js) {
 	const folder = mkdtempSync(path.join(os.tmpdir(), 'dwf-source-map-test-'));
 	try {
 		writeFileSync(path.join(folder, 'main.js'), js);
-		return spawnSync(process.execPath, ['main.js'], { cwd: folder, encoding: 'utf8', timeout: 20000 }).stderr;
+		return runMain(folder).stderr;
 	} finally {
 		rmSync(folder, { recursive: true, force: true });
 	}

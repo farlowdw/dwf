@@ -24,7 +24,6 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -59,6 +58,7 @@ import {
 	typeScriptNamespace,
 } from '../typescript.js';
 import { CHECK_DECLARATION, EXTRA_LIBS, NODE_GLOBALS_PATH, TYPE_HELPERS_PATH } from '../typescriptLibs.js';
+import { runMain } from './runMain.js';
 import { FakeModel, FakeUri, SKIP_REASON, createTypeScriptMonaco, fakeDefaults, loadTypeScript } from './tsHarness.js';
 
 const loaded = await loadTypeScript();
@@ -130,12 +130,12 @@ function realSetup() {
 	return setup;
 }
 
-/** Run `files` ({ name: text }; main.js first) in this machine's node: { status, stdout, stderr }. */
+/** Run `files` ({ name: text }; main.js first) in this machine's node (./runMain.js): { status, stdout, stderr }. */
 function runInNode(files) {
 	const folder = mkdtempSync(path.join(os.tmpdir(), 'dwf-ts-test-'));
 	try {
 		for (const [name, text] of Object.entries(files)) writeFileSync(path.join(folder, name), text);
-		const result = spawnSync(process.execPath, ['main.js'], { cwd: folder, encoding: 'utf8', timeout: 20000 });
+		const result = runMain(folder);
 		return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 	} finally {
 		rmSync(folder, { recursive: true, force: true });

@@ -15,7 +15,6 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -34,6 +33,7 @@ import {
 	typeErrorCountOf,
 	wrapForTopLevelAwait,
 } from '../typescriptRun.js';
+import { runMain } from './runMain.js';
 import { SKIP_REASON, createTypeScriptMonaco, loadTypeScript } from './tsHarness.js';
 
 const loaded = await loadTypeScript();
@@ -46,12 +46,12 @@ function realSetup() {
 	return setup;
 }
 
-/** Run main.js in this machine's node: Piston's answer shape for runErrors ({ run: { stdout, stderr, code, … } }). */
+/** Run main.js in this machine's node (./runMain.js): Piston's answer shape for runErrors ({ run: { stdout, stderr, code, … } }). */
 function runInNode(js) {
 	const folder = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'dwf-ts-run-')));
 	try {
 		writeFileSync(path.join(folder, 'main.js'), js);
-		const result = spawnSync(process.execPath, ['main.js'], { cwd: folder, encoding: 'utf8', timeout: 20000 });
+		const result = runMain(folder);
 		// Piston names the file /box/submission/main.js; node names the temporary folder's: rename it.
 		const stderr = result.stderr.split(folder).join('/box/submission');
 		return { run: { stdout: result.stdout, stderr, output: result.stdout + stderr, code: result.status, signal: null, status: result.status === 0 ? null : 'RE' } };
