@@ -327,8 +327,10 @@ deploys Netlify stops accepting on 2027-07-01.
 - **The client's IP** is `context.ip`, and **the site's host** is the host of `request.url`.
 - **The variables** are read from `process.env`, which Netlify fills for a function.
 
-`__tests__/functionsLayout.test.mjs` holds this for the library, and
-`__tests__/functionShims.test.mjs` holds it for what Netlify finds in a site.
+`__tests__/functionsLayout.test.mjs` holds this for the library. In a site,
+`__tests__/functionShims.test.mjs` holds the library's two shims to these rules, and a function of
+the site's own only to being a modern function: its route and the rest of its shape are that site's
+business.
 
 ## Checking locally
 
@@ -391,7 +393,9 @@ deploys Netlify stops accepting on 2027-07-01.
   later. A new language joins no menu by itself: give it a label, highlighting and a file name in
   `shared/components/CodeEditor/lib/codeRunner/languages.js`.
 - **A new function:** a `<name>.mjs` here with a default export and no `handler`, a shim in each
-  site that wants it, and its name in `EXPECTED_FUNCTIONS` in `__tests__/functionFolder.mjs`.
+  site that wants it, and its name in `EXPECTED_FUNCTIONS` in `__tests__/functionFolder.mjs`. A
+  function of one site's own stays in that site, with its name under `ownFunctions` in that site's
+  `package.json`.
 - **Tests:** `__tests__/` runs under `npm run test:shared`. `__tests__/readme.test.mjs` holds this
   file's numbers and the pointers at it to the code. `__tests__/readerWords.test.mjs` runs each
   function's real failures through the editor's words. `__tests__/overSocket.test.mjs` runs the

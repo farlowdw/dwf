@@ -413,7 +413,8 @@ A site differs from the others in five places only:
    where a `:root` value loses;
 3. its own `docusaurus.config.js`;
 4. its own `src/theme`;
-5. two lines in its `package.json`: `shared:verify` and `comparePages`.
+5. the lines `shared:verify` and `comparePages` in its `package.json`, and `ownFunctions` when its
+   `netlify/functions` holds functions of its own beside the code editor's two.
 
 A stub that hands in data:
 

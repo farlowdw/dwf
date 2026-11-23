@@ -127,7 +127,8 @@ of that check.
 
    Keep each shim one re-export of the default, with no `handler`: Netlify then reads it as a
    modern function. Anything else in that folder deploys as a public endpoint, and
-   `functionShims.test.mjs` fails on it.
+   `functionShims.test.mjs` fails on it, unless the site's `package.json` lists its name under
+   `ownFunctions`, as a function of the site's own.
 6. **On Netlify** (names only; the values are the server's): `PISTON_BASE_URL` and
    `PISTON_PROXY_SECRET`, and optionally `CODE_RUNNER_RATE_LIMIT` (runs per client, default
    `20/60`; the guards are on whether the site has a password or not). Leave
@@ -140,8 +141,8 @@ of that check.
    editor folder's tests read nothing outside it; two of the others read the site, and pass when
    steps 4 and 5 are followed as written: `shared/plugins/monaco-editor/__tests__` expects
    `codeRunnerPlugin(` at the start of a line of `docusaurus.config.js`, and
-   `shared/functions/code-runner/__tests__/functionShims.test.mjs` reads the shims and
-   `netlify.toml`.
+   `shared/functions/code-runner/__tests__/functionShims.test.mjs` reads the shims,
+   `netlify.toml` and the site's `package.json`, for its `ownFunctions`.
 8. **Optional:**
    - the after-deploy reload: a third stub, `src/components/CodeEditor/unsavedWork.js`, holding
      `export * from '@site/shared/components/CodeEditor/unsavedWork.js';`, for the site's own
