@@ -75,7 +75,7 @@ const config = {
     ],
     forbiddenGiscusBlogPaths: [
     ],
-    feedbackEnabled: false,
+    feedbackEnabled: true,
     forbiddenFeedbackDocPaths: [
       '/docs/intro',
       '/docs/admonitions',
@@ -83,7 +83,7 @@ const config = {
     ],
     forbiddenFeedbackBlogPaths: [
     ],
-    feedbackCaptchaSiteKey: '',
+    feedbackCaptchaSiteKey: '0x4AAAAAAGPM0tLKSbWTmQs5',
   },
 
   clientModules: [

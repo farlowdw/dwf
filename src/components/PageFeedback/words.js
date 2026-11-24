@@ -24,79 +24,79 @@
 
 export const WORDS = Object.freeze({
   /** The prompt itself, beside the two thumbs. */
-  question: 'Is this page useful?',
+  question: 'What did you think of this page?',
 
   /** The name of the thumbs-up button, read by a screen reader and shown as its tooltip. */
-  thumbUp: '',
+  thumbUp: 'Yes',
 
   /** The name of the thumbs-down button, read by a screen reader and shown as its tooltip. */
-  thumbDown: '',
+  thumbDown: 'No',
 
   /**
    * The line above the text field after a thumbs up. Text is optional there: say so in it. A
    * thumb alone sends nothing: the message goes when Send is pressed, with or without text.
    */
-  askUp: '',
+  askUp: `What feedback would you like to share? What is being done well or could be improved?`,
 
   /**
    * The line above the text field after a thumbs down. Text is required there: say so in it. A
    * thumb alone sends nothing: the message goes when Send is pressed.
    */
-  askDown: '',
+  askDown: `What could be improved? Please be as detailed as you like.`,
 
   /** Optional. The grey text in the empty field after a thumbs up. */
-  placeholderUp: '',
+  placeholderUp: 'Any feedback would be appreciated before you jet ✈️\n\n(optional)',
 
   /** Optional. The grey text in the empty field after a thumbs down. */
-  placeholderDown: '',
+  placeholderDown: 'Please share whatever feedback you feel would help me improve this site ✍️\n\n(required)',
 
   /**
    * Optional. A line under the field, for example on where the message goes, or that no reply
    * can come back: the prompt asks for no address.
    */
-  note: '',
+  note: 'I read every submission. Thank you for your time!',
 
   /** The button that sends the message. */
-  send: '',
+  send: 'Submit',
 
   /** The same button while the message is on its way; also read to a screen reader then. */
-  sending: '',
+  sending: 'Sending ...',
 
   /** The button that closes the card without sending. The text is kept until the page is left. */
-  cancel: '',
+  cancel: 'Cancel',
 
   /** Shown in place of the question once the message was sent; the card is then gone. */
-  thanks: '',
+  thanks: 'Thanks for your submission!',
 
   /** Shown under the field when Send is pressed after a thumbs down with no text. */
-  textRequired: '',
+  textRequired: 'Please provide more details in your feedback.',
 
   /**
    * Shown in the card when the message could not be sent. The text stays, so Send can be pressed
    * again. It also stands for failures that pressing Send again cannot mend: the function is not
    * set up, or the mail service's limit for the day is used up.
    */
-  failed: '',
+  failed: 'Your submission did not go through. Please try again later.',
 
   /**
    * Optional. Shown when too many messages came from one connection: the function takes five in
    * ten minutes, then one more every two minutes. `failed` when empty.
    */
-  tooMany: '',
+  tooMany: 'Too many submissions from this connection in too little time. Please try again later.',
 
   /**
    * Required on a site with a captcha. Shown when the captcha's check did not pass or could not
    * run. A reader whose browser or network stops Cloudflare's script meets it at every Send:
    * pressing Send again does not help there.
    */
-  captchaFailed: '',
+  captchaFailed: 'Captcha failed',
 
   /**
    * Optional. Shown when Send is pressed while the captcha still waits for the reader: its box
    * then shows in the card, above Cancel and Send, and nothing was sent. `captchaFailed` when
    * empty.
    */
-  captchaNeeded: '',
+  captchaNeeded: 'Captcha needed',
 });
 
 /** The words the prompt cannot do without. */
