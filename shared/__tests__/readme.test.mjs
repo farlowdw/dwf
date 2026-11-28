@@ -7,7 +7,8 @@
  *     stays on that line only until its script lands: then the test goes red.
  *   - Every script at the top of scripts/ has a line, apart from NO_NPM_LINE.
  *   - Every option the README shows beside a command is in that script's own --help, and so is every
- *     option of its sections on check-public.mjs, check-mui-api.mjs and mdx-check.mjs, which have no npm line.
+ *     option of its sections on check-public.mjs, check-mui-api.mjs, mdx-check.mjs and check-build.mjs,
+ *     which have no npm line.
  *   - The git lines use scripts/lib/settings.mjs, the config block's names are what wiring/index.cjs
  *     exports and its paths are relative strings, every path in What is here exists, and there are
  *     five rules. The clear rule, there, in Silent failures and in the two wiring headers, says that a plain
@@ -63,6 +64,7 @@ const UNDO_HEADING = 'Undo a bad pull';
 const PUBLIC_HEADING = 'Before a public site goes out';
 const MUI_HEADING = 'Old MUI names';
 const MDX_HEADING = 'MDX check';
+const BUILD_HEADING = 'Maths and citations';
 const EVERY_SITE_HEADING = 'Every site at once';
 const SILENT_HEADING = 'Silent failures';
 const COMPARE_HEADING = 'Compare two builds';
@@ -110,13 +112,14 @@ const CONFLICT_MARKER = `${'<'.repeat(7)} HEAD`;
 const SITE_OWN_LINES = new Set(['shared:verify']);
 
 /** Scripts a site's build or a person runs by their path, so no npm line points at them. */
-const NO_NPM_LINE = new Set(['check-public.mjs', 'check-mui-api.mjs', 'mdx-check.mjs']);
+const NO_NPM_LINE = new Set(['check-public.mjs', 'check-mui-api.mjs', 'mdx-check.mjs', 'check-build.mjs']);
 
 const SCRIPTS_FOLDER = 'scripts';
 const HELP_FLAG = '--help';
 const PUBLIC_CHECK = 'check-public.mjs';
 const MUI_CHECK = 'check-mui-api.mjs';
 const MDX_CHECK = 'mdx-check.mjs';
+const BUILD_CHECK = 'check-build.mjs';
 const CHECKS_FILE = 'scripts/lib/checks.mjs';
 const TWO_SETS_OF_LINES = 'its undo leaves the pull in place';
 
@@ -303,6 +306,14 @@ test('every option the section on the MDX check shows is in its --help', () => {
 
 test('the section on the MDX check prints the line a site runs', () => {
   assert.ok(section(MDX_HEADING).includes(`\nnode ${PREFIX}/${SCRIPTS_FOLDER}/${MDX_CHECK}\n`));
+});
+
+test('every option the section on maths and citations shows is in its --help', () => {
+  assertSectionOptions(BUILD_HEADING, BUILD_CHECK);
+});
+
+test('the section on maths and citations prints the line a site runs', () => {
+  assert.ok(section(BUILD_HEADING).includes(`\nnode ${PREFIX}/${SCRIPTS_FOLDER}/${BUILD_CHECK}\n`));
 });
 
 test('the section on the compare says what it cannot see', () => {

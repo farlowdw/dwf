@@ -30,7 +30,7 @@ const FUNCTION_START = /^(?:export )?(?:async )?function (\w+)\(/;
 const STRUCTURED_VALUE = /^(?:Object\.freeze\(|new (?:Set|Map)\(|\[)/;
 
 const OWN_OPTIONS = 'each command names its own options, and may rename one without the others';
-const BUILD_CHECK_CODES = 'the three build checks are run by their path, and each documents its own three exit codes';
+const BUILD_CHECK_CODES = 'the four build checks are run by their path, and each documents its own three exit codes';
 const TIME_STAMP = 'shared:bump and shared:all each name their own folder from the time';
 
 /**
