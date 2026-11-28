@@ -1588,7 +1588,7 @@ With the above table in mind, let's explore what the maximum value of $n$ can be
 | $O(n^2)$ | 1000 | 38,729 |
 | $O(n\log n)$ | 62,746 | 58,154,442 |
 | $O(n)$ | 1,000,000 | 1,500,000,000 |
-| $O(\log_2 n)$ | $2^{1\times 10^6}$ (insanely huge) | $\floor 2^{1.5\times 10^9}\rfloor$ (even huger) |
+| $O(\log_2 n)$ | $2^{1\times 10^6}$ (insanely huge) | $\lfloor 2^{1.5\times 10^9}\rfloor$ (even huger) |
 | $O(1)$ | No maximum | No maximum |
 
 Why is the table above helpful for boundary thinking? Because coding problems generally specify input-size constraints. That is, you're generally told what kind of input size you should plan to accommodate (e.g., `1 <= n <= 1000`). Hence, without even looking at the coding question, we can examine the input-size constraints to infer two things:

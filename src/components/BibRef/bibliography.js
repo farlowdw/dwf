@@ -5,6 +5,13 @@
 const bibItems = {
   endlessListing: [
     {
+      id: 'AL2011Puzzles',
+      title: `Algorithmic Puzzles`,
+      author: 'Anany Levitin and Maria Levitin',
+      time: '2011',
+      link: 'https://www.amazon.com/Algorithmic-Puzzles-Anany-Levitin/dp/0199740445/ref=sr_1_1',
+    },
+    {
       id: 'CSL1958',
       title: `Reflections on the Psalms`,
       subtitle: ``,
