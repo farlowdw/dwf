@@ -346,10 +346,13 @@ export function stopProcess(child) {
   });
 }
 
-/** Starts a real server in `cwd`, waits until it listens, and stops it when the test ends. */
-export function startServer(t, cwd) {
+/**
+ * Starts a real server in `cwd`, waits until it listens, and stops it when the test ends. `program` is the
+ * node that runs it: a copy of node in a folder of the test's choosing can stand in for an app's program.
+ */
+export function startServer(t, cwd, { program = process.execPath } = {}) {
   const args = ['-e', SERVER_CODE, SERVER_MARK, process.env[RUN_MARK_ENV] ?? ''];
-  const child = spawn(process.execPath, args, { cwd, stdio: SERVER_STDIO });
+  const child = spawn(program, args, { cwd, stdio: SERVER_STDIO });
   t.after(() => stopProcess(child));
   return new Promise((resolve, reject) => {
     child.stdout.once('data', () => resolve(child));
