@@ -370,6 +370,37 @@ fixes those, with what it did on four older sites. It stays a note, because a pe
 It exits 0 when no page fails, 1 when one does, and 2 when it could not run, which is never a pass: no pages,
 or no packages to compile with. `--help` lists the flags.
 
+## Maths and citations
+
+`scripts/check-build.mjs` reads every page of `build/` and lists each one that shows maths KaTeX could not
+draw or a citation the site's `bibliography.js` lacks. Each shows on the page in red while the build exits 0,
+and rehype-katex's warning never reaches the build's log. It reads the build, so it runs after one: add
+`&& node shared/scripts/check-build.mjs` to `command` under `[build]` in `netlify.toml`, right after the
+site's build and in front of the public check where a site has one, so `netlify build` stops at a hit.
+
+```sh
+node shared/scripts/check-build.mjs
+node shared/scripts/check-build.mjs --report-only
+```
+
+| A page that holds | What the build leaves |
+|---|---|
+| A formula KaTeX could not read, such as `$\frac{1}{$` | A `katex-error` span, whose title holds KaTeX's message |
+| A command KaTeX does not know, such as a macro the config lacks | The command's name in KaTeX's red, `#cc0000`, inside an ordinary formula, and no `katex-error` anywhere |
+| A citation of an id `bibliography.js` lacks | BibRef's `ITEM NOT FOUND`, on red |
+
+Each line names the page by its address and the kind, and for maths what KaTeX printed. A citation's id is
+not in the HTML, so search that page's `<BibRef` ids. Maths that colours a part `#cc0000` on purpose passes: only a
+command's name in that red counts.
+
+Four failures stay out of it. Maths in a BibRef tooltip is drawn on hover alone. A `%` in a formula drops the
+rest of it with no mark. A colour's name spelled wrong, such as `\color{rde}`, draws in the text's own colour.
+A partial that no page imports is never built.
+
+It exits 0 when clean, 1 when a page shows a failure, and 2 when it could not run, which is never a pass: no
+`build/`, or one with no page. `--report-only` lists the pages and exits 0, for a site whose pages wait for a
+fix. `--root` reads another folder, and `--help` lists the flags.
+
 ## Add a component
 
 1. Add its folder under `components/`, its tests, and a row in `requirements.cjs` that names them in its
@@ -567,6 +598,7 @@ The rest need a step of their own:
 | A change to an attribute alone, or words that leave every box the same size | Nothing in `shared:compare`: diff the two `build/` folders |
 | An install forced past a conflict drops a package | Nothing: never force one |
 | A KaTeX option list without the macros, so a page builds and shows red text | `katexOptions()`, never a shortened copy |
+| A formula KaTeX could not read, a command it does not know, such as a macro the config lacks, or a citation `bibliography.js` lacks: each shows red on the page, and the build exits 0 | `scripts/check-build.mjs`, after the build |
 | A change under `wiring/` or to DropDownIC's `mdx.cjs`, after a plain restart or a cached build: docs pages take a change to the macros and the admonition keywords, while blog posts and pages of the pages plugin keep the old macros and the old keywords until the clear; magic comments, read in the browser, change on every page. So neither one docs page nor one code block's new mark proves the change was taken | The site's `clear` script before the build or the restart. `shared:pull` clears the cache itself when it brings such a change |
 | An old MUI prop or class name on its list, which the component just ignores or no element carries | `scripts/check-mui-api.mjs`, for the names in `scripts/lib/oldMuiApis.json`. A removed name the list lacks passes |
 | A test glob that matches nothing, or a test file left with no test: `node --test` exits 0 | `test:shared`, which calls a suite with no test files, a planned file with no test and a file named like a test that never runs a problem |

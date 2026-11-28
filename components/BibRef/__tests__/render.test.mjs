@@ -4,15 +4,17 @@
  *   - a citation of a listed item is [n], n its place in the sorted list, linking to the list page at
  *     /docs/reference-list#n, or at the stub's `listPath`;
  *   - a hidden item is found too, and links to its own address as [∗] or its refSymbol;
- *   - an id no item has reads ITEM NOT FOUND;
+ *   - an id no item has reads ITEM NOT FOUND, in the very markup scripts/check-build.mjs looks for in a build;
  *   - listAll prints every item that is not hidden, in order, each under an h4 whose id the citations name.
- * To change it: a new prop or case of ../index.jsx gets a test here. Run with `npm run test:shared`, or on its own
+ * To change it: a new prop or case of ../index.jsx gets a test here. A change to what an id no item has draws
+ * changes MISSING_CITATION in scripts/check-build.mjs too. Run with `npm run test:shared`, or on its own
  * with `node --test "shared/components/BibRef/__tests__/*.test.mjs"` in a site.
  */
 
 import { register } from 'node:module';
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { MISSING_CITATION, failuresIn } from '../../../scripts/check-build.mjs';
 
 register('../../../__tests__/renderHooks.mjs', import.meta.url);
 
@@ -52,6 +54,13 @@ test('a hidden item is found, and links to its own address', () => {
 test('an id no item has reads ITEM NOT FOUND', () => {
   assert.match(render({ id: 'missing' }), /ITEM NOT FOUND/);
   assert.match(renderToStaticMarkup(createElement(BibRef, { id: 'first' })), /ITEM NOT FOUND/);
+});
+
+test('an id no item has draws the markup scripts/check-build.mjs finds in a build, and a listed one does not', () => {
+  assert.equal(render({ id: 'missing' }), MISSING_CITATION);
+  assert.deepEqual(failuresIn(render({ id: 'missing' })), [{ kind: 'citation', detail: null }]);
+  assert.deepEqual(failuresIn(render({ id: 'first' })), []);
+  assert.deepEqual(failuresIn(render({ listAll: true })), []);
 });
 
 test('listAll prints the items that are not hidden, in order, under the ids the citations name', () => {
