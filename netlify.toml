@@ -9,7 +9,7 @@
 # predeploy npm script would only run under `npm run deploy`. See the README, The public check.
 
 [build]
-  command = "node shared/scripts/check-mui-api.mjs && npm run build && node shared/scripts/check-public.mjs"
+  command = "node shared/scripts/check-mui-api.mjs && npm run build && node shared/scripts/check-build.mjs && node shared/scripts/check-public.mjs"
   publish = "build"
 
   ## Uncomment to use this redirect for Single Page Applications like create-react-app.
