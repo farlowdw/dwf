@@ -60,7 +60,8 @@ prints the exact install line for anything missing.
 
 Options go after `--`. npm keeps them otherwise, and the scripts stop and say so. Pull and push run on
 `master`, in the main checkout, and refuse a changed tree and an open merge. A pull also refuses while a
-server runs from this checkout. The exit codes are in `scripts/lib/exitCodes.mjs`.
+server runs from this checkout. A desktop app's own process there, one whose program sits in a `.app`
+bundle, is not a server: the pull names it and goes on. The exit codes are in `scripts/lib/exitCodes.mjs`.
 
 In the hub itself, run the tests with `node --test "__tests__/*.test.mjs"` and
 `node --test "scripts/__tests__/*.test.mjs"`.

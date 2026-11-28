@@ -20,7 +20,7 @@ server from the site and a browser driver from a cache folder. Neither is an imp
 | `checkout.mjs` | Plain facts: the root, the branch, main checkout or worktree, changed files, tracked and ignored files, whether a remote holds a commit. Also a file's text and a folder's real path, which other files read through it |
 | `state.mjs` | The state reader: the six states, the commits going out and coming in, the commits a split would carry, `commitsToPublish` |
 | `siblings.mjs` | The one sibling finder. The hub holds no list of sites: they are found from `.git/config` files |
-| `listeners.mjs` | The preflight: refuse while a server runs from this checkout. It reads and never stops anything |
+| `listeners.mjs` | The preflight: refuse while a server runs from this checkout, and name an app's own process there without refusing. It reads and never stops anything |
 | `privacy.mjs` | The word list on this machine, the secret shapes, the scans. A hit never prints the word |
 | `wordList.mjs` | The one reader of the word list's lines, for the privacy scans and `check-public.mjs` alike |
 | `wordForms.mjs` | The spellings of one entry of the word list, and the views of a text both privacy scans read |
